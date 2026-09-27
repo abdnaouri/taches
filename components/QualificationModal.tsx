@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FiX, FiCheckCircle, FiAward, FiAlertCircle } from 'react-icons/fi';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { FiX, FiCheckCircle, FiAward } from 'react-icons/fi';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
   onClose,
   onPassed,
 }) => {
+  const { t, isRTL } = useLanguage();
   const [answers, setAnswers] = useState<Record<number, number>>({ 0: 0, 1: 1, 2: 0 });
   const [submitted, setSubmitted] = useState(false);
   const [scorePassed, setScorePassed] = useState(true);
@@ -22,29 +24,29 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
 
   const questions = [
     {
-      q: "Où doivent impérativement s'effectuer tous les paiements et échanges ?",
+      q: t('q1Title'),
       options: [
-        "Exclusivement sur Tâches via le système de séquestre sécurisé (Escrow)",
-        "Par virement direct ou PayPal pour éviter les commissions",
-        "Peu importe, c'est au choix du client"
+        t('q1Opt0'),
+        t('q1Opt1'),
+        t('q1Opt2')
       ],
       correct: 0,
     },
     {
-      q: "Que devez-vous faire si vous réalisez que vous ne pourrez pas respecter le délai imparti ?",
+      q: t('q2Title'),
       options: [
-        "Envoyer une preuve vide pour arrêter le chronomètre",
-        "Prévenir immédiatement le client via le chat et demander une extension de délai",
-        "Ne rien dire et espérer que le client ne s'en rende pas compte"
+        t('q2Opt0'),
+        t('q2Opt1'),
+        t('q2Opt2')
       ],
       correct: 1,
     },
     {
-      q: "Quand vos gains sont-ils crédités sur votre solde retirable ?",
+      q: t('q3Title'),
       options: [
-        "Dès que le client valide vos livrables ou après examen positif de l'arbitrage",
-        "Dès que vous acceptez la mission",
-        "À la fin de chaque mois calendaire"
+        t('q3Opt0'),
+        t('q3Opt1'),
+        t('q3Opt2')
       ],
       correct: 0,
     },
@@ -68,7 +70,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
       <div className="relative w-full max-w-lg rounded-3xl bg-cream p-6 sm:p-8 shadow-2xl border border-ink/15 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all"
+          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all`}
         >
           <FiX className="text-lg" />
         </button>
@@ -78,21 +80,21 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
             <FiAward />
           </span>
           <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">
-            Test de qualification Work-zilla
+            {t('qualificationBadge')}
           </span>
         </div>
 
         <h2 className="font-display text-2xl font-bold text-ink">
-          Certification des Règles & Qualité
+          {t('qualificationTitle')}
         </h2>
         <p className="mt-1 text-xs text-ink/70">
-          Pour maintenir la qualité et éliminer les spams, chaque exécutant certifie sa maîtrise des règles.
+          {t('qualificationDesc')}
         </p>
 
         {submitted && scorePassed && (
           <div className="mt-4 flex items-center gap-2.5 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold">
             <FiCheckCircle className="text-emerald-600 text-lg shrink-0" />
-            <span>Félicitations ! Vous avez réussi le test de qualification (3/3). Votre profil est vérifié Niveau Pro.</span>
+            <span>{t('qualificationSuccessMsg')}</span>
           </div>
         )}
 
@@ -133,14 +135,14 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
             onClick={onClose}
             className="rounded-full border border-ink/20 px-5 py-2.5 text-xs font-semibold text-ink"
           >
-            Fermer
+            {t('btnClose')}
           </button>
           <button
             type="button"
             onClick={handleValidate}
             className="rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-lime hover:bg-ink/90 shadow-sm"
           >
-            Valider mes réponses
+            {t('btnValidateAnswers')}
           </button>
         </div>
       </div>

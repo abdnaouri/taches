@@ -7,7 +7,7 @@ A modern, high-trust micro-task and freelance services marketplace built with Ne
 - **Role-based Experience**: Seamless switching between Customer (ordering & posting tasks) and Performer (earning & completing tasks).
 - **Escrow-Secured Payments**: Multi-tier balance management (Available vs. Escrow), milestone releases, automated commission calculation, and transaction history.
 - **Qualification & Performer Tiers**: Gamified 5-tier progression with experience points (XP), completion rating thresholds, and qualification tests.
-- **Detailed Task Flow**: 
+- **Detailed Task Flow**:
   - Dynamic task filtering (categories, level requirements, reward ranges)
   - Interactive task creation with escrow budget calculator
   - Proposal & bid submission
