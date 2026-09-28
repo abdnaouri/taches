@@ -18,6 +18,7 @@ import {
 import { Header } from '@/components/Header';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskMiniCard } from '@/components/TaskMiniCard';
+import { TaskRow } from '@/components/TaskRow';
 import { TaskDetailModal } from '@/components/TaskDetailModal';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { ProofSubmissionDrawer } from '@/components/ProofSubmissionDrawer';
@@ -45,7 +46,9 @@ import {
   FiArrowRight,
   FiArrowLeft,
   FiLock,
-  FiUser
+  FiUser,
+  FiList,
+  FiGrid
 } from 'react-icons/fi';
 
 interface MarketplaceAppProps {
@@ -85,6 +88,8 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // View & Filter State
   const activeTab = (searchParams.get('tab') as 'explore' | 'my-tasks') || 'explore';
+  const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
+  const [myTasksStatusFilter, setMyTasksStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'under_review' | 'completed'>('all');
   const [filterUrgent, setFilterUrgent] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -445,41 +450,85 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     return tasks.map(t => getLocalizedTask(t, locale));
   }, [tasks, locale]);
 
+  // My Tasks list helper
+  const myTasksList = useMemo(() => {
+    if (!isAuthenticated || !profile) return [];
+    if (profile.activeRole === 'CUSTOMER') {
+      return localizedTasks.filter(
+        (t) =>
+          t.clientId === profile.id ||
+          t.clientName.includes('Vous') ||
+          t.clientName.includes('You')
+      );
+    }
+    return localizedTasks.filter(
+      (t) =>
+        t.assignedToId === profile.id ||
+        t.status === 'IN_PROGRESS' ||
+        t.status === 'UNDER_REVIEW'
+    );
+  }, [localizedTasks, isAuthenticated, profile]);
+
+  const myTasksCounts = useMemo(() => {
+    return {
+      all: myTasksList.length,
+      open: myTasksList.filter((t) => t.status === 'OPEN').length,
+      in_progress: myTasksList.filter((t) => t.status === 'IN_PROGRESS').length,
+      under_review: myTasksList.filter((t) => t.status === 'UNDER_REVIEW').length,
+      completed: myTasksList.filter((t) => t.status === 'COMPLETED').length,
+    };
+  }, [myTasksList]);
+
   // Filtered Task List
   const filteredTasks = useMemo(() => {
     let list = localizedTasks;
 
     // Filter by Active Tab
     if (activeTab === 'my-tasks') {
-      if (!isAuthenticated || !profile) {
-        list = [];
-      } else if (profile.activeRole === 'CUSTOMER') {
-        list = list.filter(t => t.clientId === profile.id || t.clientName.includes('Vous') || t.clientName.includes('You'));
-      } else {
-        list = list.filter(t => t.assignedToId === profile.id || t.status === 'IN_PROGRESS' || t.status === 'UNDER_REVIEW');
+      list = myTasksList;
+
+      // Filter by My-Tasks Status Sub-tab
+      if (myTasksStatusFilter === 'open') {
+        list = list.filter((t) => t.status === 'OPEN');
+      } else if (myTasksStatusFilter === 'in_progress') {
+        list = list.filter((t) => t.status === 'IN_PROGRESS');
+      } else if (myTasksStatusFilter === 'under_review') {
+        list = list.filter((t) => t.status === 'UNDER_REVIEW');
+      } else if (myTasksStatusFilter === 'completed') {
+        list = list.filter((t) => t.status === 'COMPLETED');
       }
     }
 
     // Filter by Category
     if (selectedCategory !== 'all') {
-      list = list.filter(t => t.category === selectedCategory);
+      list = list.filter((t) => t.category === selectedCategory);
     }
 
     // Filter by Urgency (< 6h)
     if (filterUrgent) {
-      list = list.filter(t => t.timeLimitHours <= 6);
+      list = list.filter((t) => t.timeLimitHours <= 6);
     }
 
     // Filter by Search Query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
-        t => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q)
       );
     }
 
     return list;
-  }, [localizedTasks, activeTab, user.activeRole, user.id, selectedCategory, filterUrgent, searchQuery]);
+  }, [
+    localizedTasks,
+    activeTab,
+    myTasksList,
+    myTasksStatusFilter,
+    selectedCategory,
+    filterUrgent,
+    searchQuery,
+  ]);
 
   // Current active modal task objects
   const selectedTask = useMemo(() => {
@@ -649,9 +698,34 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                   );
                 })}
               </div>
+
+              {/* Sub-status filter when in My-Tasks */}
+              {activeTab === 'my-tasks' && isAuthenticated && (
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {[
+                    { id: 'all', label: `Toutes (${myTasksCounts.all})` },
+                    { id: 'open', label: `En attente (${myTasksCounts.open})` },
+                    { id: 'in_progress', label: `En cours (${myTasksCounts.in_progress})` },
+                    { id: 'under_review', label: `À vérifier (${myTasksCounts.under_review})` },
+                    { id: 'completed', label: `Terminées (${myTasksCounts.completed})` },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      onClick={() => setMyTasksStatusFilter(st.id as any)}
+                      className={`rounded-lg px-3 py-1 text-xs font-extrabold transition whitespace-nowrap cursor-pointer ${
+                        myTasksStatusFilter === st.id
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Filters & Search Controls */}
+            {/* Filters, Search & Layout View Controls */}
             <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
                 <FiSearch className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-3.5 text-slate-400 text-sm`} />
@@ -673,7 +747,37 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* View Switcher: List vs Grid */}
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('list')}
+                    title="Vue liste compacte"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewLayout === 'list'
+                        ? 'bg-white text-brand-800 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <FiList />
+                    <span>Liste</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('grid')}
+                    title="Vue cartes"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewLayout === 'grid'
+                        ? 'bg-white text-brand-800 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <FiGrid />
+                    <span>Cartes</span>
+                  </button>
+                </div>
+
                 <button
                   onClick={() => setFilterUrgent(!filterUrgent)}
                   className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold border transition cursor-pointer ${filterUrgent
@@ -685,12 +789,13 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                   <span>{t('filterUrgent')}</span>
                 </button>
 
-                {(filterUrgent || searchQuery || selectedCategory !== 'all') && (
+                {(filterUrgent || searchQuery || selectedCategory !== 'all' || myTasksStatusFilter !== 'all') && (
                   <button
                     onClick={() => {
                       setFilterUrgent(false);
                       setSearchQuery('');
                       setSelectedCategory('all');
+                      setMyTasksStatusFilter('all');
                     }}
                     className="rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-300 transition cursor-pointer shadow-2xs"
                   >
@@ -700,7 +805,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
               </div>
             </div>
 
-            {/* Task Cards Grid (Full Rich TaskCard with All Metadata) */}
+            {/* Task Content: Compact List (Default Work-zilla) or Grid */}
             <div>
               {filteredTasks.length === 0 ? (
                 activeTab === 'my-tasks' && !isAuthenticated ? (
@@ -740,6 +845,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                           setFilterUrgent(false);
                           setSearchQuery('');
                           setSelectedCategory('all');
+                          setMyTasksStatusFilter('all');
                         }}
                         className="rounded-xl bg-slate-100 hover:bg-slate-200 px-4 py-2 text-xs font-bold text-slate-800 transition cursor-pointer"
                       >
@@ -754,6 +860,18 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                     </div>
                   </div>
                 )
+              ) : viewLayout === 'list' ? (
+                <div className="space-y-2.5">
+                  {filteredTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      userRole={user.activeRole}
+                      isMyTaskView={activeTab === 'my-tasks'}
+                      onSelectTask={handleOpenTask}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                   {filteredTasks.map((task) => (
@@ -856,12 +974,13 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                 </button>
               </div>
 
-              {/* Mini Cards Grid: ONLY Title & Price */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {localizedTasks.slice(0, 8).map((task) => (
-                  <TaskMiniCard
+              {/* Compact Task List (Work-zilla style) */}
+              <div className="space-y-2.5">
+                {localizedTasks.slice(0, 6).map((task) => (
+                  <TaskRow
                     key={task.id}
                     task={task}
+                    userRole={user.activeRole}
                     onSelectTask={handleOpenTask}
                   />
                 ))}
