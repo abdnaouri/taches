@@ -1,0 +1,5 @@
+name = "taches-email-forwarder"
+main = "index.js"
+compatibility_date = "2026-09-27"
+account_id = "10d74fab3a9cf06d055a28be30d5e764"
+

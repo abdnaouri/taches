@@ -19,7 +19,9 @@ import {
   FiCheck,
   FiPlus,
   FiFileText,
-  FiMapPin
+  FiMapPin,
+  FiZap,
+  FiAward
 } from 'react-icons/fi';
 
 interface WorkzillaHeroProps {
@@ -31,115 +33,173 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
   onDirectPost,
   onExploreFeed,
 }) => {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, locale } = useLanguage();
   const [taskQuery, setTaskQuery] = useState('');
   const [heroAudience, setHeroAudience] = useState<'customer' | 'performer'>('customer');
 
   const popularTasks = [
-    { title: 'Conception Logo & Identité', icon: '🎨' },
-    { title: 'Boutique YouCan ou Shopify', icon: '🛍️' },
-    { title: 'Traduction Arabe / Français', icon: '📄' },
-    { title: 'Saisie factures sous Excel', icon: '📊' },
-    { title: 'Montage vidéo TikTok / Reels', icon: '📱' },
-    { title: 'Démarches & Dépôt de plis', icon: '🚚' },
+    { title: 'Conception Logo & Identité', price: '150 DH', icon: '🎨' },
+    { title: 'Traduction Arabe / Français', price: '100 DH', icon: '📄' },
+    { title: 'Saisie factures sous Excel', price: '80 DH', icon: '📊' },
+    { title: 'Boutique YouCan ou Shopify', price: '250 DH', icon: '🛍️' },
+    { title: 'Montage vidéo TikTok / Reels', price: '120 DH', icon: '📱' },
+    { title: 'Démarches & Dépôt de plis', price: '70 DH', icon: '🚚' },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (taskQuery.trim()) {
-      onDirectPost(taskQuery.trim());
-    } else {
-      onDirectPost('');
-    }
+    onDirectPost(taskQuery.trim());
   };
 
   return (
-    <section className="relative bg-gradient-to-b from-white via-surface-soft to-slate-100/70 border-b border-line pt-8 pb-12 sm:pt-24 sm:pb-24">
+    <section className="relative bg-gradient-to-b from-white via-surface-soft to-slate-100/70 border-b border-line pt-8 pb-12 sm:pt-20 sm:pb-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 
         {/* Audience Toggle Tabs: Client vs Freelance */}
         <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-xl bg-slate-200/80 p-1.5 border border-slate-300 shadow-inner">
+          <div className="inline-flex rounded-2xl bg-slate-200/90 p-1.5 border border-slate-300 shadow-inner">
             <button
               onClick={() => setHeroAudience('customer')}
-              className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold transition-all ${heroAudience === 'customer'
-                ? 'bg-brand-700 text-white shadow-sm'
-                : 'text-slate-700 hover:text-slate-900'
-                }`}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm sm:text-base font-extrabold transition-all cursor-pointer ${
+                heroAudience === 'customer'
+                  ? 'bg-brand-700 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900'
+              }`}
             >
-              <FiUsers className="text-base" />
+              <FiUsers className="text-lg" />
               <span>{t('wzTabCustomer')}</span>
             </button>
             <button
               onClick={() => {
                 setHeroAudience('performer');
-                onExploreFeed();
               }}
-              className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold transition-all ${heroAudience === 'performer'
-                ? 'bg-brand-700 text-white shadow-sm'
-                : 'text-slate-700 hover:text-slate-900'
-                }`}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm sm:text-base font-extrabold transition-all cursor-pointer ${
+                heroAudience === 'performer'
+                  ? 'bg-brand-700 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900'
+              }`}
             >
-              <FiDollarSign className="text-base" />
+              <FiDollarSign className="text-lg" />
               <span>{t('wzTabPerformer')}</span>
             </button>
           </div>
         </div>
 
-        {/* Main Header Copy */}
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
-            {t('wzHeroTitle')}
-          </h1>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl mx-auto font-normal">
-            {t('wzHeroLead')}
-          </p>
-        </div>
-
-        {/* Work-zilla Instant Task Action Box */}
-        <div className="mt-8 sm:mt-10 max-w-3xl mx-auto">
-          <form
-            onSubmit={handleSubmit}
-            className="hero-task-box p-2 sm:p-3 bg-white flex flex-col sm:flex-row items-stretch gap-2.5"
-          >
-            <div className="relative flex-1 flex items-center">
-              <FiSearch className={`absolute ${isRTL ? 'right-4' : 'left-4'} text-slate-400 text-lg`} />
-              <input
-                type="text"
-                value={taskQuery}
-                onChange={(e) => setTaskQuery(e.target.value)}
-                placeholder={t('wzHeroInputPlaceholder')}
-                className={`w-full ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3.5 text-sm sm:text-base text-slate-900 font-medium placeholder-slate-400 bg-transparent outline-none`}
-              />
+        {heroAudience === 'customer' ? (
+          <>
+            {/* Customer Main Header Copy */}
+            <div className="text-center max-w-4xl mx-auto">
+              <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 border border-brand-200 px-3.5 py-1 text-xs font-extrabold text-brand-700 mb-4 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Plateforme N°1 de Services & Micro-tâches au Maroc</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
+                {t('wzHeroTitle')}
+              </h1>
+              <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl mx-auto font-normal">
+                {t('wzHeroLead')}
+              </p>
             </div>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-7 py-3.5 text-sm sm:text-base font-bold shadow-md hover:shadow-lg transition-all active:scale-98 whitespace-nowrap cursor-pointer"
-            >
-              <FiPlus className="text-lg" />
-              <span>{t('wzHeroBtnPost')}</span>
-            </button>
-          </form>
 
-          {/* Guarantee Note */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-slate-600 text-center">
-            <span className="inline-flex items-center gap-1 text-emerald-700">
-              <FiCheck className="text-emerald-600 font-bold" />
-              <span>100% Gratuit à la publication</span>
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="inline-flex items-center gap-1 text-slate-700">
-              <FiClock className="text-brand-600" />
-              <span>Première offre en ~35 secondes</span>
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="inline-flex items-center gap-1 text-emerald-700">
-              <FiLock className="text-emerald-600" />
-              <span>somme gardée en sécurité (Daman)</span>
-            </span>
+            {/* Work-zilla Instant Task Action Box */}
+            <div className="mt-8 sm:mt-10 max-w-3xl mx-auto">
+              <form
+                onSubmit={handleSubmit}
+                className="hero-task-box p-2 sm:p-3 bg-white flex flex-col sm:flex-row items-stretch gap-2.5"
+              >
+                <div className="relative flex-1 flex items-center">
+                  <FiSearch className={`absolute ${isRTL ? 'right-4' : 'left-4'} text-slate-400 text-lg`} />
+                  <input
+                    type="text"
+                    value={taskQuery}
+                    onChange={(e) => setTaskQuery(e.target.value)}
+                    placeholder={t('wzHeroInputPlaceholder')}
+                    className={`w-full ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3.5 text-sm sm:text-base text-slate-900 font-medium placeholder-slate-400 bg-transparent outline-none`}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-7 py-3.5 text-sm sm:text-base font-bold shadow-md hover:shadow-lg transition-all active:scale-98 whitespace-nowrap cursor-pointer"
+                >
+                  <FiPlus className="text-lg" />
+                  <span>{t('wzHeroBtnPost')}</span>
+                </button>
+              </form>
+
+              {/* Popular Task Quick Chips */}
+              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap text-xs">
+                <span className="font-bold text-slate-500 mr-1 hidden sm:inline">Exemples rapides :</span>
+                {popularTasks.map((pt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setTaskQuery(pt.title);
+                      onDirectPost(pt.title);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50/50 transition-all font-semibold shadow-2xs cursor-pointer"
+                  >
+                    <span>{pt.icon}</span>
+                    <span>{pt.title}</span>
+                    <span className="text-[11px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.2 rounded-md">
+                      {pt.price}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Guarantee Note */}
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-slate-600 text-center">
+                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                  <FiCheck className="text-emerald-600 font-black" />
+                  <span>100% Gratuit à la publication</span>
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="inline-flex items-center gap-1 text-slate-700 font-bold">
+                  <FiClock className="text-brand-600" />
+                  <span>Première offre en ~35 secondes</span>
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                  <FiLock className="text-emerald-600" />
+                  <span>Paiement 100% sécurisé (Daman)</span>
+                </span>
+              </div>
+
+            </div>
+          </>
+        ) : (
+          /* Performer / Freelance View */
+          <div className="text-center max-w-3xl mx-auto py-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-extrabold text-emerald-800 mb-4 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Espace Freelance & Rémunération au Maroc</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
+              Gagnez de l’argent en effectuant des missions
+            </h1>
+            <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
+              Rejoignez plus de 890 000 prestataires au Maroc. Postulez à des micro-services (saisie, graphisme, traduction, web, terrain) et recevez vos virements bancaires garantis d’avance par séquestre.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={onExploreFeed}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-8 py-4 text-base font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+              >
+                <FiSearch className="text-lg" />
+                <span>Parcourir toutes les missions ouvertes</span>
+                {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
+              </button>
+              <button
+                onClick={() => onDirectPost('')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 px-6 py-4 text-base font-bold transition-all cursor-pointer shadow-2xs"
+              >
+                <FiAward className="text-brand-600 text-lg" />
+                <span>Créer mon profil vérifié</span>
+              </button>
+            </div>
           </div>
-
-        </div>
+        )}
 
       </div>
     </section>
@@ -151,10 +211,10 @@ export const WorkzillaProofBar: React.FC = () => {
   const { t } = useLanguage();
 
   const stats = [
-    { value: t('wzStatTasksCount'), label: t('wzStatTasksLabel'), icon: <FiCheckCircle className="text-emerald-600 text-2xl" /> },
-    { value: t('wzStatSpeedTime'), label: t('wzStatSpeedLabel'), icon: <FiClock className="text-brand-600 text-2xl" /> },
-    { value: t('wzStatPriceFrom'), label: t('wzStatPriceLabel'), icon: <FiDollarSign className="text-amber-600 text-2xl" /> },
-    { value: t('wzStatGuaranteeText'), label: t('wzStatGuaranteeLabel'), icon: <FiShield className="text-emerald-700 text-2xl" /> },
+    { value: '890 000+', label: 'Prestataires et freelances au Maroc', icon: <FiUsers className="text-brand-600 text-2xl" /> },
+    { value: '35 secondes', label: 'Délai moyen de première réponse', icon: <FiClock className="text-brand-600 text-2xl" /> },
+    { value: '4.8 Millions', label: 'Tâches réalisées avec succès', icon: <FiCheckCircle className="text-emerald-600 text-2xl" /> },
+    { value: '100% Garanti', label: 'Paiement sous séquestre Daman', icon: <FiShield className="text-emerald-700 text-2xl" /> },
   ];
 
   return (
@@ -178,6 +238,119 @@ export const WorkzillaProofBar: React.FC = () => {
   );
 };
 
+/* Visual Categories Grid (Workzilla Universal Categorization) */
+interface WorkzillaCategoryGridProps {
+  onSelectCategory: (categoryKey: string) => void;
+}
+
+export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ onSelectCategory }) => {
+  const { isRTL } = useLanguage();
+
+  const categories = [
+    {
+      key: 'design',
+      title: 'Graphisme & Design',
+      desc: 'Logos, cartes de visite, affiches, flyers, retouche photo, menus café/resto',
+      price: 'Dès 100 DH',
+      icon: '🎨',
+      color: 'bg-rose-50 text-rose-700 border-rose-200',
+    },
+    {
+      key: 'copywriting',
+      title: 'Traduction & Rédaction',
+      desc: 'Arabe classique, Darija, Français, Anglais, contrats, mémoires, correction',
+      price: 'Dès 50 DH',
+      icon: '📄',
+      color: 'bg-blue-50 text-blue-700 border-blue-200',
+    },
+    {
+      key: 'assistance',
+      title: 'Saisie & Bureautique Excel',
+      desc: 'Saisie de factures, tableaux Excel, mise en page Word, archivage de données',
+      price: 'Dès 50 DH',
+      icon: '📊',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    },
+    {
+      key: 'development',
+      title: 'Boutiques YouCan & Sites Web',
+      desc: 'Création boutique en ligne, ajout de fiches produits, dépannage WordPress',
+      price: 'Dès 200 DH',
+      icon: '🛍️',
+      color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    },
+    {
+      key: 'marketing',
+      title: 'Vidéos, Reels & Marketing',
+      desc: 'Montage TikTok / Reels, sous-titrage, animation de réseaux sociaux, pub',
+      price: 'Dès 120 DH',
+      icon: '📱',
+      color: 'bg-purple-50 text-purple-700 border-purple-200',
+    },
+    {
+      key: 'micro',
+      title: 'Démarches & Services Terrain',
+      desc: 'Dépôt de plis, démarches administratives, visites et photos sur place',
+      price: 'Dès 70 DH',
+      icon: '🚚',
+      color: 'bg-amber-50 text-amber-700 border-amber-200',
+    },
+  ];
+
+  return (
+    <section className="bg-white py-14 sm:py-20 border-b border-line" id="categories">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+
+        {/* Section Heading */}
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <p className="section-kicker mb-2">Catégories & Services</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+            Des compétences pour chaque besoin
+          </h2>
+          <p className="mt-2 text-sm sm:text-base text-slate-600">
+            Cliquez sur un domaine pour lancer votre tâche ou trouver les meilleurs prestataires.
+          </p>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {categories.map((cat) => (
+            <div
+              key={cat.key}
+              onClick={() => onSelectCategory(cat.key)}
+              className="functional-card p-6 flex flex-col justify-between hover:border-brand-600 transition-all cursor-pointer group bg-white"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-3xl p-3 rounded-2xl bg-slate-50 border border-slate-200 group-hover:scale-105 transition-transform">
+                    {cat.icon}
+                  </div>
+                  <span className="text-xs font-extrabold text-brand-700 bg-brand-50 border border-brand-200 px-3 py-1 rounded-full">
+                    {cat.price}
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-700 transition-colors">
+                  {cat.title}
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  {cat.desc}
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-700 group-hover:underline">
+                <span>Commander ce service</span>
+                {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </section>
+  );
+};
+
 /* 3-Step Process (Work-zilla Simple Workflow) */
 interface WorkzillaHowItWorksProps {
   onPostTask: () => void;
@@ -189,22 +362,22 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
   const steps = [
     {
       num: '1',
-      title: t('wzStep1Title'),
-      desc: t('wzStep1Desc'),
+      title: '1. Décrivez votre tâche',
+      desc: 'Écrivez en quelques mots simples ce que vous souhaitez faire et indiquez votre budget en Dirhams (dès 50 DH). La publication est 100% gratuite.',
       icon: <FiFileText className="text-brand-700 text-xl" />,
       color: 'bg-brand-50 border-brand-200 text-brand-700',
     },
     {
       num: '2',
-      title: t('wzStep2Title'),
-      desc: t('wzStep2Desc'),
+      title: '2. Choisissez votre prestataire',
+      desc: 'En quelques minutes (dès 35 secondes), des personnes sérieuses et vérifiées avec Carte d’Identité Nationale (CIN) vous répondent.',
       icon: <FiUsers className="text-amber-700 text-xl" />,
       color: 'bg-amber-50 border-amber-200 text-amber-700',
     },
     {
       num: '3',
-      title: t('wzStep3Title'),
-      desc: t('wzStep3Desc'),
+      title: '3. Payez seulement si vous êtes satisfait',
+      desc: 'Votre argent est gardé en sécurité sous séquestre (Daman). Vous ne payez que lorsque vous avez vérifié et validé le résultat final.',
       icon: <FiShield className="text-emerald-700 text-xl" />,
       color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
     },
@@ -261,7 +434,7 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
         <div className="mt-10 text-center">
           <button
             onClick={onPostTask}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-8 py-3.5 text-sm sm:text-base shadow-md hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-8 py-3.5 text-sm sm:text-base shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
             <span>Publier ma tâche gratuitement</span>
             {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
@@ -279,23 +452,23 @@ export const WorkzillaTrustSection: React.FC = () => {
 
   const trustItems = [
     {
-      title: t('wzTrustItem1Title'),
-      desc: t('wzTrustItem1Desc'),
+      title: 'Paiement 100% Sécurisé sous Séquestre (Daman)',
+      desc: 'Votre argent ne quitte jamais la plateforme avant votre validation finale. Aucun risque de payer pour un travail incomplet ou non conforme.',
       icon: <FiShield className="text-emerald-700 text-2xl" />,
     },
     {
-      title: t('wzTrustItem2Title'),
-      desc: t('wzTrustItem2Desc'),
+      title: 'Freelances Vérifiés par Pièce d’Identité (CIN)',
+      desc: 'Chaque prestataire actif fournit sa Carte d’Identité Nationale marocaine et son numéro de mobile vérifié par SMS.',
       icon: <FiUsers className="text-brand-700 text-2xl" />,
     },
     {
-      title: t('wzTrustItem3Title'),
-      desc: t('wzTrustItem3Desc'),
+      title: 'Banques Marocaines & Retraits CMI / Wafacash',
+      desc: 'Compatible avec toutes les banques du Maroc (CIH, Attijariwafa, Al Barid, BMCE), cartes CMI et agences Cash Plus / Wafacash.',
       icon: <FiDollarSign className="text-amber-700 text-2xl" />,
     },
     {
-      title: t('wzTrustItem4Title'),
-      desc: t('wzTrustItem4Desc'),
+      title: 'Assistance Locale 7j/7 au Maroc & WhatsApp',
+      desc: 'Notre équipe marocaine à Casablanca et Rabat vous accompagne par téléphone et WhatsApp en Darija et Français.',
       icon: <FiPhoneCall className="text-emerald-600 text-2xl" />,
     },
   ];
@@ -306,13 +479,13 @@ export const WorkzillaTrustSection: React.FC = () => {
 
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="badge-daman mb-3">
-            <FiShield /> somme gardée en sécurité
+            <FiShield /> Sécurité & Garantie Daman Maroc
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-            {t('wzTrustTitle')}
+            Pourquoi faire confiance à tâches.ma ?
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            {t('wzTrustSubtitle')}
+            Une infrastructure pensée pour la confiance et la sérénité des particuliers et professionnels au Maroc
           </p>
         </div>
 
@@ -348,7 +521,6 @@ export const WorkzillaCompletedFeed: React.FC = () => {
     {
       title: 'Création du menu & carte des boissons pour café restaurant',
       price: '250 DH',
-      eur: '25 €',
       city: 'Casablanca',
       client: 'Karim B. (Gérant)',
       rating: 5.0,
@@ -358,7 +530,6 @@ export const WorkzillaCompletedFeed: React.FC = () => {
     {
       title: 'Traduction contrat de bail commercial Arabe vers Français',
       price: '150 DH',
-      eur: '15 €',
       city: 'Rabat',
       client: 'Nawal T. (Cabinet)',
       rating: 5.0,
@@ -368,7 +539,6 @@ export const WorkzillaCompletedFeed: React.FC = () => {
     {
       title: 'Saisie de 180 factures et rapprochement sous Excel',
       price: '120 DH',
-      eur: '12 €',
       city: 'Tanger',
       client: 'Rachid M. (Commerçant)',
       rating: 4.9,
@@ -378,11 +548,10 @@ export const WorkzillaCompletedFeed: React.FC = () => {
     {
       title: 'Mise en place de 35 fiches produits sur boutique YouCan Shop',
       price: '300 DH',
-      eur: '30 €',
       city: 'Marrakech',
       client: 'Souk Moderne (E-commerce)',
       rating: 5.0,
-      review: '« Produits bien rédigés en Darija et Français avec belles photos détourées. Ma boutique vend déjà. »',
+      review: '« Produits bien rédigés en Darija et Français avec de belles photos. Ma boutique vend déjà. »',
       freelancer: 'Amine K. (Spécialiste YouCan)',
     },
   ];
@@ -392,12 +561,12 @@ export const WorkzillaCompletedFeed: React.FC = () => {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="section-kicker mb-2">Exemples récents</p>
+          <p className="section-kicker mb-2">Exemples concrets</p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            {t('wzCompletedTitle')}
+            Dernières missions réalisées au Maroc
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            {t('wzCompletedSubtitle')}
+            Des exemples réels de micro-tâches rémunérées en Dirhams et validées par nos clients
           </p>
         </div>
 
@@ -450,10 +619,22 @@ export const WorkzillaHelpCenter: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const faqs = [
-    { q: t('wzFaq1Q'), a: t('wzFaq1A') },
-    { q: t('wzFaq2Q'), a: t('wzFaq2A') },
-    { q: t('wzFaq3Q'), a: t('wzFaq3A') },
-    { q: t('wzFaq4Q'), a: t('wzFaq4A') },
+    {
+      q: 'Comment fonctionne la garantie de paiement sous séquestre (Daman) ?',
+      a: 'Lorsque vous lancez une tâche, le montant est placé sur un compte sécurisé. Le prestataire effectue le travail et vous le remet. L’argent n’est versé au freelance que lorsque vous cliquez sur "Valider". Si le résultat ne convient pas, vous pouvez demander des modifications gratuites ou demander le remboursement complet.',
+    },
+    {
+      q: 'Combien coûte la publication d’une tâche ?',
+      a: 'La publication est 100% gratuite et sans engagement. Vous fixez vous-même le prix que vous souhaitez payer (dès 50 DH).',
+    },
+    {
+      q: 'Comment sont payés les prestataires au Maroc ?',
+      a: 'Les freelances reçoivent leurs gains directement par virement bancaire sur leur compte au Maroc (CIH, Attijariwafa, Banque Populaire, BMCE, etc.) ou en espèces via Cash Plus / Wafacash.',
+    },
+    {
+      q: 'Que faire si j’ai besoin d’aide pour rédiger ou commander ?',
+      a: 'Notre équipe marocaine est joignable 7j/7 par WhatsApp et téléphone. Nous pouvons rédiger votre tâche à votre place et vous conseiller.',
+    },
   ];
 
   return (
@@ -461,37 +642,37 @@ export const WorkzillaHelpCenter: React.FC = () => {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
         {/* WhatsApp Big Support Box */}
-        <div className="rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-6 sm:p-8 shadow-lg mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-800 to-emerald-900 text-white p-6 sm:p-8 shadow-xl mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/60 px-3 py-1 text-xs font-bold text-emerald-200 mb-2">
-              <FiPhoneCall /> Support direct au Maroc
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/80 border border-emerald-500/40 px-3 py-1 text-xs font-bold text-emerald-200 mb-2">
+              <FiPhoneCall /> Assistance directe au Maroc 7j/7
             </span>
-            <h3 className="text-xl sm:text-2xl font-bold">
-              {t('wzWhatsappTitle')}
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight">
+              Besoin d’aide pour déposer ou choisir un freelance ?
             </h3>
-            <p className="mt-1 text-sm text-emerald-100 max-w-xl">
-              {t('wzWhatsappDesc')}
+            <p className="mt-1.5 text-xs sm:text-sm text-emerald-100 max-w-xl leading-relaxed">
+              Vous avez 70 ans, vous n’êtes pas à l’aise avec internet, ou vous manquez de temps ? Un conseiller au Maroc vous répond sur WhatsApp en Darija ou Français.
             </p>
           </div>
           <a
             href="https://wa.me/212600000000?text=Bonjour,%20j%27ai%20besoin%20d%27aide%20sur%20Taches.ma"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 px-6 py-3.5 text-sm sm:text-base font-extrabold shadow-md shrink-0 transition-transform active:scale-95"
+            className="inline-flex items-center gap-2 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 px-6 py-4 text-sm sm:text-base font-black shadow-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
           >
-            <FiMessageSquare className="text-xl" />
-            <span>{t('wzWhatsappBtn')}</span>
+            <FiMessageSquare className="text-xl text-emerald-700" />
+            <span>Écrire sur WhatsApp (+212)</span>
           </a>
         </div>
 
         {/* FAQ Header */}
         <div className="text-center mb-8">
-          <p className="section-kicker mb-1">Aide & Réponses</p>
+          <p className="section-kicker mb-1">Aide & Questions fréquentes</p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            {t('wzFaqTitle')}
+            Tout ce qu’il faut savoir
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            {t('wzFaqSubtitle')}
+            Des réponses simples et claires à toutes vos questions
           </p>
         </div>
 
@@ -507,7 +688,7 @@ export const WorkzillaHelpCenter: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setOpenFaq(isOpen ? null : index)}
-                  className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 font-bold text-slate-900 hover:text-brand-700 text-sm sm:text-base"
+                  className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 font-bold text-slate-900 hover:text-brand-700 text-sm sm:text-base cursor-pointer"
                 >
                   <span className="flex items-center gap-2.5">
                     <FiHelpCircle className="text-brand-600 shrink-0" />
@@ -552,7 +733,7 @@ export const WorkzillaFooter: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              La bourse de référence des micro-tâches et services freelance au Maroc avec paiement garanti sous séquestre (Daman).
+              La bourse marocaine de référence pour les micro-tâches et services freelance avec paiement garanti sous séquestre (Daman).
             </p>
           </div>
 
@@ -564,9 +745,9 @@ export const WorkzillaFooter: React.FC = () => {
             <ul className="space-y-2 text-xs text-slate-400">
               <li><a href={`/${locale}/tasks`} className="hover:text-white transition-colors">{t('navExplore')}</a></li>
               <li><a href={`/${locale}/wallet`} className="hover:text-white transition-colors">Portefeuille & Séquestre</a></li>
-              <li><a href={`/${locale}#how-it-works`} className="hover:text-white transition-colors">{t('menuHowItWorks')}</a></li>
-              <li><a href={`/${locale}#trust-daman`} className="hover:text-white transition-colors">{t('menuDamanSecurity')}</a></li>
-              <li><a href={`/${locale}#help-faq`} className="hover:text-white transition-colors">{t('unuFooterFaq')}</a></li>
+              <li><a href={`/${locale}#how-it-works`} className="hover:text-white transition-colors">Comment ça marche ?</a></li>
+              <li><a href={`/${locale}#trust-daman`} className="hover:text-white transition-colors">Garantie Séquestre</a></li>
+              <li><a href={`/${locale}#help-faq`} className="hover:text-white transition-colors">Questions fréquentes</a></li>
             </ul>
           </div>
 
@@ -606,7 +787,7 @@ export const WorkzillaFooter: React.FC = () => {
         {/* Bottom copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            © 2026 tâches.ma • Tous droits réservés. Plateforme conçue pour le Maroc.
+            © 2026 tâches.ma • Plateforme marocaine avec paiement garanti.
           </div>
           <div className="flex items-center gap-4">
             <span className="hover:text-slate-400">Conditions Générales</span>

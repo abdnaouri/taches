@@ -158,3 +158,49 @@ export async function recordDynamicTransaction(tx: Omit<WalletTransaction, 'id' 
     console.warn('Failed to record transaction in Supabase:', err.message);
   }
 }
+
+/**
+ * Execute dynamic wallet deposit
+ */
+export async function executeDynamicDeposit(payload: {
+  userId: string;
+  amountDH: number;
+  depositMethod: string;
+  paymentDetails?: any;
+}): Promise<{ success: boolean; transaction?: WalletTransaction; error?: string }> {
+  try {
+    const res = await fetch('/api/wallet/deposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to execute deposit:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Execute dynamic wallet withdrawal request
+ */
+export async function executeDynamicWithdrawal(payload: {
+  userId: string;
+  amountDH: number;
+  payoutMethod: string;
+  speedTier: string;
+  payoutDetails: any;
+}): Promise<{ success: boolean; transaction?: WalletTransaction; feeCalculation?: any; error?: string }> {
+  try {
+    const res = await fetch('/api/wallet/withdraw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to execute withdrawal:', err);
+    return { success: false, error: err.message };
+  }
+}
+

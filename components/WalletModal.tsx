@@ -1,17 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserProfile, WalletTransaction } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getLocalizedTransaction } from '@/lib/mockData';
+import {
+  calculatePayoutFees,
+  detectMoroccanBank,
+  MIN_WITHDRAWAL_DH,
+  PayoutMethod,
+  PayoutSpeed,
+  MAD_TO_EUR_RATE,
+} from '@/lib/payoutService';
 import { 
   FiX, 
   FiLock, 
   FiArrowDownLeft, 
   FiArrowUpRight, 
   FiCheckCircle,
-  FiShield
+  FiShield,
+  FiCreditCard,
+  FiClock,
+  FiAlertTriangle,
+  FiCheck
 } from 'react-icons/fi';
+import { SiBinance } from 'react-icons/si';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -19,7 +32,7 @@ interface WalletModalProps {
   user: UserProfile;
   transactions: WalletTransaction[];
   onDeposit: (amountDH: number) => void;
-  onWithdraw: (amountDH: number) => void;
+  onWithdraw: (amountDH: number, details?: any) => void;
 }
 
 export const WalletModal: React.FC<WalletModalProps> = ({
@@ -33,13 +46,27 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const { t, locale, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState<'balance' | 'deposit' | 'withdraw'>('balance');
   const [customDepositDH, setCustomDepositDH] = useState<number>(500);
-  const [withdrawAmountDH, setWithdrawAmountDH] = useState<number>(500);
+  const [withdrawAmountDH, setWithdrawAmountDH] = useState<number>(Math.max(MIN_WITHDRAWAL_DH, Math.min(500, Math.round(user.balanceAvailable * 10))));
+  const [withdrawMethod, setWithdrawMethod] = useState<PayoutMethod>('RIB');
+  const [speedTier, setSpeedTier] = useState<PayoutSpeed>('STANDARD');
+  const [ribNumber, setRibNumber] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState(user.fullName || '');
+  const [cinNumber, setCinNumber] = useState('');
+  const [binancePayId, setBinancePayId] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-
-  if (!isOpen) return null;
 
   const balanceDH = Math.round(user.balanceAvailable * 10);
   const escrowDH = Math.round(user.balanceEscrow * 10);
+
+  const detectedBank = useMemo(() => {
+    return detectMoroccanBank(ribNumber);
+  }, [ribNumber]);
+
+  const payoutCalc = useMemo(() => {
+    return calculatePayoutFees(withdrawAmountDH, withdrawMethod, speedTier, balanceDH);
+  }, [withdrawAmountDH, withdrawMethod, speedTier, balanceDH]);
+
+  if (!isOpen) return null;
 
   const handleDepositClick = (amtDH: number) => {
     onDeposit(amtDH);
@@ -49,9 +76,22 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   const handleWithdrawClick = (e: React.FormEvent) => {
     e.preventDefault();
-    if (withdrawAmountDH <= 0 || withdrawAmountDH > balanceDH) return;
-    onWithdraw(withdrawAmountDH);
-    setSuccessMsg(t('toastWithdrawalInitiated', { amount: withdrawAmountDH }));
+    if (!payoutCalc.isValid) return;
+
+    const details = {
+      method: withdrawMethod,
+      speed: speedTier,
+      rib: ribNumber,
+      bankName: detectedBank?.name || 'Banque Marocaine',
+      accountHolder: accountHolderName,
+      cin: cinNumber,
+      binancePayId,
+      feeDH: payoutCalc.feeDH,
+      netAmountDH: payoutCalc.netAmountDH,
+    };
+
+    onWithdraw(withdrawAmountDH, details);
+    setSuccessMsg(`Demande de retrait de ${withdrawAmountDH} DH initiée (Net: ${payoutCalc.netAmountDH} DH)`);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
@@ -92,8 +132,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         {/* Balance Cards Grid */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div className="rounded-xl bg-brand-900 text-white p-5 shadow-xs">
-            <div className="text-xs text-brand-200 font-semibold uppercase tracking-wider">
-              {t('walletAvailableBalance')}
+            <div className="flex items-center justify-between text-xs text-brand-200 font-semibold uppercase tracking-wider">
+              <span>{t('walletAvailableBalance')}</span>
+              <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-brand-100">
+                ~{(balanceDH * MAD_TO_EUR_RATE).toFixed(2)} €
+              </span>
             </div>
             <div className="text-3xl font-extrabold mt-1 text-white tracking-tight">
               {balanceDH} DH
@@ -160,7 +203,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               transactions.map((tx) => {
                 const localizedTx = getLocalizedTransaction(tx, locale);
                 const isPositive = tx.type === 'DEPOSIT' || tx.type === 'ESCROW_RELEASE';
-                const txAmountDH = Math.round(tx.amount * 10);
+                const txAmountDH = Math.round(Math.abs(tx.amount) * 10);
                 return (
                   <div
                     key={tx.id}
@@ -201,7 +244,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   className="rounded-xl border border-slate-300 bg-white p-3 text-center text-xs font-bold text-slate-900 hover:border-brand-700 hover:bg-brand-50 transition cursor-pointer"
                 >
                   <div className="text-sm font-extrabold">{amtDH} DH</div>
-                  <div className="text-[10px] text-emerald-700 font-bold">{t('depositInstant')}</div>
+                  <div className="text-[10px] text-slate-400 font-semibold">~{(amtDH * MAD_TO_EUR_RATE).toFixed(0)} €</div>
                 </button>
               ))}
             </div>
@@ -230,7 +273,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
-              💳 Compatible avec les cartes bancaires marocaines (CMI), virement instantané CIH Bank / Attijariwafa Bank, et versements en espèces Cash Plus / Wafacash.
+              💳 Compatible avec les cartes bancaires internationales & marocaines (Visa, Mastercard, Apple Pay) et Binance Pay (USDT).
             </div>
           </div>
         )}
@@ -241,8 +284,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
               <div className="text-xs text-slate-600">{t('withdrawAvailableLabel')}</div>
               <div className="text-2xl font-extrabold text-slate-900">{balanceDH} DH</div>
-              <div className="text-[11px] text-emerald-700 font-bold">
-                ✓ {t('withdrawFeeAdvantage')} {t('withdrawFeeDiscount')}
+              <div className="text-[11px] text-slate-500 font-semibold">
+                Min. de retrait : {MIN_WITHDRAWAL_DH} DH • Payouts en MAD ou USDT
               </div>
             </div>
 
@@ -252,7 +295,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               </label>
               <input
                 type="number"
-                min={100}
+                min={MIN_WITHDRAWAL_DH}
                 max={balanceDH}
                 step={50}
                 value={withdrawAmountDH}
@@ -261,24 +304,127 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               />
             </div>
 
+            {/* Payout method toggle */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Relevé d'Identité Bancaire (RIB marocain 24 chiffres) ou Cash Plus :
+                Mode de retrait :
               </label>
-              <input
-                type="text"
-                placeholder="Ex: 230 780 0000000000000000 00 (CIH, Attijari, BP...)"
-                required
-                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono"
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWithdrawMethod('RIB')}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
+                    withdrawMethod === 'RIB'
+                      ? 'border-brand-700 bg-brand-50 text-brand-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  RIB Bancaire
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWithdrawMethod('CASHPLUS')}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
+                    withdrawMethod === 'CASHPLUS'
+                      ? 'border-brand-700 bg-brand-50 text-brand-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  Cash Plus
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWithdrawMethod('BINANCE_PAY')}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
+                    withdrawMethod === 'BINANCE_PAY'
+                      ? 'border-brand-700 bg-brand-50 text-brand-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  Binance Pay
+                </button>
+              </div>
             </div>
+
+            {withdrawMethod === 'RIB' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Relevé d'Identité Bancaire (RIB 24 chiffres) :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 230 780 0000 1234 5678 9012 34"
+                  value={ribNumber}
+                  onChange={(e) => setRibNumber(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono"
+                />
+                {detectedBank && (
+                  <div className={`mt-1.5 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold border ${detectedBank.bg} ${detectedBank.color}`}>
+                    <FiCheck />
+                    <span>{detectedBank.name}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {withdrawMethod === 'CASHPLUS' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Numéro de Carte Nationale (CIN) :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: BE123456"
+                  value={cinNumber}
+                  onChange={(e) => setCinNumber(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono uppercase"
+                />
+              </div>
+            )}
+
+            {withdrawMethod === 'BINANCE_PAY' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  ID Binance Pay (8-9 chiffres) :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 892401844"
+                  value={binancePayId}
+                  onChange={(e) => setBinancePayId(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono"
+                />
+              </div>
+            )}
+
+            {/* Net Amount Breakdown */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex justify-between items-center">
+              <div>
+                <span className="text-slate-500">Frais de transfert :</span>{' '}
+                <span className="font-bold text-slate-800">{payoutCalc.feeDH} DH</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Net versé :</span>{' '}
+                <span className="font-black text-brand-700 text-sm">{payoutCalc.netAmountDH} DH</span>
+              </div>
+            </div>
+
+            {!payoutCalc.isValid && (
+              <div className="text-rose-700 text-xs font-semibold flex items-center gap-1">
+                <FiAlertTriangle />
+                <span>{payoutCalc.errorMessage}</span>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={withdrawAmountDH <= 0 || withdrawAmountDH > balanceDH}
+              disabled={!payoutCalc.isValid}
               className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs font-bold text-white shadow-md disabled:opacity-40 transition active:scale-95 cursor-pointer"
             >
-              {t('btnConfirmWithdrawal')}
+              {t('btnConfirmWithdrawal')} ({payoutCalc.netAmountDH} DH Net)
             </button>
           </form>
         )}

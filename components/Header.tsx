@@ -34,8 +34,8 @@ interface HeaderProps {
   onOpenWallet: () => void;
   onOpenQualification: () => void;
   onViewMyWork: () => void;
-  activeTab: 'explore' | 'my-tasks';
-  setActiveTab: (tab: 'explore' | 'my-tasks') => void;
+  activeTab: 'explore' | 'my-tasks' | 'examples' | 'live';
+  setActiveTab: (tab: 'explore' | 'my-tasks' | 'examples' | 'live') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -282,6 +282,17 @@ export const Header: React.FC<HeaderProps> = ({
                         >
                           <FiAward className="text-slate-400" />
                           <span>{t('menuQualification')}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            router.push(`/${locale}/admin/payouts`);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          <FiShield className="text-brand-700 text-sm" />
+                          <span>Console Admin Payouts</span>
                         </button>
 
                         <a
@@ -607,6 +618,21 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-3">
                   <FiAward className="text-base text-brand-700" />
                   <span>{t('menuQualification')}</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push(`/${locale}/admin/payouts`);
+                }}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <FiShield className="text-base text-brand-700" />
+                  <span>Console Admin Payouts</span>
                 </div>
                 {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
               </button>

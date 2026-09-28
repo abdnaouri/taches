@@ -13,8 +13,14 @@ import {
   updateDynamicTask,
   submitDynamicProof,
   fetchDynamicTransactions,
-  recordDynamicTransaction
+  recordDynamicTransaction,
+  executeDynamicDeposit,
+  executeDynamicWithdrawal
 } from '@/lib/supabaseService';
+import {
+  PLATFORM_PERFORMER_COMMISSION_RATE,
+  MAD_TO_EUR_RATE
+} from '@/lib/payoutService';
 import { Header } from '@/components/Header';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskMiniCard } from '@/components/TaskMiniCard';
@@ -25,9 +31,17 @@ import { ProofSubmissionDrawer } from '@/components/ProofSubmissionDrawer';
 import { WalletModal } from '@/components/WalletModal';
 import { WalletPageContent } from '@/components/WalletPageContent';
 import { QualificationModal } from '@/components/QualificationModal';
+import { TaskExamplesPage } from '@/components/TaskExamplesPage';
+import { WorkzillaDifferentiators } from '@/components/WorkzillaDifferentiators';
+import { MoroccanLiveMatchCalculator } from '@/components/MoroccanLiveMatchCalculator';
+import { MoroccanAudienceMatrix } from '@/components/MoroccanAudienceMatrix';
+import { MoroccanInteractiveWorkflow } from '@/components/MoroccanInteractiveWorkflow';
+import { MoroccanLiveActivityTicker } from '@/components/MoroccanLiveActivityTicker';
+import { TaskExample } from '@/lib/taskExamplesData';
 import {
   WorkzillaHero,
   WorkzillaProofBar,
+  WorkzillaCategoryGrid,
   WorkzillaHowItWorks,
   WorkzillaTrustSection,
   WorkzillaCompletedFeed,
@@ -85,9 +99,36 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // Work-zilla Pre-filled Task Input State
   const [prefillTaskTitle, setPrefillTaskTitle] = useState<string>('');
+  const [prefillTaskDesc, setPrefillTaskDesc] = useState<string>('');
+  const [prefillTaskBudget, setPrefillTaskBudget] = useState<number | undefined>(undefined);
+  const [prefillTaskCategory, setPrefillTaskCategory] = useState<string | undefined>(undefined);
+
+  // Copy Task Example handler
+  const handleCopyTaskExample = (example: TaskExample) => {
+    const title = example.title[locale] || example.title.fr;
+    const desc = example.description[locale] || example.description.fr;
+    const budget = example.priceDH;
+    const cat = example.category;
+
+    setPrefillTaskTitle(title);
+    setPrefillTaskDesc(desc);
+    setPrefillTaskBudget(budget);
+    setPrefillTaskCategory(cat);
+
+    if (!isAuthenticated) {
+      openAuthModal('login', 'Connectez-vous pour publier cette tâche', () => {
+        updateQuery({ create: 'true' });
+      });
+      return;
+    }
+    if (profile?.activeRole !== 'CUSTOMER') {
+      toggleRole('CUSTOMER');
+    }
+    updateQuery({ create: 'true' });
+  };
 
   // View & Filter State
-  const activeTab = (searchParams.get('tab') as 'explore' | 'my-tasks') || 'explore';
+  const activeTab = (searchParams.get('tab') as 'examples' | 'live' | 'explore' | 'my-tasks') || 'examples';
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [myTasksStatusFilter, setMyTasksStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'under_review' | 'completed'>('all');
   const [filterUrgent, setFilterUrgent] = useState<boolean>(false);
@@ -349,28 +390,57 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const updated: Task = {
       ...task,
       status: 'COMPLETED',
+      completedAt: new Date().toISOString(),
     };
 
     setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
 
+    const commissionRate = PLATFORM_PERFORMER_COMMISSION_RATE; // 15%
+    const grossRewardEur = task.reward;
+    const commissionEur = Number((grossRewardEur * commissionRate).toFixed(2));
+    const netRewardEur = Number((grossRewardEur - commissionEur).toFixed(2));
+
+    const grossRewardDH = Math.round(grossRewardEur * 10);
+    const netRewardDH = Math.round(netRewardEur * 10);
+    const commissionDH = Math.round(commissionEur * 10);
+
     // Release escrow to performer or complete customer order
     if (isAuthenticated && profile) {
-      await updateProfile({
-        balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - task.totalBudget),
-        customerTotalSpent: (profile.customerTotalSpent || 0) + task.totalBudget,
-      });
+      if (profile.activeRole === 'CUSTOMER') {
+        await updateProfile({
+          balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - task.totalBudget),
+          customerTotalSpent: (profile.customerTotalSpent || 0) + task.totalBudget,
+        });
+      } else {
+        await updateProfile({
+          balanceAvailable: (profile.balanceAvailable || 0) + netRewardEur,
+          performerCompletedTasks: (profile.performerCompletedTasks || 0) + 1,
+        });
+      }
     }
 
-    showToast(t('toastTaskApproved', { amount: Math.round(task.reward * 10) }));
+    showToast(t('toastTaskApproved', { amount: netRewardDH }));
 
     // Supabase Persistence
-    await updateDynamicTask(taskId, { status: 'COMPLETED' });
+    await updateDynamicTask(taskId, { status: 'COMPLETED', completedAt: updated.completedAt });
+    
+    // Record escrow release transaction
     await recordDynamicTransaction({
-      userId: task.clientId,
+      userId: task.assignedToId || profile?.id || user.id,
       type: 'ESCROW_RELEASE',
-      amount: task.reward,
+      amount: grossRewardEur,
       currency: 'EUR',
-      description: `${t('statusCompleted')} #${taskId}`,
+      description: `Gains validés pour mission #${taskId.slice(0, 8)} (${grossRewardDH} DH)`,
+      status: 'COMPLETED',
+    });
+
+    // Record platform commission entry (Workzilla high margin take-rate)
+    await recordDynamicTransaction({
+      userId: task.assignedToId || profile?.id || user.id,
+      type: 'COMMISSION',
+      amount: -commissionEur,
+      currency: 'EUR',
+      description: `Commission de service Tâches.ma (15%) • -${commissionDH} DH`,
       status: 'COMPLETED',
     });
   };
@@ -381,7 +451,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       return;
     }
 
-    const amountEur = amountDH / 10;
+    const amountEur = Number((amountDH * MAD_TO_EUR_RATE).toFixed(2));
     await updateProfile({
       balanceAvailable: (profile.balanceAvailable || 0) + amountEur,
     });
@@ -392,56 +462,56 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       type: 'DEPOSIT',
       amount: amountEur,
       currency: 'EUR',
-      description: `${t('tabDeposit')} (${amountDH} DH)`,
+      description: `${t('tabDeposit')} (${amountDH} DH / ${amountEur} €)`,
       createdAt: t('justNow'),
       status: 'COMPLETED',
     };
     setTransactions(prev => [newTx, ...prev]);
     showToast(t('toastDepositSuccess', { amount: amountDH }));
 
-    await recordDynamicTransaction({
+    await executeDynamicDeposit({
       userId: profile.id,
-      type: 'DEPOSIT',
-      amount: amountEur,
-      currency: 'EUR',
-      description: `${t('tabDeposit')} (${amountDH} DH)`,
-      status: 'COMPLETED',
+      amountDH,
+      depositMethod: 'CARD',
     });
   };
 
-  const handleWithdraw = async (amountDH: number) => {
+  const handleWithdraw = async (amountDH: number, details?: any) => {
     if (!isAuthenticated || !profile) {
       openAuthModal('login', 'Connectez-vous pour effectuer un retrait');
       return;
     }
 
-    const amountEur = amountDH / 10;
+    const amountEur = Number((amountDH * MAD_TO_EUR_RATE).toFixed(2));
     if (amountEur > (profile.balanceAvailable || 0)) return;
 
     await updateProfile({
-      balanceAvailable: (profile.balanceAvailable || 0) - amountEur,
+      balanceAvailable: Math.max(0, (profile.balanceAvailable || 0) - amountEur),
     });
+
+    const payoutMethod = details?.method || 'RIB';
+    const netAmountDH = details?.netAmountDH || (amountDH - 15);
+    const feeDH = details?.feeDH || 15;
 
     const newTx: WalletTransaction = {
       id: `tx_${Date.now()}`,
       userId: profile.id,
       type: 'WITHDRAWAL',
-      amount: amountEur,
+      amount: -amountEur,
       currency: 'EUR',
-      description: `${t('tabWithdraw')} (${amountDH} DH)`,
+      description: `Retrait ${payoutMethod} - Net: ${netAmountDH} DH (Frais: ${feeDH} DH)`,
       createdAt: t('justNow'),
-      status: 'COMPLETED',
+      status: 'PENDING',
     };
     setTransactions(prev => [newTx, ...prev]);
     showToast(t('toastWithdrawalInitiated', { amount: amountDH }));
 
-    await recordDynamicTransaction({
+    await executeDynamicWithdrawal({
       userId: profile.id,
-      type: 'WITHDRAWAL',
-      amount: amountEur,
-      currency: 'EUR',
-      description: `${t('tabWithdraw')} (${amountDH} DH)`,
-      status: 'COMPLETED',
+      amountDH,
+      payoutMethod,
+      speedTier: details?.speed || 'STANDARD',
+      payoutDetails: details || {},
     });
   };
 
@@ -601,84 +671,150 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         }}
       />
 
+      {/* Moroccan Live Real-Time Ticker */}
+      <MoroccanLiveActivityTicker />
+
 
       {viewMode === 'tasks' ? (
-        /* DEDICATED ALL TASKS CATALOG PAGE */
-        <main className="flex-1 py-8 sm:py-12 bg-slate-50/60">
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-
-            {/* Breadcrumb Navigation */}
-            <nav className="flex items-center gap-2 text-xs text-slate-500 mb-6">
-              <button
-                onClick={() => router.push(`/${locale}`)}
-                className="hover:text-brand-700 transition-colors font-medium cursor-pointer"
-              >
-                Accueil
-              </button>
-              <span>/</span>
-              <span className="font-bold text-slate-900">
-                {activeTab === 'explore'
-                  ? t('navExplore')
-                  : user.activeRole === 'CUSTOMER'
-                    ? t('navMyOrders')
-                    : t('navMyMissions')}
-              </span>
-            </nav>
-
-            {/* Dedicated Catalog Banner */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs mb-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 border border-brand-200/80 px-3 py-1 text-xs font-bold text-brand-700 mb-2.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{t('navExplore')}</span>
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    {activeTab === 'explore'
-                      ? t('tasksAvailable', { count: filteredTasks.length })
-                      : user.activeRole === 'CUSTOMER'
-                        ? t('tasksMyOrders', { count: filteredTasks.length })
-                        : t('tasksMyMissions', { count: filteredTasks.length })}
-                  </h1>
-                  <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                    Parcourez et postulez aux micro-services rémunérés en Dirhams (MAD) avec paiement 100% garanti sous séquestre (Daman).
-                  </p>
+        /* DEDICATED ALL TASKS CATALOG / EXAMPLES PAGE */
+        activeTab === 'examples' || activeTab === 'explore' ? (
+          <main className="flex-1">
+            {/* Top View Selector Bar */}
+            <div className="bg-white border-b border-slate-200 py-3">
+              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+                  <button
+                    onClick={() => updateQuery({ tab: 'examples' })}
+                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer bg-white text-brand-700 shadow-xs"
+                  >
+                    ⚡ {locale === 'ar' ? 'أمثلة المهام المنجزة' : locale === 'ru' ? 'Примеры заданий' : locale === 'en' ? 'Task Examples' : 'Exemples de missions'}
+                  </button>
+                  <button
+                    onClick={() => updateQuery({ tab: 'live' })}
+                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
+                  >
+                    🔴 {locale === 'ar' ? `مهام مفتوحة (${tasks.length})` : locale === 'ru' ? `Открытые (${tasks.length})` : locale === 'en' ? `Live Tasks (${tasks.length})` : `Missions en direct (${tasks.length})`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        openAuthModal('login', 'Connectez-vous pour voir vos missions');
+                        return;
+                      }
+                      updateQuery({ tab: 'my-tasks' });
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
+                  >
+                    👤 {user.activeRole === 'CUSTOMER' ? t('navMyOrders') : t('navMyMissions')}
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 shrink-0">
-                  {/* Tab Selector */}
-                  <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
-                    <button
-                      onClick={() => updateQuery({ tab: null })}
-                      className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'explore'
-                          ? 'bg-white text-brand-700 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                    >
-                      {t('navExplore')}
-                    </button>
-                    <button
-                      onClick={() => updateQuery({ tab: 'my-tasks' })}
-                      className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'my-tasks'
-                          ? 'bg-white text-brand-700 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                    >
-                      {user.activeRole === 'CUSTOMER' ? t('navMyOrders') : t('navMyMissions')}
-                    </button>
-                  </div>
-
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={loadSupabaseData}
-                    disabled={isSyncing}
-                    title="Synchroniser avec Supabase"
-                    className="flex items-center gap-1.5 rounded-xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                    onClick={handleOpenCreateTask}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
                   >
-                    <FiRefreshCw className={`text-xs ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
-                    <span>Sync</span>
+                    <FiPlus className="text-sm" />
+                    <span>{t('btnPostTask')}</span>
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Task Examples Component (Work-zilla Style) */}
+            <TaskExamplesPage
+              onCopyTask={handleCopyTaskExample}
+              onPostNewTask={handleOpenCreateTask}
+            />
+          </main>
+        ) : (
+          <main className="flex-1 py-8 sm:py-12 bg-slate-50/60">
+            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+
+              {/* Breadcrumb Navigation */}
+              <nav className="flex items-center gap-2 text-xs text-slate-500 mb-6">
+                <button
+                  onClick={() => router.push(`/${locale}`)}
+                  className="hover:text-brand-700 transition-colors font-medium cursor-pointer"
+                >
+                  Accueil
+                </button>
+                <span>/</span>
+                <span className="font-bold text-slate-900">
+                  {activeTab === 'live'
+                    ? 'Missions ouvertes en direct'
+                    : user.activeRole === 'CUSTOMER'
+                      ? t('navMyOrders')
+                      : t('navMyMissions')}
+                </span>
+              </nav>
+
+              {/* Dedicated Catalog Banner */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 border border-brand-200/80 px-3 py-1 text-xs font-bold text-brand-700 mb-2.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{activeTab === 'live' ? 'Missions en direct' : t('navExplore')}</span>
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                      {activeTab === 'live'
+                        ? t('tasksAvailable', { count: filteredTasks.length })
+                        : user.activeRole === 'CUSTOMER'
+                          ? t('tasksMyOrders', { count: filteredTasks.length })
+                          : t('tasksMyMissions', { count: filteredTasks.length })}
+                    </h1>
+                    <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                      Parcourez et postulez aux micro-services rémunérés en Dirhams (MAD) avec paiement 100% garanti sous séquestre (Daman).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    {/* Tab Selector */}
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+                      <button
+                        onClick={() => updateQuery({ tab: 'examples' })}
+                        className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
+                      >
+                        ⚡ Exemples
+                      </button>
+                      <button
+                        onClick={() => updateQuery({ tab: 'live' })}
+                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'live'
+                            ? 'bg-white text-brand-700 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                      >
+                        🔴 En direct
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!isAuthenticated) {
+                            openAuthModal('login', 'Connectez-vous pour voir vos missions');
+                            return;
+                          }
+                          updateQuery({ tab: 'my-tasks' });
+                        }}
+                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'my-tasks'
+                            ? 'bg-white text-brand-700 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                      >
+                        {user.activeRole === 'CUSTOMER' ? t('navMyOrders') : t('navMyMissions')}
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={loadSupabaseData}
+                      disabled={isSyncing}
+                      title="Synchroniser avec Supabase"
+                      className="flex items-center gap-1.5 rounded-xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                    >
+                      <FiRefreshCw className={`text-xs ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+                      <span>Sync</span>
+                    </button>
+                  </div>
+                </div>
 
               {/* Category Filter Pills */}
               <div className="mt-6 pt-6 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -888,6 +1024,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
           </div>
         </main>
+        )
       ) : viewMode === 'wallet' ? (
         /* DEDICATED PROPER WALLET & ESCROW PAGE */
         !isAuthenticated ? (
@@ -935,19 +1072,116 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             }}
           />
 
-          {/* How it Works (3-Steps Simplicity) */}
-          <WorkzillaHowItWorks
+          {/* Proof Bar (Numbers) */}
+          <WorkzillaProofBar />
+
+          {/* Instant Moroccan Live Match & Price Calculator */}
+          <MoroccanLiveMatchCalculator
+            onLaunchCustomTask={(taskPrefill) => {
+              setPrefillTaskTitle(taskPrefill.title);
+              setPrefillTaskDesc(taskPrefill.description);
+              setPrefillTaskBudget(taskPrefill.rewardDH);
+              setPrefillTaskCategory(taskPrefill.category);
+
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour lancer cette tâche', () => {
+                  updateQuery({ create: 'true' });
+                });
+                return;
+              }
+              if (profile?.activeRole !== 'CUSTOMER') {
+                toggleRole('CUSTOMER');
+              }
+              updateQuery({ create: 'true' });
+            }}
+          />
+
+          {/* Visual Categories Grid */}
+          <WorkzillaCategoryGrid
+            onSelectCategory={(catKey) => {
+              setPrefillTaskCategory(catKey);
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour publier une tâche', () => {
+                  updateQuery({ create: 'true' });
+                });
+                return;
+              }
+              if (profile?.activeRole !== 'CUSTOMER') {
+                toggleRole('CUSTOMER');
+              }
+              updateQuery({ create: 'true' });
+            }}
+          />
+
+          {/* Moroccan Interactive Step-by-Step Workflow */}
+          <MoroccanInteractiveWorkflow
             onPostTask={handleOpenCreateTask}
           />
 
-          {/* Proof Bar (Numbers) */}
-          <WorkzillaProofBar />
+          {/* Moroccan Target Audiences Matrix (E-commerce, PME, MRE, Freelances) */}
+          <MoroccanAudienceMatrix
+            onLaunchTask={(prefill) => {
+              setPrefillTaskTitle(prefill.title);
+              setPrefillTaskDesc(prefill.description);
+              setPrefillTaskBudget(prefill.rewardDH);
+              setPrefillTaskCategory(prefill.category);
+
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour lancer cette tâche', () => {
+                  updateQuery({ create: 'true' });
+                });
+                return;
+              }
+              if (profile?.activeRole !== 'CUSTOMER') {
+                toggleRole('CUSTOMER');
+              }
+              updateQuery({ create: 'true' });
+            }}
+            onOpenQualification={() => {
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour passer le test de qualification');
+                return;
+              }
+              updateQuery({ test: 'true' });
+            }}
+            onExploreTasks={() => {
+              router.push(`/${locale}/tasks`);
+            }}
+          />
 
           {/* Moroccan Escrow Guarantee (Daman) */}
           <WorkzillaTrustSection />
 
           {/* Real Moroccan Completed Tasks Feed */}
           <WorkzillaCompletedFeed />
+
+          {/* Workzilla Unique Killer Features & Specific Usages */}
+          <WorkzillaDifferentiators
+            onLaunchTask={(prefill) => {
+              setPrefillTaskTitle(prefill.title);
+              setPrefillTaskDesc(prefill.description);
+              setPrefillTaskBudget(prefill.rewardDH);
+              setPrefillTaskCategory(prefill.category);
+
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour lancer cette mission', () => {
+                  updateQuery({ create: 'true' });
+                });
+                return;
+              }
+              if (profile?.activeRole !== 'CUSTOMER') {
+                toggleRole('CUSTOMER');
+              }
+              updateQuery({ create: 'true' });
+            }}
+            onOpenQualification={() => {
+              if (!isAuthenticated) {
+                openAuthModal('login', 'Connectez-vous pour passer le test de qualification');
+                return;
+              }
+              updateQuery({ test: 'true' });
+            }}
+          />
 
           {/* HOME PAGE: RECENT TASKS SHOWCASE (MINI CARDS: ONLY TITLE & PRICE) */}
           <section id="marketplace-feed" className="py-14 sm:py-20 bg-white border-t border-slate-200">
@@ -1028,9 +1262,15 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           onClose={() => {
             updateQuery({ create: null });
             setPrefillTaskTitle('');
+            setPrefillTaskDesc('');
+            setPrefillTaskBudget(undefined);
+            setPrefillTaskCategory(undefined);
           }}
           onCreateTask={handleCreateTask}
           initialTitle={prefillTaskTitle}
+          initialDescription={prefillTaskDesc}
+          initialRewardDH={prefillTaskBudget}
+          initialCategoryKey={prefillTaskCategory}
         />
       )}
 

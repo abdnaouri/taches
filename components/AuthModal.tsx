@@ -25,6 +25,7 @@ export const AuthModal: React.FC = () => {
     authPromptMessage,
     closeAuthModal,
     signIn,
+    signInDemo,
     signUp,
     openAuthModal,
   } = useAuth();
@@ -79,9 +80,9 @@ export const AuthModal: React.FC = () => {
     setError(null);
     setLoading(true);
     try {
-      const res = await signIn('aero@example.com', 'password123');
+      const res = await signInDemo();
       if (!res.success) {
-        setError('Impossible de se connecter au compte de démonstration.');
+        setError(res.error || 'Impossible de se connecter au compte de démonstration.');
       }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la connexion démo.');
