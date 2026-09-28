@@ -34,18 +34,24 @@ export interface LocalizedTaskContent {
 export const taskTranslations: Record<string, LocalizedTaskContent> = {
   tsk_101: {
     title: {
+      ru: "Адаптивная верстка Tailwind CSS и контактная форма Next.js",
       fr: "Correction responsive Tailwind CSS & formulaire de contact Next.js",
       ar: "إصلاح تجاوب Tailwind CSS ونموذج الاتصال في Next.js",
       en: "Tailwind CSS responsive fix & Next.js contact form",
       es: "Corrección responsive Tailwind CSS y formulario de contacto Next.js"
     },
     description: {
+      ru: "Необходимо исправить наложение мобильного меню на iPhone и настроить валидацию формы Zod с отправкой email через Resend.",
       fr: "Nous avons une landing page Next.js dont le menu mobile se chevauche sur iPhone 13/14 et le formulaire de contact nécessite une validation Zod avec envoi d'email via Resend. Code propre et testé requis.",
       ar: "لدينا صفحة هبوط في Next.js تتداخل قائمتها في الهواتف الذكية ونموذج الاتصال بحاجة إلى تحقق بواسطة Zod وإرسال البريد عبر Resend. يشترط كود نظيف ومختبر.",
       en: "We have a Next.js landing page where the mobile menu overlaps on iPhone 13/14, and the contact form needs Zod validation with email sending via Resend. Clean and tested code required.",
       es: "Tenemos una landing page en Next.js cuyo menú móvil se superpone en iPhone 13/14 y el formulario de contacto necesita validación Zod con envío por Resend. Se requiere código limpio y probado."
     },
     requiredProofs: {
+      ru: [
+        "Ссылка на Pull Request в GitHub или коммит",
+        "Видео (30с) или скриншот меню на мобильном экране (390px)"
+      ],
       fr: [
         "Lien vers la Pull Request GitHub ou commit vérifiable",
         "Vidéo de 30s ou capture d'écran du menu sur viewport mobile (390px)"
@@ -66,18 +72,24 @@ export const taskTranslations: Record<string, LocalizedTaskContent> = {
   },
   tsk_102: {
     title: {
+      ru: "Создание минималистичного логотипа + SVG favicon для ИИ-стартапа",
       fr: "Création d'un logo vectoriel minimaliste + favicon SVG pour startup IA",
       ar: "تصميم شعار متجهي بسيط + أيقونة مفضلة SVG لشركة ناشئة للذكاء الاصطناعي",
       en: "Minimalist vector logo + SVG favicon for AI startup",
       es: "Creación de logo vectorial minimalista + favicon SVG para startup de IA"
     },
     description: {
+      ru: "Ищем графического дизайнера для создания стильного логотипа 'SynapseAI'. Лаконичная палитра (черный/белый + лаймовый акцент). Исходники SVG, PNG и favicon.",
       fr: "Recherche d'un graphiste pour concevoir un logo moderne et épuré pour 'SynapseAI'. Palette sobre (noir/blanc + touche néon vert/lime). Livrables en SVG, PNG transparent haute résolution et favicon.ico.",
       ar: "مطلوب مصمم جرافيك لابتكار شعار عصري وأنيق لشركة 'SynapseAI'. ألوان بسيطة (أسود/أبيض مع لمسة ليموني نيون). التسليم بصيغ SVG وPNG شفاف عالي الدقة وfavicon.ico.",
       en: "Looking for a graphic designer to craft a modern, sleek logo for 'SynapseAI'. Minimal palette (black/white + neon lime touch). Deliverables in SVG, high-res transparent PNG, and favicon.ico.",
       es: "Buscamos diseñador gráfico para crear un logo moderno y depurado para 'SynapseAI'. Paleta sobria (negro/blanco + toque verde lima). Entregables en SVG, PNG transparente alta resolución y favicon.ico."
     },
     requiredProofs: {
+      ru: [
+        "Векторные исходники .SVG и .AI",
+        "Файл favicon.ico и прозрачные PNG (512x512)"
+      ],
       fr: [
         "Fichiers sources vectoriels .SVG et .AI",
         "Fichier favicon.ico et déclinaisons PNG transparentes (512x512)"
@@ -98,18 +110,24 @@ export const taskTranslations: Record<string, LocalizedTaskContent> = {
   },
   tsk_103: {
     title: {
+      ru: "Сбор и валидация 50 B2B SaaS лидов (LinkedIn + Email)",
       fr: "Recherche et qualification de 50 prospects B2B SaaS (LinkedIn + Emails)",
       ar: "بحث وتأهيل 50 عميلاً محتملاً B2B SaaS (لينكد إن + بريد إلكتروني)",
       en: "Sourcing and qualification of 50 B2B SaaS leads (LinkedIn + Emails)",
       es: "Búsqueda y cualificación de 50 leads B2B SaaS (LinkedIn + Emails)"
     },
     description: {
+      ru: "Собрать 50 целевых контактов: Директора по маркетингу e-commerce компаний во Франции (> 20 сотрудников). Имя, должность, компания, профиль LinkedIn, проверенный рабочий email.",
       fr: "Collecter 50 contacts ciblés : Directeurs Marketing ou Growth de scale-ups e-commerce en France (> 20 salariés). Colonnes requises : Prénom, Nom, Poste exact, Entreprise, Profil LinkedIn, Email professionnel vérifié.",
       ar: "جمع 50 جهة اتصال مستهدفة: مدراء تسويق أو نمو لشركات تجارة إلكترونية ناشئة في فرنسا (> 20 موظفاً). الأعمدة المطلوبة: الاسم، اللقب، المنصب، الشركة، رابط لينكد إن، بريد مهني مفعل.",
       en: "Collect 50 targeted leads: Marketing or Growth Directors at e-commerce scale-ups in France (> 20 employees). Required columns: First Name, Last Name, Exact Title, Company, LinkedIn Profile, Verified Work Email.",
       es: "Recopilar 50 contactos específicos: Directores de Marketing o Growth de scale-ups de e-commerce en Francia (> 20 empleados). Columnas: Nombre, Apellidos, Cargo exacto, Empresa, Perfil LinkedIn, Email verificado."
     },
     requiredProofs: {
+      ru: [
+        "Google Таблица или CSV с 50 заполненными строками",
+        "Отчет проверки валидности email адресов"
+      ],
       fr: [
         "Fichier Google Sheets ou CSV partagé avec 50 lignes complètes",
         "Rapport de bounce rate vérifié (NeverBounce ou Dropcontact)"
@@ -130,18 +148,24 @@ export const taskTranslations: Record<string, LocalizedTaskContent> = {
   },
   tsk_104: {
     title: {
+      ru: "Перевод и SEO-адаптация 4 карточек товаров с английского",
       fr: "Traduction & adaptation SEO Anglais -> Français pour 4 fiches produits",
       ar: "ترجمة ومواءمة تحسين محركات البحث (SEO) لـ 4 بطاقات منتجات",
       en: "SEO translation & localization English -> French for 4 product pages",
       es: "Traducción y adaptación SEO Inglés -> Francés para 4 fichas de producto"
     },
     description: {
+      ru: "Качественный перевод 4 описаний высокотехнологичных аксессуаров (около 1 200 слов). Сохранение премиального стиля и естественная интеграция ключевых слов.",
       fr: "Traduction humaine de 4 pages de descriptions d'accessoires high-tech (environ 1 200 mots au total). Respect du ton de marque premium et intégration naturelle des mots-clés fournis.",
       ar: "ترجمة بشرية احترافية لأربع صفحات وصف ملحقات تكنولوجية متطورة (حوالي 1200 كلمة). الحفاظ على النبرة الفاخرة للعلامة التجارية وإدراج الكلمات المفتاحية بسلاسة.",
       en: "Human translation of 4 high-tech accessory product descriptions (approx. 1,200 words total). Consistent premium brand voice and natural integration of target keywords.",
       es: "Traducción humana de 4 páginas de descripciones de accesorios high-tech (aprox. 1.200 palabras). Mantener el tono premium de la marca e integrar de forma natural las palabras clave provistas."
     },
     requiredProofs: {
+      ru: [
+        "Документ Google Docs в режиме правок",
+        "Таблица с метаописаниями товаров"
+      ],
       fr: [
         "Document Google Docs avec mode suggestion et texte final relu",
         "Tableau récapitulatif des métadescriptions optimisées"
@@ -162,18 +186,24 @@ export const taskTranslations: Record<string, LocalizedTaskContent> = {
   },
   tsk_105: {
     title: {
+      ru: "UX-тестирование мобильного приложения iOS + отчет",
       fr: "Test utilisateur UX (Application mobile iOS) + Rapport d'évaluation",
       ar: "اختبار تجربة المستخدم UX (تطبيق iOS) + تقرير تقييمي",
       en: "UX User Testing (iOS mobile app) + Evaluation Report",
       es: "Prueba de usuario UX (App móvil iOS) + Informe de evaluación"
     },
     description: {
+      ru: "Скачать приложение через TestFlight, пройти весь процесс регистрации и тестовой покупки, составить структурированный отчет о найденных проблемах.",
       fr: "Télécharger notre application TestFlight, effectuer un parcours d'inscription complet et d'achat simulé, et rédiger un retour clair sur les éventuels points de friction rencontrés.",
       ar: "تحميل تطبيقنا عبر TestFlight، وإجراء رحلة تسجيل كاملة وتجربة شراء وهمية، وكتابة ملاحظات واضحة حول أي صعوبات أو نقاط احتكاك تمت مواجهتها.",
       en: "Download our app via TestFlight, execute a complete sign-up flow and simulated checkout, and write constructive feedback on friction points encountered.",
       es: "Descargar nuestra aplicación TestFlight, realizar un registro completo y compra simulada, y redactar un informe claro sobre cualquier punto de fricción encontrado."
     },
     requiredProofs: {
+      ru: [
+        "3 скриншота ключевых этапов",
+        "Структурированный отзыв от 200 слов с описанием опыта"
+      ],
       fr: [
         "3 captures d'écran des étapes clés",
         "Rapport écrit structuré de 200 mots minimum décrivant l'expérience"
@@ -194,18 +224,23 @@ export const taskTranslations: Record<string, LocalizedTaskContent> = {
   },
   tsk_106: {
     title: {
+      ru: "Качественная обтравка и тени для 12 фото мебели",
       fr: "Détourage propre et ombrage réaliste de 12 photos de mobilier",
       ar: "قص دقيق وعزل مع إضافة ظلال واقعية لـ 12 صورة أثاث",
       en: "Clean cutout and realistic shadow enhancement for 12 furniture photos",
       es: "Recorte limpio y sombreado realista de 12 fotos de mobiliario"
     },
     description: {
+      ru: "Обтравка фотографий кресел и диванов пером (без автоматического размытия) и экспорт на чистый белый фон с естественной мягкой тенью.",
       fr: "Photos de chaises et canapés sur fond d'atelier à détourer à la plume (pas de détourage automatique flou) et exporter sur fond blanc pur (RGB 255,255,255) avec ombre portée naturelle.",
       ar: "صور كراسي وأرائك في ورشة عمل تتطلب عزلاً دقيقاً بأداة Pen Tool وتصديرها على خلفية بيضاء نقية (RGB 255,255,255) مع ظلال طبيعية واقعية.",
       en: "Photos of chairs and sofas shot in a workshop needing meticulous Pen Tool clipping (no automated fuzzy cutouts) and exported on pure white (RGB 255,255,255) with soft natural drop shadow.",
       es: "Fotos de sillas y sofás en taller que requieren trazado con pluma (sin recortes automáticos borrosos) y exportación sobre fondo blanco puro con sombra natural."
     },
     requiredProofs: {
+      ru: [
+        "ZIP-архив с 12 файлами PNG и PSD с сохраненными слоями"
+      ],
       fr: [
         "Archive ZIP contenant les 12 fichiers PNG et PSD avec calques conservés"
       ],
@@ -350,24 +385,28 @@ export const initialTasks: Task[] = [
 
 export const transactionTranslations: Record<string, Record<Locale, string>> = {
   tx_901: {
+    ru: 'Оплата за задание #tsk_089 "Интеграция Stripe Checkout"',
     fr: 'Paiement reçu pour tâche #tsk_089 "Intégration Stripe Checkout"',
     ar: 'دفعة مستلمة للمهمة #tsk_089 "تكامل بوابة دفع Stripe Checkout"',
     en: 'Payment received for task #tsk_089 "Stripe Checkout Integration"',
     es: 'Pago recibido por tarea #tsk_089 "Integración Stripe Checkout"',
   },
   tx_902: {
+    ru: 'Пополнение баланса банковской картой',
     fr: 'Approvisionnement sécurisé par Carte Bancaire',
     ar: 'شحن رصيد آمن عبر البطاقة البنكية',
     en: 'Secure top-up via Credit Card',
     es: 'Recarga segura mediante Tarjeta Bancaria',
   },
   tx_903: {
+    ru: 'Резервирование средств под задание #tsk_101',
     fr: 'Séquestre bloqué pour publication tâche #tsk_101',
     ar: 'حجز رصيد الضمان لنشر المهمة #tsk_101',
     en: 'Escrow funds locked for task publication #tsk_101',
     es: 'Custodia bloqueada para publicación de tarea #tsk_101',
   },
   tx_904: {
+    ru: 'Комиссия сервиса UNU (Уровень PRO - 15%)',
     fr: 'Commission de service plateforme Tâches (Niveau 3 - 15%)',
     ar: 'عمولة خدمة منصة Tâches (المستوى 3 - 15%)',
     en: 'Platform service commission (Level 3 - 15%)',

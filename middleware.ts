@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const LOCALES = ['fr', 'ar', 'en', 'es'];
+const LOCALES = ['fr', 'ar', 'en', 'es', 'ru'];
 const DEFAULT_LOCALE = 'fr';
 
 export function middleware(request: NextRequest) {
@@ -26,19 +26,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Handle root / -> redirect to default /fr
+  // 3. Handle root / -> redirect to preferred locale or default /fr
+  const savedCookie = request.cookies.get('taches_locale')?.value;
+  const targetLocale = (savedCookie && LOCALES.includes(savedCookie)) ? savedCookie : DEFAULT_LOCALE;
+
   if (pathname === '/') {
-    return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}${search}`, request.url));
+    return NextResponse.redirect(new URL(`/${targetLocale}${search}`, request.url));
   }
 
-  // 4. Handle direct /task/:slug -> redirect to /fr/task/:slug
+  // 4. Handle direct /task/:slug -> redirect to /:locale/task/:slug
   if (pathname.startsWith('/task/')) {
     const slug = pathname.replace('/task/', '');
-    return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}/task/${slug}${search}`, request.url));
+    return NextResponse.redirect(new URL(`/${targetLocale}/task/${slug}${search}`, request.url));
   }
 
-  // 5. Default redirect for other un-prefixed routes to /fr/pathname
-  return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}${pathname}${search}`, request.url));
+  // 5. Default redirect for other un-prefixed routes (e.g. /tasks) to /:locale/pathname
+  return NextResponse.redirect(new URL(`/${targetLocale}${pathname}${search}`, request.url));
 }
 
 export const config = {

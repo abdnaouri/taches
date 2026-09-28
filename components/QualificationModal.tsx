@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { FiX, FiCheckCircle, FiAward } from 'react-icons/fi';
+import { FiX, FiCheckCircle, FiAward, FiShield } from 'react-icons/fi';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -66,85 +66,84 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl bg-cream p-6 sm:p-8 shadow-2xl border border-ink/15 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all`}
+          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer`}
         >
           <FiX className="text-lg" />
         </button>
 
         <div className="flex items-center gap-2 mb-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-lime text-ink font-bold text-xs">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-700 text-white font-bold text-xs">
             <FiAward />
           </span>
-          <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             {t('qualificationBadge')}
           </span>
         </div>
 
-        <h2 className="font-display text-2xl font-bold text-ink">
+        <h2 className="text-2xl font-extrabold text-slate-900">
           {t('qualificationTitle')}
         </h2>
-        <p className="mt-1 text-xs text-ink/70">
+        <p className="mt-1 text-xs text-slate-600 leading-relaxed">
           {t('qualificationDesc')}
         </p>
 
-        {submitted && scorePassed && (
-          <div className="mt-4 flex items-center gap-2.5 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-            <FiCheckCircle className="text-emerald-600 text-lg shrink-0" />
-            <span>{t('qualificationSuccessMsg')}</span>
+        {submitted && scorePassed ? (
+          <div className="mt-6 rounded-xl bg-emerald-50 p-5 border border-emerald-200 text-center">
+            <FiCheckCircle className="mx-auto text-3xl text-emerald-600 mb-2" />
+            <h4 className="text-sm font-bold text-emerald-950">
+              {t('qualificationSuccessMsg')}
+            </h4>
+            <button
+              onClick={onClose}
+              className="mt-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-6 py-2.5 text-xs font-bold text-white transition active:scale-95 cursor-pointer"
+            >
+              {t('btnClose')}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-6 space-y-5">
+            {questions.map((item, qIdx) => (
+              <div key={qIdx} className="space-y-2">
+                <p className="text-xs font-bold text-slate-900">
+                  {qIdx + 1}. {item.q}
+                </p>
+                <div className="space-y-1.5">
+                  {item.options.map((opt, oIdx) => (
+                    <label
+                      key={oIdx}
+                      onClick={() => handleSelect(qIdx, oIdx)}
+                      className={`flex items-start gap-2.5 rounded-xl border p-3 text-xs transition cursor-pointer ${
+                        answers[qIdx] === oIdx
+                          ? 'border-brand-700 bg-brand-50 text-slate-900 font-semibold'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`q_${qIdx}`}
+                        checked={answers[qIdx] === oIdx}
+                        onChange={() => handleSelect(qIdx, oIdx)}
+                        className="mt-0.5 accent-brand-700"
+                      />
+                      <span className="leading-snug">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={handleValidate}
+              className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs font-bold text-white shadow-md active:scale-95 transition cursor-pointer"
+            >
+              {t('btnValidateAnswers')}
+            </button>
           </div>
         )}
-
-        <div className="mt-5 space-y-4">
-          {questions.map((item, qIdx) => (
-            <div key={qIdx} className="rounded-2xl bg-white p-4 border border-ink/10 text-xs">
-              <div className="font-bold text-ink mb-2">
-                {qIdx + 1}. {item.q}
-              </div>
-              <div className="space-y-1.5">
-                {item.options.map((opt, oIdx) => (
-                  <label
-                    key={oIdx}
-                    className={`flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer transition ${
-                      answers[qIdx] === oIdx
-                        ? 'border-ink bg-ink/5 text-ink font-semibold'
-                        : 'border-transparent text-ink/75 hover:bg-ink/3'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question_${qIdx}`}
-                      checked={answers[qIdx] === oIdx}
-                      onChange={() => handleSelect(qIdx, oIdx)}
-                      className="accent-lime"
-                    />
-                    <span>{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-ink/10">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-ink/20 px-5 py-2.5 text-xs font-semibold text-ink"
-          >
-            {t('btnClose')}
-          </button>
-          <button
-            type="button"
-            onClick={handleValidate}
-            className="rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-lime hover:bg-ink/90 shadow-sm"
-          >
-            {t('btnValidateAnswers')}
-          </button>
-        </div>
       </div>
     </div>
   );

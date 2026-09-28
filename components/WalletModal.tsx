@@ -9,7 +9,8 @@ import {
   FiLock, 
   FiArrowDownLeft, 
   FiArrowUpRight, 
-  FiCheckCircle
+  FiCheckCircle,
+  FiShield
 } from 'react-icons/fi';
 
 interface WalletModalProps {
@@ -17,8 +18,8 @@ interface WalletModalProps {
   onClose: () => void;
   user: UserProfile;
   transactions: WalletTransaction[];
-  onDeposit: (amount: number) => void;
-  onWithdraw: (amount: number) => void;
+  onDeposit: (amountDH: number) => void;
+  onWithdraw: (amountDH: number) => void;
 }
 
 export const WalletModal: React.FC<WalletModalProps> = ({
@@ -31,53 +32,58 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 }) => {
   const { t, locale, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState<'balance' | 'deposit' | 'withdraw'>('balance');
-  const [customDeposit, setCustomDeposit] = useState<number>(50);
-  const [withdrawAmount, setWithdrawAmount] = useState<number>(50);
+  const [customDepositDH, setCustomDepositDH] = useState<number>(500);
+  const [withdrawAmountDH, setWithdrawAmountDH] = useState<number>(500);
   const [successMsg, setSuccessMsg] = useState('');
 
   if (!isOpen) return null;
 
-  const handleDepositClick = (amt: number) => {
-    onDeposit(amt);
-    setSuccessMsg(t('toastDepositSuccess', { amount: amt.toFixed(2) }));
+  const balanceDH = Math.round(user.balanceAvailable * 10);
+  const escrowDH = Math.round(user.balanceEscrow * 10);
+
+  const handleDepositClick = (amtDH: number) => {
+    onDeposit(amtDH);
+    setSuccessMsg(t('toastDepositSuccess', { amount: amtDH }));
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
   const handleWithdrawClick = (e: React.FormEvent) => {
     e.preventDefault();
-    if (withdrawAmount <= 0 || withdrawAmount > user.balanceAvailable) return;
-    onWithdraw(withdrawAmount);
-    setSuccessMsg(t('toastWithdrawalInitiated', { amount: withdrawAmount.toFixed(2) }));
+    if (withdrawAmountDH <= 0 || withdrawAmountDH > balanceDH) return;
+    onWithdraw(withdrawAmountDH);
+    setSuccessMsg(t('toastWithdrawalInitiated', { amount: withdrawAmountDH }));
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-3xl bg-cream p-6 sm:p-8 shadow-2xl border border-ink/15 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+        
         {/* Close Button */}
         <button
           onClick={onClose}
-          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all`}
+          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer`}
         >
           <FiX className="text-lg" />
         </button>
 
         <div className="flex items-center gap-2 mb-2">
-          <span className="rounded-full bg-lime text-ink text-xs font-bold px-2.5 py-1">
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-1 flex items-center gap-1">
+            <FiShield className="text-emerald-700" />
             {t('walletSecurityBadge')}
           </span>
-          <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             {t('walletModalSubtitle')}
           </span>
         </div>
 
-        <h2 className="font-display text-2xl font-bold text-ink">
+        <h2 className="text-2xl font-extrabold text-slate-900">
           {t('walletModalTitle')}
         </h2>
 
         {/* Success toast */}
         {successMsg && (
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3.5 border border-emerald-200 text-emerald-800 text-xs font-semibold">
             <FiCheckCircle className="text-emerald-600 text-base shrink-0" />
             <span>{successMsg}</span>
           </div>
@@ -85,171 +91,192 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Balance Cards Grid */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div className="rounded-2xl bg-ink text-white p-5 shadow-sm">
-            <div className="text-xs text-lime font-medium uppercase tracking-wider">
+          <div className="rounded-xl bg-brand-900 text-white p-5 shadow-xs">
+            <div className="text-xs text-brand-200 font-semibold uppercase tracking-wider">
               {t('walletAvailableBalance')}
             </div>
-            <div className="font-display text-3xl font-extrabold mt-1 text-white">
-              €{user.balanceAvailable.toFixed(2)}
+            <div className="text-3xl font-extrabold mt-1 text-white tracking-tight">
+              {balanceDH} DH
             </div>
-            <p className="mt-2 text-[11px] text-white/60">
+            <p className="mt-2 text-[11px] text-brand-200/80">
               {t('walletAvailableDesc')}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white border border-ink/10 p-5 shadow-xs">
-            <div className="flex items-center justify-between text-xs text-ink/50 font-semibold uppercase tracking-wider">
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
               <span>{t('walletEscrowFunds')}</span>
-              <FiLock className="text-amber-500 text-sm" />
+              <FiLock className="text-amber-600 text-sm" />
             </div>
-            <div className="font-display text-3xl font-extrabold mt-1 text-ink">
-              €{user.balanceEscrow.toFixed(2)}
+            <div className="text-3xl font-extrabold mt-1 text-slate-900 tracking-tight">
+              {escrowDH} DH
             </div>
-            <p className="mt-2 text-[11px] text-ink/60">
+            <p className="mt-2 text-[11px] text-slate-500">
               {t('walletEscrowDesc')}
             </p>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mt-6 flex border-b border-ink/10 overflow-x-auto">
+        <div className="mt-6 flex border-b border-slate-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab('balance')}
-            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap ${isRTL ? 'ml-6' : 'mr-6'} ${
+            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap cursor-pointer ${isRTL ? 'ml-6' : 'mr-6'} ${
               activeTab === 'balance'
-                ? 'border-ink text-ink'
-                : 'border-transparent text-ink/40 hover:text-ink'
+                ? 'border-brand-700 text-brand-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             {t('tabOperationsHistory')}
           </button>
           <button
             onClick={() => setActiveTab('deposit')}
-            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap ${isRTL ? 'ml-6' : 'mr-6'} ${
+            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap cursor-pointer ${isRTL ? 'ml-6' : 'mr-6'} ${
               activeTab === 'deposit'
-                ? 'border-ink text-ink'
-                : 'border-transparent text-ink/40 hover:text-ink'
+                ? 'border-brand-700 text-brand-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             {t('tabDeposit')}
           </button>
           <button
             onClick={() => setActiveTab('withdraw')}
-            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap ${
+            className={`pb-3 text-xs font-bold transition border-b-2 whitespace-nowrap cursor-pointer ${
               activeTab === 'withdraw'
-                ? 'border-ink text-ink'
-                : 'border-transparent text-ink/40 hover:text-ink'
+                ? 'border-brand-700 text-brand-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             {t('tabWithdraw')}
           </button>
         </div>
 
-        {/* Tab 1: Transaction History */}
+        {/* TAB 1: OPERATIONS HISTORY */}
         {activeTab === 'balance' && (
-          <div className="mt-4 space-y-2.5">
-            {transactions.map((rawTx) => {
-              const tx = getLocalizedTransaction(rawTx, locale);
-              return (
-                <div key={tx.id} className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-ink/5 text-xs">
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                      tx.amount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-ink/5 text-ink'
-                    }`}>
-                      {tx.amount > 0 ? <FiArrowDownLeft /> : <FiArrowUpRight />}
+          <div className="mt-5 space-y-3">
+            {transactions.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center">Aucune transaction enregistrée.</p>
+            ) : (
+              transactions.map((tx) => {
+                const localizedTx = getLocalizedTransaction(tx, locale);
+                const isPositive = tx.type === 'DEPOSIT' || tx.type === 'ESCROW_RELEASE';
+                const txAmountDH = Math.round(tx.amount * 10);
+                return (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between rounded-xl bg-slate-50 p-3.5 border border-slate-200 text-xs"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${isPositive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-800'}`}>
+                        {isPositive ? <FiArrowDownLeft /> : <FiArrowUpRight />}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-900">{localizedTx.description}</div>
+                        <div className="text-[10px] text-slate-500">{tx.createdAt}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-ink">{tx.description}</div>
-                      <div className="text-[10px] text-ink/40">{tx.createdAt}</div>
+                    <div className={`font-bold text-sm ${isPositive ? 'text-emerald-700' : 'text-slate-800'}`}>
+                      {isPositive ? '+' : '-'}{txAmountDH} DH
                     </div>
                   </div>
-                  <div className={`font-mono font-bold ${tx.amount > 0 ? 'text-emerald-700' : 'text-ink'}`}>
-                    {tx.amount > 0 ? `+€${tx.amount.toFixed(2)}` : `€${tx.amount.toFixed(2)}`}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
 
-        {/* Tab 2: Deposit Simulator */}
+        {/* TAB 2: DEPOSIT */}
         {activeTab === 'deposit' && (
           <div className="mt-5 space-y-4">
-            <p className="text-xs text-ink/70">
+            <p className="text-xs text-slate-600 leading-relaxed">
               {t('depositDesc')}
             </p>
-            <div className="grid grid-cols-3 gap-3">
-              {[25, 50, 100].map((amt) => (
+
+            <div className="grid grid-cols-3 gap-2.5">
+              {[200, 500, 1000].map((amtDH) => (
                 <button
-                  key={amt}
+                  key={amtDH}
                   type="button"
-                  onClick={() => handleDepositClick(amt)}
-                  className="rounded-2xl border border-ink/15 bg-white p-3 text-center hover:border-ink hover:bg-lime/20 transition group"
+                  onClick={() => handleDepositClick(amtDH)}
+                  className="rounded-xl border border-slate-300 bg-white p-3 text-center text-xs font-bold text-slate-900 hover:border-brand-700 hover:bg-brand-50 transition cursor-pointer"
                 >
-                  <div className="font-bold text-ink text-sm">€{amt}</div>
-                  <div className="text-[10px] text-ink/50 group-hover:text-ink">{t('depositInstant')}</div>
+                  <div className="text-sm font-extrabold">{amtDH} DH</div>
+                  <div className="text-[10px] text-emerald-700 font-bold">{t('depositInstant')}</div>
                 </button>
               ))}
             </div>
 
             <div className="pt-2">
-              <label className="block text-xs font-bold text-ink mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {t('depositCustomLabel')}
               </label>
               <div className="flex gap-2">
                 <input
                   type="number"
-                  min={10}
-                  value={customDeposit}
-                  onChange={(e) => setCustomDeposit(Number(e.target.value))}
-                  className="w-full rounded-2xl border border-ink/15 bg-white p-3 text-xs text-ink outline-none focus:border-ink"
+                  min={50}
+                  step={50}
+                  value={customDepositDH}
+                  onChange={(e) => setCustomDepositDH(Number(e.target.value))}
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-bold text-slate-900 outline-none focus:border-brand-700"
                 />
                 <button
                   type="button"
-                  onClick={() => handleDepositClick(customDeposit)}
-                  className="rounded-full bg-ink px-5 py-2.5 text-xs font-bold text-lime hover:bg-ink/90 whitespace-nowrap"
+                  onClick={() => handleDepositClick(customDepositDH)}
+                  className="rounded-xl bg-brand-700 hover:bg-brand-800 px-6 text-xs font-bold text-white transition active:scale-95 cursor-pointer whitespace-nowrap"
                 >
                   {t('btnDeposit')}
                 </button>
               </div>
             </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+              💳 Compatible avec les cartes bancaires marocaines (CMI), virement instantané CIH Bank / Attijariwafa Bank, et versements en espèces Cash Plus / Wafacash.
+            </div>
           </div>
         )}
 
-        {/* Tab 3: Withdrawal Simulator */}
+        {/* TAB 3: WITHDRAW */}
         {activeTab === 'withdraw' && (
           <form onSubmit={handleWithdrawClick} className="mt-5 space-y-4">
-            <div className="rounded-2xl bg-white p-4 border border-ink/10 text-xs">
-              <div className="flex items-center justify-between text-ink/70 mb-1">
-                <span>{t('withdrawAvailableLabel')}</span>
-                <span className="font-bold text-ink">€{user.balanceAvailable.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between text-ink/70">
-                <span>{t('withdrawFeeAdvantage')}</span>
-                <span className="font-bold text-lime-700 bg-lime/20 px-2 py-0.5 rounded-full">
-                  {t('withdrawFeeDiscount')}
-                </span>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="text-xs text-slate-600">{t('withdrawAvailableLabel')}</div>
+              <div className="text-2xl font-extrabold text-slate-900">{balanceDH} DH</div>
+              <div className="text-[11px] text-emerald-700 font-bold">
+                ✓ {t('withdrawFeeAdvantage')} {t('withdrawFeeDiscount')}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-ink mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {t('withdrawAmountLabel')}
               </label>
               <input
                 type="number"
-                min={10}
-                max={user.balanceAvailable}
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
-                className="w-full rounded-2xl border border-ink/15 bg-white p-3 text-xs text-ink outline-none focus:border-ink"
+                min={100}
+                max={balanceDH}
+                step={50}
+                value={withdrawAmountDH}
+                onChange={(e) => setWithdrawAmountDH(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-bold text-slate-900 outline-none focus:border-brand-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Relevé d'Identité Bancaire (RIB marocain 24 chiffres) ou Cash Plus :
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: 230 780 0000000000000000 00 (CIH, Attijari, BP...)"
+                required
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono"
               />
             </div>
 
             <button
               type="submit"
-              disabled={withdrawAmount <= 0 || withdrawAmount > user.balanceAvailable}
-              className="w-full rounded-full bg-lime py-3 text-xs font-bold text-ink shadow-sm hover:bg-lime/90 disabled:opacity-50 transition"
+              disabled={withdrawAmountDH <= 0 || withdrawAmountDH > balanceDH}
+              className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs font-bold text-white shadow-md disabled:opacity-40 transition active:scale-95 cursor-pointer"
             >
               {t('btnConfirmWithdrawal')}
             </button>

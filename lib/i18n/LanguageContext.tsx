@@ -7,12 +7,14 @@ import { fr, Translations } from './locales/fr';
 import { ar } from './locales/ar';
 import { en } from './locales/en';
 import { es } from './locales/es';
+import { ru } from './locales/ru';
 
 const dictionaries: Record<Locale, Translations> = {
   fr,
   ar,
   en,
   es,
+  ru,
 };
 
 interface LanguageContextType {
@@ -36,24 +38,17 @@ function LanguageProviderInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
 
   // Determine initial locale from URL pathname if present
-  const getLocaleFromPath = (path: string): Locale => {
-    const firstSegment = path?.split('/')[1] as Locale;
-    if (['fr', 'ar', 'en', 'es'].includes(firstSegment)) {
+  const getLocaleFromPath = (path?: string | null): Locale => {
+    if (!path) return DEFAULT_LOCALE;
+    const firstSegment = path.split('/')[1] as Locale;
+    if (['fr', 'ar', 'en', 'es', 'ru'].includes(firstSegment)) {
       return firstSegment;
     }
     return DEFAULT_LOCALE;
   };
 
   const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window !== 'undefined') {
-      const fromPath = getLocaleFromPath(window.location.pathname);
-      if (fromPath) return fromPath;
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
-        if (saved && ['fr', 'ar', 'en', 'es'].includes(saved)) return saved;
-      } catch {}
-    }
-    return DEFAULT_LOCALE;
+    return getLocaleFromPath(pathname);
   });
 
   // Sync state when URL pathname changes
@@ -73,6 +68,7 @@ function LanguageProviderInner({ children }: { children: React.ReactNode }) {
     setLocaleState(newLocale);
     try {
       localStorage.setItem(STORAGE_KEY, newLocale);
+      document.cookie = `${STORAGE_KEY}=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {}
 
     if (pathname) {

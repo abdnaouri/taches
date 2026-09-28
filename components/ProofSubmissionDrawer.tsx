@@ -39,6 +39,8 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
 
   if (!task) return null;
 
+  const rewardDH = Math.round(task.reward * 10);
+
   const handleAddSampleImage = () => {
     setUploadedScreenshots([
       ...uploadedScreenshots,
@@ -59,13 +61,11 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
     if (res.success && res.url) {
       setUploadedScreenshots(prev => [...prev, res.url]);
     } else {
-      setUploadError(res.error || 'Upload error');
-      // Still allow adding local preview object URL as fallback
-      const objectUrl = URL.createObjectURL(file);
-      setUploadedScreenshots(prev => [...prev, objectUrl]);
+      setUploadError(res.error || 'Erreur de téléversement');
+      // Fallback preview
+      const localUrl = URL.createObjectURL(file);
+      setUploadedScreenshots(prev => [...prev, localUrl]);
     }
-
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleRemoveImage = (index: number) => {
@@ -78,59 +78,63 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalUrls = [...uploadedScreenshots];
-    if (proofLink.trim()) finalUrls.push(proofLink.trim());
-    onSubmitProof(task.id, reportText, finalUrls);
+    if (!reportText.trim()) return;
+
+    const allUrls = [...uploadedScreenshots];
+    if (proofLink.trim()) {
+      allUrls.push(proofLink.trim());
+    }
+
+    onSubmitProof(task.id, reportText, allUrls);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-3xl bg-cream p-6 sm:p-8 shadow-2xl border border-ink/15 max-h-[90vh] overflow-y-auto">
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all`}
+          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer`}
         >
           <FiX className="text-lg" />
         </button>
 
         <div className="flex items-center gap-2 mb-2">
-          <span className="rounded-full bg-lime text-ink text-xs font-bold px-2.5 py-1">
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-0.5">
             {t('proofFinalStepBadge')}
           </span>
-          <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             {t('proofWorkRenderBadge')}
           </span>
         </div>
 
-        <h2 className="font-display text-2xl font-bold text-ink">
+        <h2 className="text-2xl font-extrabold text-slate-900">
           {t('proofDrawerTitle')}
         </h2>
-        <p className="mt-1 text-xs text-ink/70">
-          {t('proofTaskPrefix')} <span className="font-semibold text-ink">{task.title}</span>
+        <p className="mt-1 text-xs text-slate-600">
+          {t('proofTaskPrefix')} <span className="font-bold text-slate-900">{task.title}</span>
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           {/* Deliverables Checklist verification */}
           {task.requiredProofs && task.requiredProofs.length > 0 && (
             <div>
-              <label className="block text-xs font-bold text-ink mb-2">
+              <label className="block text-xs font-bold text-slate-700 mb-2">
                 {t('proofConfirmRequirements')}
               </label>
               <div className="space-y-2">
                 {task.requiredProofs.map((req, idx) => (
                   <label
                     key={idx}
-                    className="flex items-center gap-3 rounded-2xl bg-white p-3 border border-ink/10 cursor-pointer hover:border-ink/30 transition"
+                    className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-200 cursor-pointer hover:border-brand-600 transition"
                   >
                     <input
                       type="checkbox"
                       checked={!!checkedChecklist[idx]}
                       onChange={() => toggleCheck(idx)}
-                      className="h-4 w-4 rounded border-ink/30 accent-lime cursor-pointer"
+                      className="h-4 w-4 rounded border-slate-300 accent-brand-700 cursor-pointer"
                     />
-                    <span className="text-xs text-ink">{req}</span>
+                    <span className="text-xs text-slate-800 font-medium">{req}</span>
                   </label>
                 ))}
               </div>
@@ -139,7 +143,7 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
 
           {/* Text Report */}
           <div>
-            <label className="block text-xs font-bold text-ink mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
               {t('proofReportLabel')}
             </label>
             <textarea
@@ -148,23 +152,23 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
               value={reportText}
               onChange={(e) => setReportText(e.target.value)}
               placeholder={t('proofReportPlaceholder')}
-              className="w-full rounded-2xl border border-ink/15 bg-white p-3.5 text-xs text-ink outline-none focus:border-ink"
+              className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs text-slate-900 outline-none focus:border-brand-700"
             />
           </div>
 
           {/* Deliverable URL */}
           <div>
-            <label className="block text-xs font-bold text-ink mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
               {t('proofUrlLabel')}
             </label>
             <div className="relative">
-              <FiLink className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-3.5 text-ink/40 text-xs`} />
+              <FiLink className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-3.5 text-slate-400 text-xs`} />
               <input
                 type="url"
                 value={proofLink}
                 onChange={(e) => setProofLink(e.target.value)}
                 placeholder={t('proofUrlPlaceholder')}
-                className={`w-full rounded-2xl border border-ink/15 bg-white py-3 ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} text-xs text-ink outline-none focus:border-ink`}
+                className={`w-full rounded-xl border border-slate-300 bg-white py-3 ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} text-xs text-slate-900 outline-none focus:border-brand-700`}
               />
             </div>
           </div>
@@ -172,14 +176,14 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
           {/* Screenshot Upload via Supabase Storage */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-ink">
+              <label className="block text-xs font-bold text-slate-700">
                 {t('proofScreenshotsLabel')}
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleAddSampleImage}
-                  className="text-[11px] font-semibold text-ink underline hover:text-lime-600"
+                  className="text-[11px] font-semibold text-brand-700 underline hover:text-brand-900 cursor-pointer"
                 >
                   {t('proofSimulateAddImg')}
                 </button>
@@ -187,17 +191,17 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
             </div>
 
             {uploadError && (
-              <p className="text-[11px] text-amber-700 mb-1.5">Note: {uploadError}</p>
+              <p className="text-[11px] text-amber-700 mb-1.5 font-medium">Note: {uploadError}</p>
             )}
 
             <div className="grid grid-cols-3 gap-3">
               {uploadedScreenshots.map((url, i) => (
-                <div key={i} className="group relative aspect-video rounded-xl overflow-hidden border border-ink/15 bg-ink/5">
+                <div key={i} className="group relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
                   <img src={url} alt={`Proof ${i + 1}`} className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(i)}
-                    className="absolute top-1 right-1 rounded-full bg-red-600 p-1 text-white opacity-0 group-hover:opacity-100 transition shadow-xs"
+                    className="absolute top-1 right-1 rounded-full bg-red-600 p-1 text-white opacity-0 group-hover:opacity-100 transition shadow-xs cursor-pointer"
                   >
                     <FiTrash2 className="text-[10px]" />
                   </button>
@@ -216,16 +220,16 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-ink/20 hover:border-ink/40 bg-white/50 text-ink/60 transition p-2 disabled:opacity-50"
+                className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-700 bg-slate-50 text-slate-600 transition p-2 disabled:opacity-50 cursor-pointer"
               >
                 {isUploading ? (
                   <>
-                    <FiLoader className="text-xl text-ink/70 mb-1 animate-spin" />
-                    <span className="text-[10px] font-medium">Upload Supabase...</span>
+                    <FiLoader className="text-xl text-brand-700 mb-1 animate-spin" />
+                    <span className="text-[10px] font-bold">Téléversement...</span>
                   </>
                 ) : (
                   <>
-                    <FiUploadCloud className="text-xl text-ink/50 mb-1" />
+                    <FiUploadCloud className="text-xl text-slate-400 mb-1" />
                     <span className="text-[10px] font-medium">{t('proofDragOrClick')}</span>
                   </>
                 )}
@@ -233,33 +237,33 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
             </div>
           </div>
 
-          {/* Escrow payout summary */}
-          <div className="rounded-2xl bg-white p-4 border border-ink/10 flex items-center justify-between">
+          {/* Escrow payout summary in DH */}
+          <div className="rounded-xl bg-slate-50 p-4 border border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <FiShield className="text-lime-600 text-lg shrink-0" />
+              <FiShield className="text-emerald-700 text-lg shrink-0" />
               <div className="text-xs">
-                <span className="font-bold text-ink">{t('proofGuaranteedPayout')}</span>
-                <p className="text-ink/60 text-[11px]">{t('proofGuaranteedDesc')}</p>
+                <span className="font-bold text-slate-900">{t('proofGuaranteedPayout')}</span>
+                <p className="text-slate-500 text-[11px]">{t('proofGuaranteedDesc')}</p>
               </div>
             </div>
             <div className={isRTL ? 'text-left' : 'text-right'}>
-              <span className="text-xs text-ink/50">{t('proofNetGain')}</span>
-              <div className="font-extrabold text-sm text-ink">€{task.reward.toFixed(2)}</div>
+              <span className="text-xs text-slate-500">{t('proofNetGain')}</span>
+              <div className="font-extrabold text-sm text-slate-900">{rewardDH} DH</div>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-ink/10">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-ink/20 px-5 py-2.5 text-xs font-semibold text-ink hover:bg-ink/5"
+              className="rounded-xl border border-slate-300 px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
             >
               {t('btnCancel')}
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-lime shadow-md hover:bg-ink/90 active:scale-95 transition"
+              className="flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 px-6 py-2.5 text-xs font-bold text-white shadow-md active:scale-95 transition cursor-pointer"
             >
               <FiSend className={`text-xs ${isRTL ? 'rotate-180' : ''}`} />
               <span>{t('btnSubmitForValidation')}</span>

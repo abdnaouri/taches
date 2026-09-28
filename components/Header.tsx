@@ -1,21 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { UserProfile, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
-import { 
-  FiBriefcase, 
-  FiZap, 
-  FiLock, 
-  FiPlus, 
+import { useAuth } from '@/lib/auth/AuthContext';
+import {
+  FiBriefcase,
+  FiCheckCircle,
+  FiLock,
+  FiPlus,
   FiClock,
-  FiDatabase
+  FiShield,
+  FiMenu,
+  FiX,
+  FiChevronDown,
+  FiChevronRight,
+  FiChevronLeft,
+  FiDollarSign,
+  FiHelpCircle,
+  FiMessageSquare,
+  FiAward,
+  FiCheck,
+  FiUser,
+  FiLogOut
 } from 'react-icons/fi';
 
 interface HeaderProps {
-  user: UserProfile;
-  onRoleToggle: (role: UserRole) => void;
+  user?: UserProfile | null;
+  onRoleToggle?: (role: UserRole) => void;
   onOpenCreateTask: () => void;
   onOpenWallet: () => void;
   onOpenQualification: () => void;
@@ -32,157 +46,644 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenQualification,
   onViewMyWork,
   activeTab,
-  setActiveTab
+  setActiveTab,
 }) => {
-  const { t, isRTL } = useLanguage();
-  const isCustomer = user.activeRole === 'CUSTOMER';
+  const { isAuthenticated, profile, openAuthModal, signOut, toggleRole } = useAuth();
+  const currentUser = isAuthenticated && profile ? profile : (isAuthenticated ? user : null);
+  const isUserLoggedIn = isAuthenticated && Boolean(currentUser);
+
+  const { t, locale, setLocale, locales, isRTL } = useLanguage();
+  const router = useRouter();
+  const pathname = usePathname();
+  const isTasksPage = Boolean(pathname?.includes('/tasks'));
+  const isCustomer = currentUser ? currentUser.activeRole === 'CUSTOMER' : true;
+  const balanceDH = currentUser ? Math.round(currentUser.balanceAvailable * 10) : 0;
+  const escrowDH = currentUser ? Math.round(currentUser.balanceEscrow * 10) : 0;
+
+  // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Prevent body scrolling when mobile drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        setIsUserMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    setIsMobileMenuOpen(false);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      router.push(`/${locale}#${sectionId}`);
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/90 backdrop-blur-md transition-all">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        {/* Left: Brand + Feed Switcher + Supabase Badge */}
-        <div className="flex items-center gap-3 sm:gap-6">
-          <a href="#" className="font-display text-2xl font-bold tracking-tight text-ink flex items-center">
-            tâches<span className="text-lime-500 font-extrabold text-3xl leading-none">.</span>
-          </a>
+    <>
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md transition-all">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3.5 py-2.5 sm:px-6 sm:py-3 lg:px-8">
 
-          {/* Supabase Dynamic Connection Pill */}
-          <div 
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800 border border-emerald-200/80 shadow-2xs"
-            title="Supabase API & Storage Dynamique (vzrmunzfkftydvgmylvu)"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <FiDatabase className="text-[10px]" />
-            <span>Supabase</span>
+          {/* LEFT: BRAND LOGO + DESKTOP NAVIGATION */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            <a
+              href={`/${locale}`}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(`/${locale}`);
+              }}
+              className="flex items-center gap-2.5 group shrink-0"
+            >
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-brand-700 text-white shadow-xs group-hover:bg-brand-800 transition-colors">
+                <span className="font-extrabold text-white text-base sm:text-lg tracking-tighter">T</span>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
+                    tâches<span className="text-emerald-600 font-extrabold">.ma</span>
+                  </span>
+                  <span className="hidden sm:inline-block rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
+                    Maroc
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-semibold tracking-wide hidden sm:block">
+                  Micro-services & Séquestre
+                </span>
+              </div>
+            </a>
           </div>
 
-          {/* Navigation Pills */}
-          <nav className="hidden md:flex items-center gap-1 rounded-full bg-ink/5 p-1 border border-ink/5">
-            <button
-              onClick={() => setActiveTab('explore')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                activeTab === 'explore'
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-ink/70 hover:text-ink'
-              }`}
-            >
-              {t('navExplore')}
-            </button>
-            <button
-              onClick={() => setActiveTab('my-tasks')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'my-tasks'
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-ink/70 hover:text-ink'
-              }`}
-            >
-              <span>{isCustomer ? t('navMyOrders') : t('navMyMissions')}</span>
-              <span className="rounded-full bg-lime px-1.5 py-0.2 text-[10px] font-bold text-ink">
-                {isCustomer ? '2' : '1'}
-              </span>
-            </button>
-          </nav>
-        </div>
+          {/* RIGHT: WALLET + CTA + LANGUAGE + PROFILE + MOBILE HAMBURGER */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {!isUserLoggedIn ? (
+              <>
+                {/* Log In Button */}
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold text-slate-700 transition cursor-pointer shadow-2xs whitespace-nowrap"
+                >
+                  Connexion
+                </button>
 
-        {/* Center: 1-Click Role Switcher (UNU.im Inspired) */}
-        <div className="flex items-center bg-white/80 p-1 rounded-full border border-ink/10 shadow-xs">
-          <button
-            onClick={() => onRoleToggle('CUSTOMER')}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-              isCustomer
-                ? 'bg-ink text-lime shadow-sm'
-                : 'text-ink/60 hover:text-ink'
-            }`}
-            title={t('roleCustomerTooltip')}
-          >
-            <FiBriefcase className="text-xs" />
-            <span className="hidden sm:inline">{t('roleCustomer')}</span>
-          </button>
+                {/* Language Selector (Desktop) */}
+                <div className="hidden sm:block">
+                  <LanguageSelector />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Wallet Widget */}
+                <button
+                  onClick={onOpenWallet}
+                  className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-xs transition cursor-pointer shadow-2xs shrink-0"
+                  title={t('walletOpenTooltip')}
+                >
+                  <div className={`flex flex-col ${isRTL ? 'text-right' : 'text-left'} leading-none`}>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold hidden sm:block">
+                      {t('balanceLabel')}
+                    </span>
+                    <span className="font-extrabold text-slate-900 text-xs sm:text-sm">
+                      {balanceDH} DH
+                    </span>
+                  </div>
+                  {escrowDH > 0 && (
+                    <div className={`hidden sm:flex items-center gap-1 ${isRTL ? 'pr-2 border-r' : 'pl-2 border-l'} border-slate-200 text-slate-500`}>
+                      <FiLock className="text-amber-600 text-[11px]" />
+                      <span className="text-[11px] font-bold text-amber-700" title={t('escrowLockedTooltip')}>
+                        {escrowDH} DH
+                      </span>
+                    </div>
+                  )}
+                </button>
 
-          <button
-            onClick={() => onRoleToggle('PERFORMER')}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-              !isCustomer
-                ? 'bg-lime text-ink shadow-sm'
-                : 'text-ink/60 hover:text-ink'
-            }`}
-            title={t('rolePerformerTooltip')}
-          >
-            <FiZap className="text-xs" />
-            <span className="hidden sm:inline">{t('rolePerformer')}</span>
-          </button>
-        </div>
+                {/* Main Action Post Task Button */}
+                {isCustomer ? (
+                  <button
+                    onClick={onOpenCreateTask}
+                    className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold text-white shadow-sm transition active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <FiPlus className="text-sm font-black" />
+                    <span className="hidden sm:inline">{t('btnPostTask')}</span>
+                    <span className="sm:hidden text-xs">Publier</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (isTasksPage) {
+                        setActiveTab('my-tasks');
+                      } else {
+                        router.push(`/${locale}/tasks?tab=my-tasks`);
+                      }
+                    }}
+                    className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold text-white shadow-xs transition cursor-pointer whitespace-nowrap"
+                  >
+                    <FiClock className="text-xs text-emerald-400" />
+                    <span className="hidden sm:inline">1 {t('btnInProgress')}</span>
+                  </button>
+                )}
 
-        {/* Right: Language Selector + Wallet + Level Pill + CTA */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Language Selector Component */}
-          <LanguageSelector />
+                {/* Language Selector (Desktop) */}
+                <div className="hidden sm:block">
+                  <LanguageSelector />
+                </div>
 
-          {/* Performer Level Pill (UNU Gamification) */}
-          {!isCustomer && (
-            <button
-              onClick={onOpenQualification}
-              className="hidden lg:flex items-center gap-2 rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-xs font-medium text-ink transition hover:border-ink/25"
-              title={t('levelPillTitle')}
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-lime text-ink font-bold text-[10px]">
-                3
-              </span>
-              <div className={`${isRTL ? 'text-right' : 'text-left'} leading-none`}>
-                <div className="font-semibold text-[11px]">{t('levelPro')}</div>
-                <div className="text-[9px] text-ink/60">{t('feeDiscount')}</div>
-              </div>
-            </button>
-          )}
+                {/* Desktop User Avatar with Dropdown */}
+                <div className="relative hidden lg:block" ref={userMenuRef}>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="relative flex items-center cursor-pointer rounded-full p-0.5 hover:ring-2 hover:ring-brand-700/30 transition"
+                  >
+                    <img
+                      src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
+                      alt={currentUser?.fullName || 'User'}
+                      className="h-8 w-8 rounded-full border border-slate-300 object-cover"
+                    />
+                    <span className={`absolute bottom-0 ${isRTL ? 'left-0' : 'right-0'} h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white`} />
+                  </button>
 
-          {/* Interactive Escrow Wallet Widget */}
-          <button
-            onClick={onOpenWallet}
-            className="flex items-center gap-2 rounded-full border border-ink/10 bg-white px-3.5 py-1.5 text-xs transition hover:border-ink/30 hover:shadow-xs"
-            title={t('walletOpenTooltip')}
-          >
-            <div className={`flex flex-col ${isRTL ? 'text-right' : 'text-left'} leading-none`}>
-              <span className="text-[10px] text-ink/50 uppercase tracking-wider font-semibold">{t('balanceLabel')}</span>
-              <span className="font-bold text-ink text-sm">€{user.balanceAvailable.toFixed(2)}</span>
-            </div>
-            {user.balanceEscrow > 0 && (
-              <div className={`flex items-center gap-1 ${isRTL ? 'pr-2 border-r' : 'pl-2 border-l'} border-ink/10 text-ink/70`}>
-                <FiLock className="text-amber-500 text-[11px]" />
-                <span className="text-[11px] font-medium" title={t('escrowLockedTooltip')}>€{user.balanceEscrow.toFixed(2)}</span>
-              </div>
+                  {isUserMenuOpen && (
+                    <div
+                      className={`absolute z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-100 ${isRTL ? 'left-0' : 'right-0'
+                        }`}
+                    >
+                      <div className="px-3 py-2.5 border-b border-slate-100">
+                        <div className="font-bold text-xs text-slate-900 truncate">{currentUser?.fullName}</div>
+                        <div className="text-[11px] text-slate-500 truncate">{currentUser?.email}</div>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-700">
+                            {isCustomer ? t('roleCustomer') : t('rolePerformer')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newRole = isCustomer ? 'PERFORMER' : 'CUSTOMER';
+                              if (onRoleToggle) onRoleToggle(newRole);
+                              toggleRole(newRole);
+                            }}
+                            className="text-[10px] text-brand-700 hover:underline font-semibold cursor-pointer"
+                          >
+                            {isCustomer ? 'Passer Prestataire' : 'Passer Client'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenWallet();
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          <FiDollarSign className="text-slate-400" />
+                          <span>{t('menuWallet')}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenQualification();
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          <FiAward className="text-slate-400" />
+                          <span>{t('menuQualification')}</span>
+                        </button>
+
+                        <a
+                          href="https://wa.me/212600000000"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition"
+                        >
+                          <FiMessageSquare />
+                          <span>{t('menuSupportWhatsApp')}</span>
+                        </a>
+
+                        <div className="pt-1 mt-1 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              signOut();
+                            }}
+                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                          >
+                            <FiLogOut className="text-rose-500 text-sm" />
+                            <span>Se déconnecter</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-          </button>
 
-          {/* Main Action Button */}
-          {isCustomer ? (
+            {/* MOBILE HAMBURGER BUTTON (< 1024px) */}
             <button
-              onClick={onOpenCreateTask}
-              className="group flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-ink/90 active:scale-95"
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? t('menuClose') : t('menuOpen')}
+              className="lg:hidden flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition-colors shadow-2xs cursor-pointer active:scale-95"
             >
-              <FiPlus className="text-sm text-lime" />
-              <span>{t('btnPostTask')}</span>
+              {isMobileMenuOpen ? (
+                <FiX className="text-xl text-slate-900" />
+              ) : (
+                <FiMenu className="text-xl text-slate-900" />
+              )}
             </button>
-          ) : (
-            <button
-              onClick={() => setActiveTab('my-tasks')}
-              className="flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-xs font-semibold text-lime shadow-xs transition hover:bg-ink/90"
-            >
-              <FiClock className="text-sm" />
-              <span className="hidden sm:inline">1 {t('btnInProgress')}</span>
-            </button>
-          )}
+          </div>
 
-          {/* User Avatar */}
-          <div className="relative">
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName}
-              className="h-8 w-8 rounded-full border border-ink/20 object-cover ring-2 ring-lime/40"
-            />
-            <span className={`absolute bottom-0 ${isRTL ? 'left-0' : 'right-0'} h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-cream`} />
+        </div>
+      </header>
+
+      {/* MOBILE DRAWER MENU OVERLAY (< 1024px) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop Blur */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Slide-out Drawer Panel */}
+          <div
+            className={`relative flex flex-col w-full max-w-sm sm:max-w-md bg-white h-full shadow-2xl z-10 overflow-y-auto animate-in duration-250 ${isRTL
+              ? 'mr-auto slide-in-from-left'
+              : 'ml-auto slide-in-from-right'
+              }`}
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-white font-extrabold text-sm">
+                  T
+                </div>
+                <span className="font-extrabold text-lg text-slate-900">
+                  tâches<span className="text-emerald-600">.ma</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
+                aria-label={t('menuClose')}
+              >
+                <FiX className="text-lg" />
+              </button>
+            </div>
+
+            {/* Guest Welcome Card */}
+            {!isUserLoggedIn ? (
+              <div className="p-4 border-b border-slate-200 bg-gradient-to-b from-white to-slate-50">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 border border-brand-200 text-brand-700 font-black text-lg shrink-0">
+                    <FiUser />
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-sm text-slate-900">Bienvenue sur tâches.ma</div>
+                    <div className="text-xs text-slate-500">Connectez-vous pour commencer</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openAuthModal('login');
+                    }}
+                    className="flex items-center justify-center rounded-xl bg-brand-700 hover:bg-brand-800 text-white py-2.5 px-3 text-xs font-bold shadow-xs transition cursor-pointer"
+                  >
+                    <span>Connexion</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openAuthModal('signup');
+                    }}
+                    className="flex items-center justify-center rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 py-2.5 px-3 text-xs font-bold transition cursor-pointer"
+                  >
+                    <span>S'inscrire</span>
+                  </button>
+                </div>
+
+                {/* Big Post Task Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenCreateTask();
+                  }}
+                  className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 py-3 text-xs font-extrabold text-white shadow-md active:scale-98 transition cursor-pointer"
+                >
+                  <FiPlus className="text-base font-black" />
+                  <span>{t('btnPostTask')}</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Profile & Balance Card */}
+                <div className="p-4 border-b border-slate-200 bg-gradient-to-b from-white to-slate-50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <img
+                      src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
+                      alt={currentUser?.fullName || 'User'}
+                      className="h-11 w-11 rounded-full border-2 border-brand-700 object-cover"
+                    />
+                    <div className="overflow-hidden">
+                      <div className="font-extrabold text-sm text-slate-900 truncate">{currentUser?.fullName}</div>
+                      <div className="text-xs text-slate-500 truncate">{currentUser?.email}</div>
+                      <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.2 text-[10px] font-bold text-brand-800">
+                        {isCustomer ? t('roleCustomer') : t('rolePerformer')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Balance Box with direct action */}
+                  <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {t('balanceLabel')}
+                      </span>
+                      <div className="font-extrabold text-lg text-slate-900">
+                        {balanceDH} DH
+                      </div>
+                      {escrowDH > 0 && (
+                        <div className="text-[11px] font-semibold text-amber-700 flex items-center gap-1 mt-0.5">
+                          <FiLock className="text-amber-600" />
+                          <span>{escrowDH} DH {t('escrowLockedTooltip')}</span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenWallet();
+                      }}
+                      className="rounded-lg bg-slate-100 hover:bg-brand-50 border border-slate-200 px-3 py-1.5 text-xs font-bold text-brand-700 cursor-pointer transition"
+                    >
+                      {t('tabDeposit')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mode Switcher in Mobile Drawer */}
+                <div className="p-4 border-b border-slate-200">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                    Mode d'utilisation
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onRoleToggle) onRoleToggle('CUSTOMER');
+                        toggleRole('CUSTOMER');
+                      }}
+                      className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${isCustomer
+                        ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                      <FiBriefcase className={`text-lg mb-1 ${isCustomer ? 'text-brand-700' : 'text-slate-400'}`} />
+                      <span className="text-xs font-bold">{t('roleCustomer')}</span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Pour commander</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onRoleToggle) onRoleToggle('PERFORMER');
+                        toggleRole('PERFORMER');
+                      }}
+                      className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${!isCustomer
+                        ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                      <FiCheckCircle className={`text-lg mb-1 ${!isCustomer ? 'text-brand-700' : 'text-slate-400'}`} />
+                      <span className="text-xs font-bold">{t('rolePerformer')}</span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Pour travailler</span>
+                    </button>
+                  </div>
+
+                  {/* Big Post Task Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenCreateTask();
+                    }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs font-extrabold text-white shadow-md active:scale-98 transition cursor-pointer"
+                  >
+                    <FiPlus className="text-base font-black" />
+                    <span>{t('btnPostTask')}</span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Navigation List */}
+            <div className="p-4 space-y-1 flex-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Navigation
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  if (isTasksPage) {
+                    setActiveTab('explore');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    router.push(`/${locale}/tasks`);
+                  }
+                }}
+                className={`flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold transition cursor-pointer ${isTasksPage && activeTab === 'explore'
+                  ? 'bg-brand-50 text-brand-800 font-extrabold'
+                  : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FiClock className="text-base text-brand-700" />
+                  <span>{t('navExplore')}</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  if (isTasksPage) {
+                    setActiveTab('my-tasks');
+                  } else {
+                    router.push(`/${locale}/tasks?tab=my-tasks`);
+                  }
+                }}
+                className={`flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold transition cursor-pointer ${isTasksPage && activeTab === 'my-tasks'
+                  ? 'bg-brand-50 text-brand-800 font-extrabold'
+                  : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FiBriefcase className="text-base text-brand-700" />
+                  <span>{isCustomer ? t('navMyOrders') : t('navMyMissions')}</span>
+                </div>
+                <span className="rounded-full bg-brand-700 px-2 py-0.5 text-[10px] font-bold text-white">
+                  {isCustomer ? '2' : '1'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollToSection('how-it-works')}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <FiCheck className="text-base text-brand-700" />
+                  <span>{t('menuHowItWorks')}</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollToSection('marketplace-feed')}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <FiShield className="text-base text-emerald-700" />
+                  <span>{t('menuDamanSecurity')}</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenQualification();
+                }}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <FiAward className="text-base text-brand-700" />
+                  <span>{t('menuQualification')}</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
+
+              {/* WhatsApp Support Callout */}
+              <a
+                href="https://wa.me/212600000000"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-xl p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold transition hover:bg-emerald-100"
+              >
+                <div className="flex items-center gap-3">
+                  <FiMessageSquare className="text-base text-emerald-700" />
+                  <span>{t('menuSupportWhatsApp')}</span>
+                </div>
+                <span className="text-[10px] bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full font-bold">
+                  Direct
+                </span>
+              </a>
+            </div>
+
+            {/* Language Selector in Drawer Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+                {t('language')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {locales.map((item) => {
+                  const isSelected = item.code === locale;
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => {
+                        setLocale(item.code);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`flex items-center justify-between rounded-xl p-2.5 text-xs font-bold transition cursor-pointer ${isSelected
+                        ? 'bg-brand-700 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none">{item.flag}</span>
+                        <span>{item.nativeName}</span>
+                      </div>
+                      {isSelected && <FiCheckCircle className="text-xs" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Log out button in mobile drawer */}
+              {isUserLoggedIn && (
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      signOut();
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition cursor-pointer"
+                  >
+                    <FiLogOut className="text-sm" />
+                    <span>Se déconnecter</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-4 pt-3 border-t border-slate-200 text-center text-[11px] text-slate-400">
+                tâches.ma • 100% Séquestre Daman Maroc
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
 };

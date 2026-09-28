@@ -55,7 +55,7 @@ export interface Task {
   id: string;
   title: string;
   description: string;
-  category: TaskCategory;
+  category?: TaskCategory | string;
   status: TaskStatus;
   reward: number; // What the performer receives
   platformFee: number; // Escrow commission

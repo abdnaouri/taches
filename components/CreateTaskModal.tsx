@@ -1,336 +1,235 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Task, TaskCategory } from '@/types/database';
+import React, { useState, useEffect } from 'react';
+import { Task } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { 
-  FiX, 
-  FiPlus, 
-  FiTrash2, 
-  FiShield, 
-  FiCheck
-} from 'react-icons/fi';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { FiX, FiShield, FiArrowRight } from 'react-icons/fi';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateTask: (newTask: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'>) => void;
+  initialTitle?: string;
 }
 
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isOpen,
   onClose,
   onCreateTask,
+  initialTitle = '',
 }) => {
-  const { t, getCategoryLabel, isRTL } = useLanguage();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [category, setCategory] = useState<TaskCategory>('development');
-  const [title, setTitle] = useState('');
+  const { t, isRTL } = useLanguage();
+  const { profile, user: authUser } = useAuth();
+
+  // Exactly 3 user fields
+  const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState('');
-  const [reward, setReward] = useState<number>(30);
-  const [timeLimitHours, setTimeLimitHours] = useState<number>(12);
-  const [proofs, setProofs] = useState<string[]>([
-    "Capture d'écran du résultat final",
-    "Lien direct vers le livrable accessible"
-  ]);
-  const [newProofInput, setNewProofInput] = useState('');
+  const [rewardDH, setRewardDH] = useState<number>(200);
+
+  // Sync initialTitle when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialTitle) {
+        setTitle(initialTitle);
+      }
+      setRewardDH(200);
+      setDescription('');
+    }
+  }, [isOpen, initialTitle]);
+
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const platformFee = Number((reward * 0.10).toFixed(2));
-  const totalBudget = Number((reward + platformFee).toFixed(2));
-
-  const handleAddProof = () => {
-    if (!newProofInput.trim()) return;
-    setProofs([...proofs, newProofInput.trim()]);
-    setNewProofInput('');
-  };
-
-  const handleRemoveProof = (index: number) => {
-    setProofs(proofs.filter((_, i) => i !== index));
-  };
+  // Internal accounting in EUR equivalent
+  const rewardEur = Number((rewardDH / 10).toFixed(2));
+  const platformFeeEur = Number((rewardEur * 0.10).toFixed(2));
+  const totalBudgetEur = Number((rewardEur * 1.10).toFixed(2));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim() || !description.trim() || !rewardDH || rewardDH <= 0) return;
+
+    const clientId = profile?.id || authUser?.id || `usr_${Date.now()}`;
+    const clientName = profile?.fullName ? `${profile.fullName} (Vous)` : 'Vous';
+    const clientAvatar = profile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
+
     onCreateTask({
-      title,
-      description,
-      category,
+      title: title.trim(),
+      description: description.trim(),
       status: 'OPEN',
-      reward,
-      platformFee,
-      totalBudget,
-      timeLimitHours,
+      reward: rewardEur,
+      platformFee: platformFeeEur,
+      totalBudget: totalBudgetEur,
+      timeLimitHours: 24, // Standard 24h default
       minLevelRequired: 1,
-      clientId: 'usr_me_1',
-      clientName: 'Aero Mehdi (Vous)',
-      clientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-      clientRating: 5.0,
+      clientId,
+      clientName,
+      clientAvatar,
+      clientRating: profile?.customerRating || 5.0,
       clientHireRate: 100,
-      requiredProofs: proofs,
+      requiredProofs: ['Livrable final validé'],
     });
+
     onClose();
   };
 
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl rounded-3xl bg-cream p-6 sm:p-8 shadow-2xl border border-ink/15 max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
+    >
+      <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 my-auto">
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className={`absolute ${isRTL ? 'left-5' : 'right-5'} top-5 rounded-full bg-ink/5 p-2 text-ink/70 hover:bg-ink hover:text-white transition-all`}
+          aria-label="Fermer"
+          className={`absolute ${isRTL ? 'left-5' : 'right-5'
+            } top-5 rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer`}
         >
           <FiX className="text-lg" />
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-lime text-ink font-bold text-xs">
-            +
-          </span>
-          <span className="text-xs font-bold uppercase tracking-wider text-ink/50">
-            {t('createTaskHeaderBadge')}
-          </span>
-        </div>
-        <h2 className="font-display text-2xl font-bold text-ink">
-          {t('createTaskTitle')}
-        </h2>
-
-        {/* Stepper Bar */}
-        <div className="mt-4 flex items-center gap-2 border-b border-ink/10 pb-4 overflow-x-auto">
-          <button
-            onClick={() => setStep(1)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
-              step === 1 ? 'bg-ink text-lime' : 'bg-white text-ink/60'
-            }`}
-          >
-            {t('step1Tab')}
-          </button>
-          <button
-            onClick={() => setStep(2)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
-              step === 2 ? 'bg-ink text-lime' : 'bg-white text-ink/60'
-            }`}
-          >
-            {t('step2Tab')}
-          </button>
-          <button
-            onClick={() => setStep(3)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition whitespace-nowrap ${
-              step === 3 ? 'bg-ink text-lime' : 'bg-white text-ink/60'
-            }`}
-          >
-            {t('step3Tab')}
-          </button>
+        <div className="mb-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-2">
+            <FiShield className="text-emerald-700" />
+            <span>{t('createTaskHeaderBadge')}</span>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+            {t('createTaskTitle')}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {t('simpleTaskSubtitle')}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          {/* STEP 1: CATEGORY & TITLE */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-ink mb-2">
-                  {t('chooseCategory')}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {(['development', 'design', 'assistance', 'copywriting', 'marketing', 'micro'] as TaskCategory[]).map((catId) => (
-                    <button
-                      type="button"
-                      key={catId}
-                      onClick={() => setCategory(catId)}
-                      className={`rounded-2xl p-3 ${isRTL ? 'text-right' : 'text-left'} border text-xs font-semibold transition ${
-                        category === catId
-                          ? 'border-ink bg-ink text-lime shadow-xs'
-                          : 'border-ink/10 bg-white text-ink/80 hover:border-ink/30'
-                      }`}
-                    >
-                      {getCategoryLabel(catId)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* ONE SIMPLE FORM: Title, Description, Price */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* FIELD 1: TITLE */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              {t('titleLabel')} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={t('titlePlaceholder')}
+              autoFocus={!initialTitle}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/20 transition-all"
+            />
+          </div>
 
-              <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
-                  {t('titleLabel')}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t('titlePlaceholder')}
-                  className="w-full rounded-2xl border border-ink/15 bg-white p-3.5 text-xs text-ink outline-none transition focus:border-ink focus:ring-1 focus:ring-ink"
-                />
-              </div>
+          {/* FIELD 2: DESCRIPTION */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              {t('descLabel')} <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={4}
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t('descPlaceholder')}
+              autoFocus={Boolean(initialTitle)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/20 transition-all resize-y"
+            />
+          </div>
 
-              <div className="flex justify-end pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  disabled={!title.trim()}
-                  className="rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-lime disabled:opacity-40 transition"
-                >
-                  {t('btnContinueStep2')}
-                </button>
-              </div>
+          {/* FIELD 3: PRICE (IN DIRHAMS - DH) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-800">
+                {t('rewardPerformerLabel')} <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[11px] font-semibold text-slate-500">
+                (~{rewardEur} €)
+              </span>
             </div>
-          )}
 
-          {/* STEP 2: DESCRIPTION & PROOFS CHECKLIST */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
-                  {t('descLabel')}
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('descPlaceholder')}
-                  className="w-full rounded-2xl border border-ink/15 bg-white p-3.5 text-xs text-ink outline-none transition focus:border-ink focus:ring-1 focus:ring-ink"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
-                  {t('proofsRequiredLabel')}
-                </label>
-                <div className="space-y-2 mb-2">
-                  {proofs.map((proof, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 rounded-xl bg-white p-2.5 border border-ink/10 text-xs">
-                      <span className="text-ink">✓ {proof}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveProof(i)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <FiTrash2 className="text-xs" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newProofInput}
-                    onChange={(e) => setNewProofInput(e.target.value)}
-                    placeholder={t('proofPlaceholder')}
-                    className="flex-1 rounded-xl border border-ink/15 bg-white px-3 py-2 text-xs text-ink outline-none focus:border-ink"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddProof}
-                    className="flex items-center gap-1 rounded-xl bg-ink/10 px-3 py-2 text-xs font-semibold text-ink hover:bg-ink/20"
-                  >
-                    <FiPlus /> {t('btnAddProof')}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-between pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="rounded-full border border-ink/20 px-5 py-2.5 text-xs font-semibold text-ink"
-                >
-                  {t('btnBack')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  disabled={!description.trim()}
-                  className="rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-lime disabled:opacity-40 transition"
-                >
-                  {t('btnContinueStep3')}
-                </button>
-              </div>
+            <div className="relative">
+              <input
+                type="number"
+                min={50}
+                max={50000}
+                step={10}
+                required
+                value={rewardDH || ''}
+                onChange={(e) => setRewardDH(Math.max(0, Number(e.target.value)))}
+                placeholder="200"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base font-extrabold text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/20 transition-all"
+              />
+              <span
+                className={`absolute ${isRTL ? 'left-4' : 'right-4'
+                  } top-1/2 -translate-y-1/2 text-sm font-black text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-lg pointer-events-none`}
+              >
+                DH
+              </span>
             </div>
-          )}
 
-          {/* STEP 3: REWARD & ESCROW VAULT CALCULATION */}
-          {step === 3 && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-ink mb-1.5">
-                    {t('rewardPerformerLabel')}
-                  </label>
-                  <input
-                    type="number"
-                    min={5}
-                    max={2000}
-                    value={reward}
-                    onChange={(e) => setReward(Number(e.target.value))}
-                    className="w-full rounded-2xl border border-ink/15 bg-white p-3.5 text-base font-bold text-ink outline-none focus:border-ink"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ink mb-1.5">
-                    {t('timeAllowedLabel')}
-                  </label>
-                  <select
-                    value={timeLimitHours}
-                    onChange={(e) => setTimeLimitHours(Number(e.target.value))}
-                    className="w-full rounded-2xl border border-ink/15 bg-white p-3.5 text-xs font-semibold text-ink outline-none focus:border-ink"
-                  >
-                    <option value={2}>{t('timeOption2h')}</option>
-                    <option value={6}>{t('timeOption6h')}</option>
-                    <option value={12}>{t('timeOption12h')}</option>
-                    <option value={24}>{t('timeOption24h')}</option>
-                    <option value={48}>{t('timeOption48h')}</option>
-                    <option value={72}>{t('timeOption72h')}</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Work-zilla Transparent Escrow Breakdown */}
-              <div className="rounded-2xl bg-white p-4 border border-ink/10 shadow-xs space-y-2 text-xs">
-                <div className="flex items-center justify-between text-ink/70">
-                  <span>{t('breakdownPerformerNet')}</span>
-                  <span className="font-semibold text-ink">€{reward.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between text-ink/70">
-                  <span>{t('breakdownPlatformFee')}</span>
-                  <span className="font-semibold text-ink">€{platformFee.toFixed(2)}</span>
-                </div>
-                <div className="pt-2 border-t border-ink/10 flex items-center justify-between font-bold text-sm text-ink">
-                  <span>{t('breakdownTotalEscrow')}</span>
-                  <span className="text-base text-ink bg-lime px-2.5 py-0.5 rounded-full">
-                    €{totalBudget.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-xl bg-lime/20 p-3 border border-lime/40 text-xs text-ink">
-                <FiShield className="text-base text-ink shrink-0" />
-                <span>
-                  {t('escrowNoticeCreate')}
-                </span>
-              </div>
-
-              <div className="flex justify-between pt-4">
+            {/* Quick Suggestions Chips */}
+            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+              <span className="text-[11px] font-medium text-slate-500 mr-1">
+                {t('simpleTaskPriceQuick')}
+              </span>
+              {[50, 100, 200, 500, 1000].map((amount) => (
                 <button
+                  key={amount}
                   type="button"
-                  onClick={() => setStep(2)}
-                  className="rounded-full border border-ink/20 px-5 py-2.5 text-xs font-semibold text-ink"
+                  onClick={() => setRewardDH(amount)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${rewardDH === amount
+                      ? 'bg-brand-700 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                 >
-                  {t('btnBack')}
+                  {amount} DH
                 </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 rounded-full bg-ink px-7 py-3 text-xs font-bold text-lime shadow-md hover:bg-ink/90 active:scale-95 transition"
-                >
-                  <FiCheck className="text-base" />
-                  <span>{t('btnLockEscrowAndPost')}</span>
-                </button>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
+
+          {/* Reassurance Daman Escrow Notice */}
+          <div className="flex items-start gap-3 rounded-xl bg-emerald-50/80 p-3.5 border border-emerald-200 text-xs text-emerald-900">
+            <FiShield className="text-lg text-emerald-700 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              {t('escrowNoticeCreate')}
+            </p>
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              {t('btnCancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={!title.trim() || !description.trim() || !rewardDH || rewardDH <= 0}
+              className="flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-40 disabled:pointer-events-none px-6 py-3 text-xs font-bold text-white shadow-md active:scale-98 transition cursor-pointer"
+            >
+              <span>{t('btnLockEscrowAndPost')}</span>
+              <FiArrowRight className={`text-sm ${isRTL ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
         </form>
       </div>
     </div>

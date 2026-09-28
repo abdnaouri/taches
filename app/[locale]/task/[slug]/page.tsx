@@ -9,5 +9,6 @@ export default function TaskSlugPage({
   const locale = (params.locale as Locale) || 'fr';
   const slug = params.slug;
 
-  return <MarketplaceApp forcedLocale={locale} initialSlug={slug} />;
+  return <MarketplaceApp forcedLocale={locale} initialSlug={slug} viewMode="tasks" />;
 }
+
