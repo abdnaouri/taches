@@ -69,6 +69,12 @@ export interface Task {
   clientHireRate: number; // e.g. 96%
   minLevelRequired: number; // 1 to 5
   requiredProofs: string[]; // e.g. ["Screenshot of confirmed account", "Profile URL link"]
+  subCategory?: string;
+  locationMode?: 'online' | 'in_person';
+  city?: string;
+  taskMode?: 'single' | 'multi';
+  referenceLinks?: string[];
+  verificationQuestion?: string;
   applicantsCount: number;
   assignedToId?: string;
   assignedToName?: string;

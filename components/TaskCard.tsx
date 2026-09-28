@@ -9,7 +9,9 @@ import {
   FiUsers,
   FiArrowUpRight,
   FiArrowUpLeft,
-  FiShield
+  FiMapPin,
+  FiGlobe,
+  FiZap
 } from 'react-icons/fi';
 
 interface TaskCardProps {
@@ -23,22 +25,47 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   userRole,
   onSelectTask,
 }) => {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, getCategoryLabel } = useLanguage();
   const isAssignedToMe = task.assignedToId === 'usr_me_1';
   const rewardDH = Math.round(task.reward * 10);
+  const isUrgent = task.timeLimitHours <= 6;
 
   return (
     <div
       onClick={() => onSelectTask(task)}
-      className={`group relative flex flex-col justify-between rounded-xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${isAssignedToMe
+      className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
+        isAssignedToMe
           ? 'border-brand-600 ring-2 ring-brand-600/30'
           : 'border-slate-200 hover:border-brand-600'
-        }`}
+      }`}
     >
       <div>
         {/* Top Badges Row */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Category / Subcategory Pill */}
+            <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 border border-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+              {task.subCategory || getCategoryLabel(task.category || 'all')}
+            </span>
+
+            {/* Location pill */}
+            {task.city ? (
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+                <FiMapPin className="text-[10px]" /> {task.city}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-slate-50 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                <FiGlobe className="text-[10px]" /> En ligne
+              </span>
+            )}
+
+            {/* Urgent Badge */}
+            {isUrgent && (
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-800">
+                <FiZap className="text-amber-600 text-[10px]" /> Urgent
+              </span>
+            )}
+
             {task.status === 'IN_PROGRESS' && (
               <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                 <FiClock /> {t('statusInProgress')}
@@ -48,7 +75,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
           {/* Reward badge (in Moroccan Dirhams DH + EUR in tooltip) */}
           <div
-            className="flex items-baseline gap-1 rounded-lg bg-slate-900 text-white px-3 py-1 text-xs font-black shadow-2xs"
+            className="flex items-baseline gap-1 rounded-lg bg-slate-900 text-white px-3 py-1 text-xs font-black shadow-2xs shrink-0"
             title={`~€${task.reward.toFixed(2)}`}
           >
             <span>{rewardDH} DH</span>
@@ -72,7 +99,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <span className="truncate">
               {t('proofsRequiredCount', {
                 count: task.requiredProofs.length,
-                firstProof: task.requiredProofs[0]
+                firstProof: task.requiredProofs[0],
               })}
             </span>
           </div>
@@ -84,12 +111,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         {/* Client rating & stats */}
         <div className="flex items-center gap-2">
           <img
-            src={task.clientAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
+            src={
+              task.clientAvatar ||
+              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'
+            }
             alt={task.clientName}
             className="h-6 w-6 rounded-full object-cover border border-slate-300"
           />
           <div className="text-[11px] leading-tight">
-            <div className="font-bold text-slate-900 truncate max-w-[120px]">{task.clientName}</div>
+            <div className="font-bold text-slate-900 truncate max-w-[120px]">
+              {task.clientName}
+            </div>
             <div className="text-slate-500 text-[10px]">
               ★ {task.clientRating} • {t('hireRate', { rate: task.clientHireRate })}
             </div>
@@ -98,12 +130,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Time limit & Applicants & Action Arrow */}
         <div className="flex items-center gap-3 text-slate-600 text-[11px]">
-          <span className="flex items-center gap-1 font-medium" title={t('timeLimitTooltip')}>
+          <span
+            className="flex items-center gap-1 font-medium"
+            title={t('timeLimitTooltip')}
+          >
             <FiClock className="text-slate-400" />
             <span>{t('hoursShort', { h: task.timeLimitHours })}</span>
           </span>
 
-          <span className="flex items-center gap-1 font-medium" title={t('applicantsTooltip')}>
+          <span
+            className="flex items-center gap-1 font-medium"
+            title={t('applicantsTooltip')}
+          >
             <FiUsers className="text-slate-400" />
             <span>{task.applicantsCount}</span>
           </span>

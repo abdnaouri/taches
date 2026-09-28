@@ -7,21 +7,21 @@ export const initialUser: UserProfile = {
   fullName: 'Aero Mehdi',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
   activeRole: 'PERFORMER',
-  balanceAvailable: 285.50,
-  balanceEscrow: 75.00,
+  balanceAvailable: 285.5,
+  balanceEscrow: 75.0,
   createdAt: '2024-01-15T10:00:00Z',
 
-  // Performer stats (UNU-style Level 3 Pro)
+  // Performer stats (Level 3 Pro)
   performerTier: 'level_3',
-  performerXp: 780, // out of 1000 for level 4
+  performerXp: 780,
   performerRating: 4.96,
   performerReviewsCount: 48,
   performerCompletedTasks: 52,
   passedQualification: true,
 
-  // Customer stats (Work-zilla style)
+  // Customer stats
   customerRating: 5.0,
-  customerTotalSpent: 640.00,
+  customerTotalSpent: 640.0,
   customerTasksPosted: 11,
 };
 
@@ -34,227 +34,172 @@ export interface LocalizedTaskContent {
 export const taskTranslations: Record<string, LocalizedTaskContent> = {
   tsk_101: {
     title: {
-      ru: "Адаптивная верстка Tailwind CSS и контактная форма Next.js",
-      fr: "Correction responsive Tailwind CSS & formulaire de contact Next.js",
-      ar: "إصلاح تجاوب Tailwind CSS ونموذج الاتصال في Next.js",
-      en: "Tailwind CSS responsive fix & Next.js contact form",
-      es: "Corrección responsive Tailwind CSS y formulario de contacto Next.js"
+      ru: "Настройка и оптимизация магазина YouCan / Shopify",
+      fr: "Configuration et personnalisation boutique YouCan / Shopify",
+      ar: "إعداد وتخصيص متجر إلكتروني على YouCan / Shopify",
+      en: "Setup & optimization of YouCan / Shopify online store",
+      es: "Configuración y optimización de tienda YouCan / Shopify",
     },
     description: {
-      ru: "Необходимо исправить наложение мобильного меню на iPhone и настроить валидацию формы Zod с отправкой email через Resend.",
-      fr: "Nous avons une landing page Next.js dont le menu mobile se chevauche sur iPhone 13/14 et le formulaire de contact nécessite une validation Zod avec envoi d'email via Resend. Code propre et testé requis.",
-      ar: "لدينا صفحة هبوط في Next.js تتداخل قائمتها في الهواتف الذكية ونموذج الاتصال بحاجة إلى تحقق بواسطة Zod وإرسال البريد عبر Resend. يشترط كود نظيف ومختبر.",
-      en: "We have a Next.js landing page where the mobile menu overlaps on iPhone 13/14, and the contact form needs Zod validation with email sending via Resend. Clean and tested code required.",
-      es: "Tenemos una landing page en Next.js cuyo menú móvil se superpone en iPhone 13/14 y el formulario de contacto necesita validación Zod con envío por Resend. Se requiere código limpio y probado."
+      ru: "Требуется настроить тему YouCan Shop, подключить оплату CMI и загрузить первые 15 товаров с описаниями на арабском и французском.",
+      fr: "Configuration complète d’une boutique YouCan Shop : installation du thème, mode de livraison au Maroc, intégration des 15 premiers produits avec descriptions soignées.",
+      ar: "إعداد كامل لمتجر YouCan Shop: تثبيت القالب، ضبط وسائل التوصيل في المغرب، وإدخال أول 15 منتجاً مع صور ووصف احترافي.",
+      en: "Full setup of a YouCan Shop store: theme configuration, Moroccan shipping rates, and upload of 15 initial products with clean descriptions.",
+      es: "Configuración completa de tienda YouCan Shop: instalación del tema, métodos de envío en Marruecos y carga de los primeros 15 productos con fotos.",
     },
     requiredProofs: {
       ru: [
-        "Ссылка на Pull Request в GitHub или коммит",
-        "Видео (30с) или скриншот меню на мобильном экране (390px)"
+        "Ссылка на опубликованный и рабочий магазин",
+        "Скриншоты настроенных страниц доставки и корзины",
       ],
       fr: [
-        "Lien vers la Pull Request GitHub ou commit vérifiable",
-        "Vidéo de 30s ou capture d'écran du menu sur viewport mobile (390px)"
+        "Lien direct vers la boutique opérationnelle",
+        "Captures d’écran de la configuration panier et livraison",
       ],
       ar: [
-        "رابط إلى طلب السحب (Pull Request) في GitHub أو الالتزام المحقق",
-        "فيديو مدته 30 ثانية أو لقطة شاشة للقائمة على شاشات الجوال (390px)"
+        "رابط مباشر للمتجر بعد النشر والعمل",
+        "لقطات شاشة لصفحات السلة وإعدادات التوصيل",
       ],
       en: [
-        "Link to GitHub Pull Request or verifiable commit",
-        "30s video or screenshot of the menu on mobile viewport (390px)"
+        "Live URL link to the fully working store",
+        "Screenshots of cart and Moroccan delivery settings",
       ],
       es: [
-        "Enlace al Pull Request de GitHub o commit verificable",
-        "Vídeo de 30s o captura de pantalla del menú en móvil (390px)"
-      ]
-    }
+        "Enlace directo a la tienda operativa",
+        "Capturas de pantalla del carrito y configuración de envíos",
+      ],
+    },
   },
   tsk_102: {
     title: {
-      ru: "Создание минималистичного логотипа + SVG favicon для ИИ-стартапа",
-      fr: "Création d'un logo vectoriel minimaliste + favicon SVG pour startup IA",
-      ar: "تصميم شعار متجهي بسيط + أيقونة مفضلة SVG لشركة ناشئة للذكاء الاصطناعي",
-      en: "Minimalist vector logo + SVG favicon for AI startup",
-      es: "Creación de logo vectorial minimalista + favicon SVG para startup de IA"
+      ru: "Создание логотипа и меню для кафе-ресторана в Касабланке",
+      fr: "Création de logo & design du menu pour café/restaurant à Casablanca",
+      ar: "تصميم شعار وقائمة طعام لمطعم ومقهى بالدار البيضاء",
+      en: "Logo design & menu layout for café/restaurant in Casablanca",
+      es: "Diseño de logotipo y menú para café/restaurante en Casablanca",
     },
     description: {
-      ru: "Ищем графического дизайнера для создания стильного логотипа 'SynapseAI'. Лаконичная палитра (черный/белый + лаймовый акцент). Исходники SVG, PNG и favicon.",
-      fr: "Recherche d'un graphiste pour concevoir un logo moderne et épuré pour 'SynapseAI'. Palette sobre (noir/blanc + touche néon vert/lime). Livrables en SVG, PNG transparent haute résolution et favicon.ico.",
-      ar: "مطلوب مصمم جرافيك لابتكار شعار عصري وأنيق لشركة 'SynapseAI'. ألوان بسيطة (أسود/أبيض مع لمسة ليموني نيون). التسليم بصيغ SVG وPNG شفاف عالي الدقة وfavicon.ico.",
-      en: "Looking for a graphic designer to craft a modern, sleek logo for 'SynapseAI'. Minimal palette (black/white + neon lime touch). Deliverables in SVG, high-res transparent PNG, and favicon.ico.",
-      es: "Buscamos diseñador gráfico para crear un logo moderno y depurado para 'SynapseAI'. Paleta sobria (negro/blanco + toque verde lima). Entregables en SVG, PNG transparente alta resolución y favicon.ico."
+      ru: "Нужен стильный логотип и двухстороннее меню A4 для нового заведения в районе Готье (Касабланка). Форматы для печати PDF + PSD/AI.",
+      fr: "Recherche d’un graphiste pour concevoir le logo et la carte des boissons/plats (recto-verso format A4) pour un nouveau café à Casablanca. Fichiers prêts pour l’imprimeur.",
+      ar: "مطلوب مصمم جرافيك لابتكار شعار وتصميم قائمة الطعام والمشروبات (وجهين A4) لمقهى جديد بالدار البيضاء. تسليم ملفات جاهزة للطباعة.",
+      en: "Looking for a graphic designer to create the logo and 2-page A4 food & drink menu for a new café in Casablanca. Print-ready files required.",
+      es: "Buscamos diseñador gráfico para crear logo y menú de 2 caras A4 para un nuevo café en Casablanca. Archivos listos para imprenta.",
     },
     requiredProofs: {
       ru: [
-        "Векторные исходники .SVG и .AI",
-        "Файл favicon.ico и прозрачные PNG (512x512)"
+        "Векторные исходники .AI или .PSD со слоями",
+        "Печатный PDF высокого разрешения (300 DPI)",
       ],
       fr: [
-        "Fichiers sources vectoriels .SVG et .AI",
-        "Fichier favicon.ico et déclinaisons PNG transparentes (512x512)"
+        "Fichiers sources vectoriels .AI ou .PSD avec calques",
+        "PDF haute définition (300 DPI) prêt pour impression",
       ],
       ar: [
-        "ملفات المصدر المتجهية .SVG و .AI",
-        "ملف favicon.ico ونسخ PNG شفافة (512x512)"
+        "ملفات المصدر المفتوحة .AI أو .PSD مع الطبقات",
+        "ملف PDF عالي الدقة (300 DPI) مجهز للطباعة",
       ],
       en: [
-        "Vector source files in .SVG and .AI",
-        "Favicon.ico file and transparent PNG versions (512x512)"
+        "Vector source files (.AI or layered .PSD)",
+        "High-res print-ready PDF (300 DPI)",
       ],
       es: [
-        "Archivos fuente vectoriales .SVG y .AI",
-        "Archivo favicon.ico y versiones PNG transparentes (512x512)"
-      ]
-    }
+        "Archivos fuente vectoriales .AI o .PSD con capas",
+        "PDF de alta resolución (300 DPI) listo para imprimir",
+      ],
+    },
   },
   tsk_103: {
     title: {
-      ru: "Сбор и валидация 50 B2B SaaS лидов (LinkedIn + Email)",
-      fr: "Recherche et qualification de 50 prospects B2B SaaS (LinkedIn + Emails)",
-      ar: "بحث وتأهيل 50 عميلاً محتملاً B2B SaaS (لينكد إن + بريد إلكتروني)",
-      en: "Sourcing and qualification of 50 B2B SaaS leads (LinkedIn + Emails)",
-      es: "Búsqueda y cualificación de 50 leads B2B SaaS (LinkedIn + Emails)"
+      ru: "Сверка и ввод 180 счетов-фактур в Excel",
+      fr: "Saisie de 180 factures et rapprochement sous Excel",
+      ar: "إدخال ومطابقة 180 فاتورة تجارية في جدول Excel",
+      en: "Data entry of 180 invoices & reconciliation in Excel",
+      es: "Introducción y cuadre de 180 facturas en Excel",
     },
     description: {
-      ru: "Собрать 50 целевых контактов: Директора по маркетингу e-commerce компаний во Франции (> 20 сотрудников). Имя, должность, компания, профиль LinkedIn, проверенный рабочий email.",
-      fr: "Collecter 50 contacts ciblés : Directeurs Marketing ou Growth de scale-ups e-commerce en France (> 20 salariés). Colonnes requises : Prénom, Nom, Poste exact, Entreprise, Profil LinkedIn, Email professionnel vérifié.",
-      ar: "جمع 50 جهة اتصال مستهدفة: مدراء تسويق أو نمو لشركات تجارة إلكترونية ناشئة في فرنسا (> 20 موظفاً). الأعمدة المطلوبة: الاسم، اللقب، المنصب، الشركة، رابط لينكد إن، بريد مهني مفعل.",
-      en: "Collect 50 targeted leads: Marketing or Growth Directors at e-commerce scale-ups in France (> 20 employees). Required columns: First Name, Last Name, Exact Title, Company, LinkedIn Profile, Verified Work Email.",
-      es: "Recopilar 50 contactos específicos: Directores de Marketing o Growth de scale-ups de e-commerce en Francia (> 20 empleados). Columnas: Nombre, Apellidos, Cargo exacto, Empresa, Perfil LinkedIn, Email verificado."
+      ru: "Ввод данных из отсканированных PDF счетов в готовый шаблон Excel. Точность чисел, проверка НДС и формул.",
+      fr: "Saisie minutieuse des montants, numéros de factures, dates et TVA depuis des PDF scannés vers notre matrice Excel. Rapprochement avec zéro erreur.",
+      ar: "إدخال دقيق للبيانات والمبالغ وتواريخ الفواتير وأرقامها من ملفات PDF الممسوحة ضوئياً إلى نموذج Excel مع مراجعة المجاميع.",
+      en: "Accurate entry of invoice numbers, dates, amounts and VAT from scanned PDFs into our Excel template with total reconciliation.",
+      es: "Introducción rigurosa de 180 facturas desde PDFs escaneados a plantilla Excel con comprobación de subtotales e IVA.",
     },
     requiredProofs: {
-      ru: [
-        "Google Таблица или CSV с 50 заполненными строками",
-        "Отчет проверки валидности email адресов"
-      ],
-      fr: [
-        "Fichier Google Sheets ou CSV partagé avec 50 lignes complètes",
-        "Rapport de bounce rate vérifié (NeverBounce ou Dropcontact)"
-      ],
-      ar: [
-        "ملف Google Sheets أو CSV مشترك يحتوي على 50 صفاً مكتملاً",
-        "تقرير تحقق من ارتداد البريد (NeverBounce أو Dropcontact)"
-      ],
-      en: [
-        "Shared Google Sheets or CSV with 50 completed rows",
-        "Verified bounce rate report (NeverBounce or Dropcontact)"
-      ],
-      es: [
-        "Archivo Google Sheets o CSV compartido con 50 filas completas",
-        "Informe de rebote verificado (NeverBounce o Dropcontact)"
-      ]
-    }
+      ru: ["Файл Excel .xlsx с заполненными данными и формулами"],
+      fr: ["Fichier Excel .xlsx complet avec formules vérifiées"],
+      ar: ["ملف Excel بصيغة .xlsx مع التحقق من كافة العمليات الحسابية"],
+      en: ["Completed Excel .xlsx file with verified totals and formulas"],
+      es: ["Archivo Excel .xlsx completado con fórmulas verificadas"],
+    },
   },
   tsk_104: {
     title: {
-      ru: "Перевод и SEO-адаптация 4 карточек товаров с английского",
-      fr: "Traduction & adaptation SEO Anglais -> Français pour 4 fiches produits",
-      ar: "ترجمة ومواءمة تحسين محركات البحث (SEO) لـ 4 بطاقات منتجات",
-      en: "SEO translation & localization English -> French for 4 product pages",
-      es: "Traducción y adaptación SEO Inglés -> Francés para 4 fichas de producto"
+      ru: "Перевод коммерческого договора с арабского на французский",
+      fr: "Traduction d’un contrat commercial Arabe vers Français (5 pages)",
+      ar: "ترجمة عقد تجاري من العربية إلى الفرنسية (5 صفحات)",
+      en: "Translation of commercial agreement from Arabic to French (5 pages)",
+      es: "Traducción de contrato comercial de Árabe a Francés (5 páginas)",
     },
     description: {
-      ru: "Качественный перевод 4 описаний высокотехнологичных аксессуаров (около 1 200 слов). Сохранение премиального стиля и естественная интеграция ключевых слов.",
-      fr: "Traduction humaine de 4 pages de descriptions d'accessoires high-tech (environ 1 200 mots au total). Respect du ton de marque premium et intégration naturelle des mots-clés fournis.",
-      ar: "ترجمة بشرية احترافية لأربع صفحات وصف ملحقات تكنولوجية متطورة (حوالي 1200 كلمة). الحفاظ على النبرة الفاخرة للعلامة التجارية وإدراج الكلمات المفتاحية بسلاسة.",
-      en: "Human translation of 4 high-tech accessory product descriptions (approx. 1,200 words total). Consistent premium brand voice and natural integration of target keywords.",
-      es: "Traducción humana de 4 páginas de descripciones de accesorios high-tech (aprox. 1.200 palabras). Mantener el tono premium de la marca e integrar de forma natural las palabras clave provistas."
+      ru: "Юридический и коммерческий перевод партнерского соглашения (5 страниц, ~1800 слов). Строгое соблюдение терминологии марокканского права.",
+      fr: "Traduction soignée et rigoureuse d’un contrat de partenariat commercial de 5 pages de l’Arabe standard vers le Français juridique marocain.",
+      ar: "ترجمة دقيقة ومحكمة لعقد شراكة تجارية يقع في 5 صفحات من العربية الفصحى إلى الفرنسية القانونية المعتمدة في المغرب.",
+      en: "Accurate translation of a 5-page commercial partnership contract from Arabic to French respecting Moroccan legal standards.",
+      es: "Traducción precisa de contrato de sociedad comercial de 5 páginas de Árabe a Francés jurídico marroquí.",
     },
     requiredProofs: {
-      ru: [
-        "Документ Google Docs в режиме правок",
-        "Таблица с метаописаниями товаров"
-      ],
-      fr: [
-        "Document Google Docs avec mode suggestion et texte final relu",
-        "Tableau récapitulatif des métadescriptions optimisées"
-      ],
-      ar: [
-        "مستند Google Docs مع وضع الاقتراحات والنص النهائي المراجع",
-        "جدول يلخص الأوصاف الوصفية (Meta descriptions) المحسنة"
-      ],
-      en: [
-        "Google Docs document with suggestion mode and final reviewed text",
-        "Summary table of optimized meta descriptions"
-      ],
-      es: [
-        "Documento Google Docs en modo sugerencias y texto final revisado",
-        "Tabla resumen de metadescripciones optimizadas"
-      ]
-    }
+      ru: ["Итоговый документ Word (.docx) и PDF с точным форматированием"],
+      fr: ["Document finalisé en format Word (.docx) et PDF propre"],
+      ar: ["الملف المترجم بصيغتي Word (.docx) و PDF مطابق للتنسيق الأصلي"],
+      en: ["Finalized document in Word (.docx) and clean PDF format"],
+      es: ["Documento traducido en Word (.docx) y PDF con maquetación limpia"],
+    },
   },
   tsk_105: {
     title: {
-      ru: "UX-тестирование мобильного приложения iOS + отчет",
-      fr: "Test utilisateur UX (Application mobile iOS) + Rapport d'évaluation",
-      ar: "اختبار تجربة المستخدم UX (تطبيق iOS) + تقرير تقييمي",
-      en: "UX User Testing (iOS mobile app) + Evaluation Report",
-      es: "Prueba de usuario UX (App móvil iOS) + Informe de evaluación"
+      ru: "Монтаж 3 коротких роликов для TikTok / Instagram Reels",
+      fr: "Montage dynamique de 3 vidéos pour TikTok & Instagram Reels",
+      ar: "مونتاج احترافي وديناميكي لـ 3 مقاطع فيديو لـ TikTok و Reels",
+      en: "Dynamic video editing of 3 clips for TikTok & Instagram Reels",
+      es: "Edición dinámica de 3 vídeos para TikTok e Instagram Reels",
     },
     description: {
-      ru: "Скачать приложение через TestFlight, пройти весь процесс регистрации и тестовой покупки, составить структурированный отчет о найденных проблемах.",
-      fr: "Télécharger notre application TestFlight, effectuer un parcours d'inscription complet et d'achat simulé, et rédiger un retour clair sur les éventuels points de friction rencontrés.",
-      ar: "تحميل تطبيقنا عبر TestFlight، وإجراء رحلة تسجيل كاملة وتجربة شراء وهمية، وكتابة ملاحظات واضحة حول أي صعوبات أو نقاط احتكاك تمت مواجهتها.",
-      en: "Download our app via TestFlight, execute a complete sign-up flow and simulated checkout, and write constructive feedback on friction points encountered.",
-      es: "Descargar nuestra aplicación TestFlight, realizar un registro completo y compra simulada, y redactar un informe claro sobre cualquier punto de fricción encontrado."
+      ru: "Монтаж 3 вертикальных видео (9:16) по 40 секунд: динамичные склейки, анимированные субтитры, звуковые эффекты и трендовая музыка.",
+      fr: "Montage de 3 vidéos verticales (9:16) percutantes pour la promotion d’une marque locale : sous-titres animés, transitions dynamiques et musique tendance.",
+      ar: "مونتاج 3 فيديوهات عمودية (9:16) مدتها 40 ثانية للترويج لعلامة تجارية محلية: نصوص متحركة، انتقالات سريعة، ومؤثرات صوتية.",
+      en: "Editing of 3 vertical videos (9:16, 40s each) for local brand promo: animated captions, crisp cuts, and trending sound design.",
+      es: "Edición de 3 vídeos verticales (9:16) de 40 segundos: subtítulos dinámicos, transiciones fluidas y música en tendencia.",
     },
     requiredProofs: {
-      ru: [
-        "3 скриншота ключевых этапов",
-        "Структурированный отзыв от 200 слов с описанием опыта"
-      ],
-      fr: [
-        "3 captures d'écran des étapes clés",
-        "Rapport écrit structuré de 200 mots minimum décrivant l'expérience"
-      ],
-      ar: [
-        "3 لقطات شاشة للخطوات الأساسية",
-        "تقرير كتابي منظم لا يقل عن 200 كلمة يصف التجربة بالتفصيل"
-      ],
-      en: [
-        "3 screenshots of key steps",
-        "Structured written report of at least 200 words describing the experience"
-      ],
-      es: [
-        "3 capturas de pantalla de los pasos clave",
-        "Informe escrito estructurado de mínimo 200 palabras describiendo la experiencia"
-      ]
-    }
+      ru: ["3 видеофайла в формате MP4 1080x1920 Full HD"],
+      fr: ["3 fichiers vidéo finaux MP4 Full HD (1080x1920)"],
+      ar: ["3 ملفات فيديو نهائية بصيغة MP4 بدقة عالية Full HD"],
+      en: ["3 final video files in MP4 Full HD (1080x1920)"],
+      es: ["3 archivos de vídeo finales MP4 en Full HD (1080x1920)"],
+    },
   },
   tsk_106: {
     title: {
-      ru: "Качественная обтравка и тени для 12 фото мебели",
-      fr: "Détourage propre et ombrage réaliste de 12 photos de mobilier",
-      ar: "قص دقيق وعزل مع إضافة ظلال واقعية لـ 12 صورة أثاث",
-      en: "Clean cutout and realistic shadow enhancement for 12 furniture photos",
-      es: "Recorte limpio y sombreado realista de 12 fotos de mobiliario"
+      ru: "Срочная подача документов в администрацию в Рабате",
+      fr: "Dépôt physique urgent de dossier administratif à Rabat",
+      ar: "إيداع ملف إداري مستعجل في إدارة عمومية بالرباط",
+      en: "Urgent physical delivery of administrative documents in Rabat",
+      es: "Entrega física urgente de expediente administrativo en Rabat",
     },
     description: {
-      ru: "Обтравка фотографий кресел и диванов пером (без автоматического размытия) и экспорт на чистый белый фон с естественной мягкой тенью.",
-      fr: "Photos de chaises et canapés sur fond d'atelier à détourer à la plume (pas de détourage automatique flou) et exporter sur fond blanc pur (RGB 255,255,255) avec ombre portée naturelle.",
-      ar: "صور كراسي وأرائك في ورشة عمل تتطلب عزلاً دقيقاً بأداة Pen Tool وتصديرها على خلفية بيضاء نقية (RGB 255,255,255) مع ظلال طبيعية واقعية.",
-      en: "Photos of chairs and sofas shot in a workshop needing meticulous Pen Tool clipping (no automated fuzzy cutouts) and exported on pure white (RGB 255,255,255) with soft natural drop shadow.",
-      es: "Fotos de sillas y sofás en taller que requieren trazado con pluma (sin recortes automáticos borrosos) y exportación sobre fondo blanco puro con sombra natural."
+      ru: "Требуется забрать запечатанный пакет в центре Рабата и сдать в канцелярию с получением регистрационного штампа.",
+      fr: "Mission sur le terrain à Rabat : récupération d’un pli fermé et dépôt au bureau d’ordre avec accusé de réception tamponné et daté.",
+      ar: "مهمة ميدانية بالرباط: استلام ظرف مغلق وإيداعه بمكتب الضبط وأخذ وصل الإيداع مختوماً ومؤرخاً.",
+      en: "On-site errand in Rabat: pickup of a sealed envelope and delivery to registry office with a stamped and dated receipt acknowledgment.",
+      es: "Gestión presencial en Rabat: recogida de sobre cerrado y entrega en registro con sello oficial fechado.",
     },
     requiredProofs: {
-      ru: [
-        "ZIP-архив с 12 файлами PNG и PSD с сохраненными слоями"
-      ],
-      fr: [
-        "Archive ZIP contenant les 12 fichiers PNG et PSD avec calques conservés"
-      ],
-      ar: [
-        "ملف مضغوط ZIP يحتوي على 12 ملفاً بصيغتي PNG و PSD مع الحفاظ على الطبقات"
-      ],
-      en: [
-        "ZIP archive containing all 12 PNG and PSD files with preserved layers"
-      ],
-      es: [
-        "Archivo ZIP con los 12 archivos PNG y PSD manteniendo las capas"
-      ]
-    }
-  }
+      ru: ["Четкое фото расписки/штампа о принятии документов"],
+      fr: ["Photo nette du récépissé d’enregistrement avec cachet officiel"],
+      ar: ["صورة واضحة لوصل الإيداع يحمل الطابع والتاريخ الرسمي"],
+      en: ["Clear photograph of the officially stamped receipt acknowledgment"],
+      es: ["Fotografía clara del justificante con sello oficial fechado"],
+    },
+  },
 };
 
 export const initialTasks: Task[] = [
@@ -263,59 +208,72 @@ export const initialTasks: Task[] = [
     title: taskTranslations.tsk_101.title.fr,
     description: taskTranslations.tsk_101.description.fr,
     category: 'development',
+    subCategory: 'Boutique YouCan Shop / Shopify',
+    locationMode: 'online',
+    taskMode: 'single',
     status: 'OPEN',
-    reward: 45.00,
-    platformFee: 5.00,
-    totalBudget: 50.00,
-    timeLimitHours: 4,
-    minLevelRequired: 2,
+    reward: 35.0,
+    platformFee: 3.5,
+    totalBudget: 38.5,
+    timeLimitHours: 48,
+    minLevelRequired: 1,
     clientId: 'cli_01',
-    clientName: 'Studio Digital Paris',
-    clientAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+    clientName: 'Yassine K. (E-com)',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
     clientRating: 4.9,
     clientHireRate: 98,
     requiredProofs: taskTranslations.tsk_101.requiredProofs.fr,
-    applicantsCount: 3,
-    createdAt: 'Il y a 25 min',
+    applicantsCount: 5,
+    createdAt: 'Il y a 15 min',
   },
   {
     id: 'tsk_102',
     title: taskTranslations.tsk_102.title.fr,
     description: taskTranslations.tsk_102.description.fr,
     category: 'design',
+    subCategory: 'Logo & Menus restaurant',
+    locationMode: 'in_person',
+    city: 'Casablanca',
+    taskMode: 'single',
     status: 'OPEN',
-    reward: 70.00,
-    platformFee: 7.00,
-    totalBudget: 77.00,
+    reward: 25.0,
+    platformFee: 2.5,
+    totalBudget: 27.5,
     timeLimitHours: 24,
     minLevelRequired: 1,
     clientId: 'cli_02',
-    clientName: 'Karim B. (Founder)',
-    clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+    clientName: 'Karim B. (Gérant Café)',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
     clientRating: 5.0,
     clientHireRate: 100,
     requiredProofs: taskTranslations.tsk_102.requiredProofs.fr,
-    applicantsCount: 7,
-    createdAt: 'Il y a 1h',
+    applicantsCount: 8,
+    createdAt: 'Il y a 45 min',
   },
   {
     id: 'tsk_103',
     title: taskTranslations.tsk_103.title.fr,
     description: taskTranslations.tsk_103.description.fr,
     category: 'assistance',
+    subCategory: 'Saisie de données Excel',
+    locationMode: 'online',
+    taskMode: 'single',
     status: 'OPEN',
-    reward: 32.00,
-    platformFee: 3.50,
-    totalBudget: 35.50,
+    reward: 12.0,
+    platformFee: 1.2,
+    totalBudget: 13.2,
     timeLimitHours: 12,
     minLevelRequired: 1,
     clientId: 'cli_03',
-    clientName: 'GrowthLab Agency',
-    clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-    clientRating: 4.8,
-    clientHireRate: 92,
+    clientName: 'Rachid M. (Comptable)',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+    clientRating: 4.85,
+    clientHireRate: 94,
     requiredProofs: taskTranslations.tsk_103.requiredProofs.fr,
-    applicantsCount: 5,
+    applicantsCount: 6,
     createdAt: 'Il y a 2h',
   },
   {
@@ -323,17 +281,21 @@ export const initialTasks: Task[] = [
     title: taskTranslations.tsk_104.title.fr,
     description: taskTranslations.tsk_104.description.fr,
     category: 'copywriting',
+    subCategory: 'Traduction Arabe ⇄ Français',
+    locationMode: 'online',
+    taskMode: 'single',
     status: 'IN_PROGRESS',
-    reward: 28.00,
-    platformFee: 3.00,
-    totalBudget: 31.00,
-    timeLimitHours: 6,
+    reward: 15.0,
+    platformFee: 1.5,
+    totalBudget: 16.5,
+    timeLimitHours: 24,
     minLevelRequired: 1,
     clientId: 'cli_04',
-    clientName: 'ÉlectroShop Direct',
-    clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    clientRating: 4.7,
-    clientHireRate: 89,
+    clientName: 'Nawal T. (Cabinet)',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
+    clientRating: 4.95,
+    clientHireRate: 96,
     requiredProofs: taskTranslations.tsk_104.requiredProofs.fr,
     applicantsCount: 4,
     assignedToId: 'usr_me_1',
@@ -345,73 +307,82 @@ export const initialTasks: Task[] = [
     id: 'tsk_105',
     title: taskTranslations.tsk_105.title.fr,
     description: taskTranslations.tsk_105.description.fr,
-    category: 'micro',
+    category: 'marketing',
+    subCategory: 'Montage Vidéo TikTok / Reels',
+    locationMode: 'online',
+    taskMode: 'single',
     status: 'OPEN',
-    reward: 18.00,
-    platformFee: 2.00,
-    totalBudget: 20.00,
-    timeLimitHours: 2,
+    reward: 18.0,
+    platformFee: 1.8,
+    totalBudget: 19.8,
+    timeLimitHours: 24,
     minLevelRequired: 1,
     clientId: 'cli_05',
-    clientName: 'Nox Fintech',
-    clientAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+    clientName: 'Amine K. (Créateur)',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
     clientRating: 4.9,
     clientHireRate: 95,
     requiredProofs: taskTranslations.tsk_105.requiredProofs.fr,
-    applicantsCount: 12,
+    applicantsCount: 11,
     createdAt: 'Il y a 10 min',
   },
   {
     id: 'tsk_106',
     title: taskTranslations.tsk_106.title.fr,
     description: taskTranslations.tsk_106.description.fr,
-    category: 'design',
+    category: 'micro',
+    subCategory: 'Démarches & Dépôt urgent',
+    locationMode: 'in_person',
+    city: 'Rabat',
+    taskMode: 'single',
     status: 'OPEN',
-    reward: 35.00,
-    platformFee: 3.50,
-    totalBudget: 38.50,
-    timeLimitHours: 8,
+    reward: 12.0,
+    platformFee: 1.2,
+    totalBudget: 13.2,
+    timeLimitHours: 6,
     minLevelRequired: 1,
     clientId: 'cli_06',
-    clientName: 'Mobilier & Co',
-    clientAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+    clientName: 'Cabinet Juridique Rabat',
+    clientAvatar:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
     clientRating: 4.85,
     clientHireRate: 94,
     requiredProofs: taskTranslations.tsk_106.requiredProofs.fr,
-    applicantsCount: 6,
-    createdAt: 'Il y a 4h',
-  }
+    applicantsCount: 3,
+    createdAt: 'Il y a 30 min',
+  },
 ];
 
 export const transactionTranslations: Record<string, Record<Locale, string>> = {
   tx_901: {
-    ru: 'Оплата за задание #tsk_089 "Интеграция Stripe Checkout"',
-    fr: 'Paiement reçu pour tâche #tsk_089 "Intégration Stripe Checkout"',
-    ar: 'دفعة مستلمة للمهمة #tsk_089 "تكامل بوابة دفع Stripe Checkout"',
-    en: 'Payment received for task #tsk_089 "Stripe Checkout Integration"',
-    es: 'Pago recibido por tarea #tsk_089 "Integración Stripe Checkout"',
+    ru: 'Оплата за задание #tsk_102 "Дизайн меню ресторана"',
+    fr: 'Paiement reçu pour tâche #tsk_102 "Design menu restaurant"',
+    ar: 'دفعة مستلمة للمهمة #tsk_102 "تصميم قائمة طعام لمطعم"',
+    en: 'Payout received for task #tsk_102 "Restaurant menu design"',
+    es: 'Pago recibido por tarea #tsk_102 "Diseño de menú de restaurante"',
   },
   tx_902: {
-    ru: 'Пополнение баланса банковской картой',
-    fr: 'Approvisionnement sécurisé par Carte Bancaire',
-    ar: 'شحن رصيد آمن عبر البطاقة البنكية',
-    en: 'Secure top-up via Credit Card',
-    es: 'Recarga segura mediante Tarjeta Bancaria',
+    ru: 'Пополнение баланса через карту CMI / Банк',
+    fr: 'Approvisionnement du compte via Carte CMI / Virement',
+    ar: 'شحن الحساب عبر بطاقة CMI البنكية / تحويل',
+    en: 'Wallet deposit via Moroccan Bank / CMI Card',
+    es: 'Recarga de cuenta con tarjeta CMI / Transferencia',
   },
   tx_903: {
-    ru: 'Резервирование средств под задание #tsk_101',
-    fr: 'Séquestre bloqué pour publication tâche #tsk_101',
+    ru: 'Блокировка в эскроу для публикации задачи #tsk_101',
+    fr: 'Séquestre Daman bloqué pour publication tâche #tsk_101',
     ar: 'حجز رصيد الضمان لنشر المهمة #tsk_101',
-    en: 'Escrow funds locked for task publication #tsk_101',
-    es: 'Custodia bloqueada para publicación de tarea #tsk_101',
+    en: 'Escrow deposit locked for task publication #tsk_101',
+    es: 'Depósito en garantía retenido para tarea #tsk_101',
   },
   tx_904: {
-    ru: 'Комиссия сервиса UNU (Уровень PRO - 15%)',
-    fr: 'Commission de service plateforme Tâches (Niveau 3 - 15%)',
-    ar: 'عمولة خدمة منصة Tâches (المستوى 3 - 15%)',
-    en: 'Platform service commission (Level 3 - 15%)',
-    es: 'Comisión de servicio plataforma Tâches (Nivel 3 - 15%)',
-  }
+    ru: 'Комиссия сервиса Tâches (10%)',
+    fr: 'Frais de gestion & Séquestre Daman (10%)',
+    ar: 'رسوم حماية الضمان والخدمة (10%)',
+    en: 'Platform escrow and service fee (10%)',
+    es: 'Comisión de custodia y gestión (10%)',
+  },
 };
 
 export const initialTransactions: WalletTransaction[] = [
@@ -419,7 +390,7 @@ export const initialTransactions: WalletTransaction[] = [
     id: 'tx_901',
     userId: 'usr_me_1',
     type: 'ESCROW_RELEASE',
-    amount: 55.00,
+    amount: 25.0,
     currency: 'EUR',
     description: transactionTranslations.tx_901.fr,
     createdAt: 'Hier à 18:20',
@@ -429,32 +400,32 @@ export const initialTransactions: WalletTransaction[] = [
     id: 'tx_902',
     userId: 'usr_me_1',
     type: 'DEPOSIT',
-    amount: 100.00,
+    amount: 50.0,
     currency: 'EUR',
     description: transactionTranslations.tx_902.fr,
-    createdAt: '25 Sep 2024',
+    createdAt: '25 Sep 2026',
     status: 'COMPLETED',
   },
   {
     id: 'tx_903',
     userId: 'usr_me_1',
     type: 'ESCROW_LOCK',
-    amount: -50.00,
+    amount: -38.5,
     currency: 'EUR',
     description: transactionTranslations.tx_903.fr,
-    createdAt: '24 Sep 2024',
+    createdAt: '24 Sep 2026',
     status: 'COMPLETED',
   },
   {
     id: 'tx_904',
     userId: 'usr_me_1',
     type: 'COMMISSION',
-    amount: -8.25,
+    amount: -3.5,
     currency: 'EUR',
     description: transactionTranslations.tx_904.fr,
     createdAt: 'Hier à 18:20',
     status: 'COMPLETED',
-  }
+  },
 ];
 
 export function getLocalizedTask(task: Task, locale: Locale): Task {
@@ -468,7 +439,10 @@ export function getLocalizedTask(task: Task, locale: Locale): Task {
   };
 }
 
-export function getLocalizedTransaction(tx: WalletTransaction, locale: Locale): WalletTransaction {
+export function getLocalizedTransaction(
+  tx: WalletTransaction,
+  locale: Locale
+): WalletTransaction {
   const trans = transactionTranslations[tx.id];
   if (!trans) return tx;
   return {
