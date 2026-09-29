@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import React from 'react';
 import { AdminPayoutsDashboard } from '@/components/AdminPayoutsDashboard';
 import { Locale } from '@/lib/i18n/types';
