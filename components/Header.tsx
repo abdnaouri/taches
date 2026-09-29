@@ -133,9 +133,9 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
-                    tâches<span className="text-emerald-600 font-extrabold">.ma</span>
+                    tâches<span className="text-brand-600 font-extrabold">.ma</span>
                   </span>
-                  <span className="hidden sm:inline-block rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
+                  <span className="hidden sm:inline-block rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
                     Maroc
                   </span>
                 </div>
@@ -299,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({
                           href="https://wa.me/212600000000"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition"
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-brand-700 hover:bg-brand-50 transition"
                         >
                           <FiMessageSquare />
                           <span>{t('menuSupportWhatsApp')}</span>
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
                   T
                 </div>
                 <span className="font-extrabold text-lg text-slate-900">
-                  tâches<span className="text-emerald-600">.ma</span>
+                  tâches<span className="text-brand-600">.ma</span>
                 </span>
               </div>
               <button
@@ -601,7 +601,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <FiShield className="text-base text-emerald-700" />
+                  <FiShield className="text-base text-brand-700" />
                   <span>{t('menuDamanSecurity')}</span>
                 </div>
                 {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
@@ -642,13 +642,13 @@ export const Header: React.FC<HeaderProps> = ({
                 href="https://wa.me/212600000000"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold transition hover:bg-emerald-100"
+                className="flex items-center justify-between rounded-xl p-3 bg-brand-50 border border-brand-200 text-brand-900 text-xs font-bold transition hover:bg-brand-100"
               >
                 <div className="flex items-center gap-3">
-                  <FiMessageSquare className="text-base text-emerald-700" />
+                  <FiMessageSquare className="text-base text-brand-700" />
                   <span>{t('menuSupportWhatsApp')}</span>
                 </div>
-                <span className="text-[10px] bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-brand-200 text-brand-950 px-2 py-0.5 rounded-full font-bold">
                   Direct
                 </span>
               </a>

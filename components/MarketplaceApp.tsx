@@ -32,11 +32,6 @@ import { WalletModal } from '@/components/WalletModal';
 import { WalletPageContent } from '@/components/WalletPageContent';
 import { QualificationModal } from '@/components/QualificationModal';
 import { TaskExamplesPage } from '@/components/TaskExamplesPage';
-import { WorkzillaDifferentiators } from '@/components/WorkzillaDifferentiators';
-import { MoroccanLiveMatchCalculator } from '@/components/MoroccanLiveMatchCalculator';
-import { MoroccanAudienceMatrix } from '@/components/MoroccanAudienceMatrix';
-import { MoroccanInteractiveWorkflow } from '@/components/MoroccanInteractiveWorkflow';
-import { MoroccanLiveActivityTicker } from '@/components/MoroccanLiveActivityTicker';
 import { TaskExample } from '@/lib/taskExamplesData';
 import {
   WorkzillaHero,
@@ -671,9 +666,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         }}
       />
 
-      {/* Moroccan Live Real-Time Ticker */}
-      <MoroccanLiveActivityTicker />
-
 
       {viewMode === 'tasks' ? (
         /* DEDICATED ALL TASKS CATALOG / EXAMPLES PAGE */
@@ -1062,9 +1054,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           />
         )
       ) : (
-        /* HOME PAGE VIEW */
+        /* HOME PAGE VIEW - AUTHENTIC WORKZILLA EXPERIENCE */
         <>
-          {/* Work-zilla Moroccan Hero Stage */}
+          {/* 1. Work-zilla Direct Task Action Stage */}
           <WorkzillaHero
             onDirectPost={handleDirectHeroPost}
             onExploreFeed={() => {
@@ -1072,31 +1064,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             }}
           />
 
-          {/* Proof Bar (Numbers) */}
+          {/* 2. Key Metrics Proof Bar */}
           <WorkzillaProofBar />
 
-          {/* Instant Moroccan Live Match & Price Calculator */}
-          <MoroccanLiveMatchCalculator
-            onLaunchCustomTask={(taskPrefill) => {
-              setPrefillTaskTitle(taskPrefill.title);
-              setPrefillTaskDesc(taskPrefill.description);
-              setPrefillTaskBudget(taskPrefill.rewardDH);
-              setPrefillTaskCategory(taskPrefill.category);
-
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour lancer cette tâche', () => {
-                  updateQuery({ create: 'true' });
-                });
-                return;
-              }
-              if (profile?.activeRole !== 'CUSTOMER') {
-                toggleRole('CUSTOMER');
-              }
-              updateQuery({ create: 'true' });
-            }}
-          />
-
-          {/* Visual Categories Grid */}
+          {/* 3. Universal Categories Grid */}
           <WorkzillaCategoryGrid
             onSelectCategory={(catKey) => {
               setPrefillTaskCategory(catKey);
@@ -1113,81 +1084,16 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             }}
           />
 
-          {/* Moroccan Interactive Step-by-Step Workflow */}
-          <MoroccanInteractiveWorkflow
+          {/* 4. Simple 3-Step Process (Work-zilla Model) */}
+          <WorkzillaHowItWorks
             onPostTask={handleOpenCreateTask}
           />
 
-          {/* Moroccan Target Audiences Matrix (E-commerce, PME, MRE, Freelances) */}
-          <MoroccanAudienceMatrix
-            onLaunchTask={(prefill) => {
-              setPrefillTaskTitle(prefill.title);
-              setPrefillTaskDesc(prefill.description);
-              setPrefillTaskBudget(prefill.rewardDH);
-              setPrefillTaskCategory(prefill.category);
-
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour lancer cette tâche', () => {
-                  updateQuery({ create: 'true' });
-                });
-                return;
-              }
-              if (profile?.activeRole !== 'CUSTOMER') {
-                toggleRole('CUSTOMER');
-              }
-              updateQuery({ create: 'true' });
-            }}
-            onOpenQualification={() => {
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour passer le test de qualification');
-                return;
-              }
-              updateQuery({ test: 'true' });
-            }}
-            onExploreTasks={() => {
-              router.push(`/${locale}/tasks`);
-            }}
-          />
-
-          {/* Moroccan Escrow Guarantee (Daman) */}
-          <WorkzillaTrustSection />
-
-          {/* Real Moroccan Completed Tasks Feed */}
-          <WorkzillaCompletedFeed />
-
-          {/* Workzilla Unique Killer Features & Specific Usages */}
-          <WorkzillaDifferentiators
-            onLaunchTask={(prefill) => {
-              setPrefillTaskTitle(prefill.title);
-              setPrefillTaskDesc(prefill.description);
-              setPrefillTaskBudget(prefill.rewardDH);
-              setPrefillTaskCategory(prefill.category);
-
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour lancer cette mission', () => {
-                  updateQuery({ create: 'true' });
-                });
-                return;
-              }
-              if (profile?.activeRole !== 'CUSTOMER') {
-                toggleRole('CUSTOMER');
-              }
-              updateQuery({ create: 'true' });
-            }}
-            onOpenQualification={() => {
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour passer le test de qualification');
-                return;
-              }
-              updateQuery({ test: 'true' });
-            }}
-          />
-
-          {/* HOME PAGE: RECENT TASKS SHOWCASE (MINI CARDS: ONLY TITLE & PRICE) */}
+          {/* 5. Live Marketplace Feed (Compact High-Density List) */}
           <section id="marketplace-feed" className="py-14 sm:py-20 bg-white border-t border-slate-200">
             <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
 
-              {/* Header Title for Mini Cards Showcase */}
+              {/* Header Title for Task Feed */}
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
                   <p className="section-kicker">Missions en direct</p>
@@ -1210,7 +1116,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
               {/* Compact Task List (Work-zilla style) */}
               <div className="space-y-2.5">
-                {localizedTasks.slice(0, 6).map((task) => (
+                {localizedTasks.slice(0, 8).map((task) => (
                   <TaskRow
                     key={task.id}
                     task={task}
@@ -1234,6 +1140,12 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
             </div>
           </section>
+
+          {/* 6. Escrow & Guarantee (Daman) */}
+          <WorkzillaTrustSection />
+
+          {/* 7. Real Completed Tasks Feed */}
+          <WorkzillaCompletedFeed />
         </>
       )}
 

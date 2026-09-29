@@ -150,8 +150,8 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
 
               {/* Guarantee Note */}
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-slate-600 text-center">
-                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                  <FiCheck className="text-emerald-600 font-black" />
+                <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
+                  <FiCheck className="text-brand-600 font-black" />
                   <span>100% Gratuit à la publication</span>
                 </span>
                 <span className="text-slate-300">•</span>
@@ -160,8 +160,8 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
                   <span>Première offre en ~35 secondes</span>
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                  <FiLock className="text-emerald-600" />
+                <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
+                  <FiLock className="text-brand-600" />
                   <span>Paiement 100% sécurisé (Daman)</span>
                 </span>
               </div>
@@ -171,8 +171,8 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
         ) : (
           /* Performer / Freelance View */
           <div className="text-center max-w-3xl mx-auto py-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-extrabold text-emerald-800 mb-4 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 border border-brand-200 px-3.5 py-1 text-xs font-extrabold text-brand-700 mb-4 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-brand-600 animate-pulse" />
               <span>Espace Freelance & Rémunération au Maroc</span>
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight tracking-tight">
@@ -213,8 +213,8 @@ export const WorkzillaProofBar: React.FC = () => {
   const stats = [
     { value: '890 000+', label: 'Prestataires et freelances au Maroc', icon: <FiUsers className="text-brand-600 text-2xl" /> },
     { value: '35 secondes', label: 'Délai moyen de première réponse', icon: <FiClock className="text-brand-600 text-2xl" /> },
-    { value: '4.8 Millions', label: 'Tâches réalisées avec succès', icon: <FiCheckCircle className="text-emerald-600 text-2xl" /> },
-    { value: '100% Garanti', label: 'Paiement sous séquestre Daman', icon: <FiShield className="text-emerald-700 text-2xl" /> },
+    { value: '4.8 Millions', label: 'Tâches réalisées avec succès', icon: <FiCheckCircle className="text-brand-600 text-2xl" /> },
+    { value: '100% Garanti', label: 'Paiement sous séquestre Daman', icon: <FiShield className="text-brand-700 text-2xl" /> },
   ];
 
   return (
@@ -378,8 +378,8 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
       num: '3',
       title: '3. Payez seulement si vous êtes satisfait',
       desc: 'Votre argent est gardé en sécurité sous séquestre (Daman). Vous ne payez que lorsque vous avez vérifié et validé le résultat final.',
-      icon: <FiShield className="text-emerald-700 text-xl" />,
-      color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+      icon: <FiShield className="text-brand-700 text-xl" />,
+      color: 'bg-brand-50 border-brand-200 text-brand-700',
     },
   ];
 
@@ -454,7 +454,7 @@ export const WorkzillaTrustSection: React.FC = () => {
     {
       title: 'Paiement 100% Sécurisé sous Séquestre (Daman)',
       desc: 'Votre argent ne quitte jamais la plateforme avant votre validation finale. Aucun risque de payer pour un travail incomplet ou non conforme.',
-      icon: <FiShield className="text-emerald-700 text-2xl" />,
+      icon: <FiShield className="text-brand-700 text-2xl" />,
     },
     {
       title: 'Freelances Vérifiés par Pièce d’Identité (CIN)',
@@ -469,7 +469,7 @@ export const WorkzillaTrustSection: React.FC = () => {
     {
       title: 'Assistance Locale 7j/7 au Maroc & WhatsApp',
       desc: 'Notre équipe marocaine à Casablanca et Rabat vous accompagne par téléphone et WhatsApp en Darija et Français.',
-      icon: <FiPhoneCall className="text-emerald-600 text-2xl" />,
+      icon: <FiPhoneCall className="text-brand-700 text-2xl" />,
     },
   ];
 
@@ -642,25 +642,25 @@ export const WorkzillaHelpCenter: React.FC = () => {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
         {/* WhatsApp Big Support Box */}
-        <div className="rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-800 to-emerald-900 text-white p-6 sm:p-8 shadow-xl mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="rounded-3xl bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 text-white p-6 sm:p-8 shadow-xl mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/80 border border-emerald-500/40 px-3 py-1 text-xs font-bold text-emerald-200 mb-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-800/80 border border-brand-500/40 px-3 py-1 text-xs font-bold text-brand-200 mb-2">
               <FiPhoneCall /> Assistance directe au Maroc 7j/7
             </span>
             <h3 className="text-xl sm:text-2xl font-black tracking-tight">
               Besoin d’aide pour déposer ou choisir un freelance ?
             </h3>
-            <p className="mt-1.5 text-xs sm:text-sm text-emerald-100 max-w-xl leading-relaxed">
-              Vous avez 70 ans, vous n’êtes pas à l’aise avec internet, ou vous manquez de temps ? Un conseiller au Maroc vous répond sur WhatsApp en Darija ou Français.
+            <p className="mt-1.5 text-xs sm:text-sm text-brand-100 max-w-xl leading-relaxed">
+              Vous avez besoin d'assistance ou vous manquez de temps ? Un conseiller au Maroc vous répond sur WhatsApp en Darija ou Français.
             </p>
           </div>
           <a
             href="https://wa.me/212600000000?text=Bonjour,%20j%27ai%20besoin%20d%27aide%20sur%20Taches.ma"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 px-6 py-4 text-sm sm:text-base font-black shadow-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-white text-brand-900 hover:bg-brand-50 px-6 py-4 text-sm sm:text-base font-black shadow-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
           >
-            <FiMessageSquare className="text-xl text-emerald-700" />
+            <FiMessageSquare className="text-xl text-brand-700" />
             <span>Écrire sur WhatsApp (+212)</span>
           </a>
         </div>
@@ -729,7 +729,7 @@ export const WorkzillaFooter: React.FC = () => {
                 T
               </div>
               <span className="font-extrabold text-lg text-white tracking-tight">
-                tâches<span className="text-emerald-400">.ma</span>
+                tâches<span className="text-brand-400">.ma</span>
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
@@ -757,7 +757,7 @@ export const WorkzillaFooter: React.FC = () => {
               Sécurité & Daman
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href={`/${locale}/wallet`} className="text-emerald-400 font-semibold hover:underline">✓ 100% Séquestre Protégé</a></li>
+              <li><a href={`/${locale}/wallet`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Protégé</a></li>
               <li><span>Paiement CMI & Banques Maroc</span></li>
               <li><span>Vérification CIN des freelances</span></li>
               <li><span>Arbitrage sous 24 heures</span></li>
@@ -776,7 +776,7 @@ export const WorkzillaFooter: React.FC = () => {
               href="https://wa.me/212600000000"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-bold text-emerald-400 hover:text-emerald-300 text-xs"
+              className="inline-flex items-center gap-1.5 font-bold text-brand-400 hover:text-brand-300 text-xs"
             >
               <FiPhoneCall /> WhatsApp : +212 6 00 00 00 00
             </a>

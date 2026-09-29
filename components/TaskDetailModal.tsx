@@ -130,8 +130,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         </h2>
 
         {/* Escrow Guarantee Pill Banner */}
-        <div className="mt-3.5 flex items-center gap-2.5 rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200 text-xs text-emerald-900 font-semibold">
-          <FiShield className="text-emerald-700 text-lg shrink-0" />
+        <div className="mt-3.5 flex items-center gap-2.5 rounded-2xl bg-brand-50 p-3.5 border border-brand-200 text-xs text-brand-900 font-semibold">
+          <FiShield className="text-brand-700 text-lg shrink-0" />
           <span>
             {t('escrowBannerDesc')}
           </span>
@@ -313,7 +313,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     onApproveWork(task.id);
                     onClose();
                   }}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white transition cursor-pointer shrink-0 shadow-sm"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 px-5 py-2.5 text-xs font-bold text-white transition cursor-pointer shrink-0 shadow-sm"
                 >
                   <FiCheck /> Valider le travail & Débloquer {rewardDH} DH
                 </button>
