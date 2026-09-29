@@ -43,6 +43,32 @@ export interface UserProfile {
   customerRating: number;
   customerTotalSpent: number;
   customerTasksPosted: number;
+
+  // Admin Role
+  isAdmin?: boolean;
+}
+
+export interface TaskMessage {
+  id: string;
+  taskId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  receiverId?: string;
+  content: string;
+  attachmentUrl?: string;
+  createdAt: string;
+}
+
+export interface TaskReview {
+  id: string;
+  taskId: string;
+  authorId: string;
+  authorName: string;
+  targetUserId: string;
+  rating: number; // 1 to 5
+  comment: string;
+  createdAt: string;
 }
 
 export interface TaskRequirement {
@@ -73,6 +99,8 @@ export interface Task {
   locationMode?: 'online' | 'in_person';
   city?: string;
   taskMode?: 'single' | 'multi';
+  targetExecutionsCount?: number;
+  unitPriceDH?: number;
   referenceLinks?: string[];
   verificationQuestion?: string;
   applicantsCount: number;
@@ -141,6 +169,16 @@ export interface Database {
         Insert: Partial<TaskProofSubmission>;
         Update: Partial<TaskProofSubmission>;
       };
+      messages: {
+        Row: TaskMessage;
+        Insert: Partial<TaskMessage>;
+        Update: Partial<TaskMessage>;
+      };
+      reviews: {
+        Row: TaskReview;
+        Insert: Partial<TaskReview>;
+        Update: Partial<TaskReview>;
+      };
       transactions: {
         Row: WalletTransaction;
         Insert: Partial<WalletTransaction>;
@@ -149,3 +187,4 @@ export interface Database {
     };
   };
 }
+

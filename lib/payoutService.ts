@@ -46,7 +46,7 @@ export const MOROCCAN_BANKS: Record<string, MoroccanBankInfo> = {
   '320': { code: '320', name: 'Bank Assafa', shortName: 'Bank Assafa', color: 'text-purple-800', bg: 'bg-purple-50 border-purple-200', logoText: 'ASF' },
 };
 
-export const MIN_WITHDRAWAL_DH = 200; // Workzilla style minimum threshold to protect margins
+export const MIN_WITHDRAWAL_DH = 1000; // Minimum withdrawal threshold set to 1000 DH
 export const MAD_TO_EUR_RATE = 0.1; // 10 MAD = 1 EUR standard platform accounting
 
 export const PLATFORM_PERFORMER_COMMISSION_RATE = 0.15; // 15% platform commission on task completion

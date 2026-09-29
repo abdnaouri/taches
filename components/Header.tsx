@@ -144,6 +144,30 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
             </a>
+
+            {/* Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center gap-4 text-xs font-bold text-slate-600 pl-4 border-l border-slate-200">
+              <a
+                href={`/${locale}/tasks`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(`/${locale}/tasks`);
+                }}
+                className="hover:text-brand-700 transition"
+              >
+                {t('navExplore')}
+              </a>
+              <a
+                href={`/${locale}/concepts`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(`/${locale}/concepts`);
+                }}
+                className="hover:text-brand-700 transition flex items-center gap-1.5 text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg"
+              >
+                <span>💡 Modèle & Architecture</span>
+              </a>
+            </nav>
           </div>
 
           {/* RIGHT: WALLET + CTA + LANGUAGE + PROFILE + MOBILE HAMBURGER */}
@@ -581,6 +605,21 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="rounded-full bg-brand-700 px-2 py-0.5 text-[10px] font-bold text-white">
                   {isCustomer ? '2' : '1'}
                 </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push(`/${locale}/concepts`);
+                }}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-base">💡</span>
+                  <span className="text-brand-800 font-extrabold">Modèle & Architecture</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
               </button>
 
               <button

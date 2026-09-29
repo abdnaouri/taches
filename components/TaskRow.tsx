@@ -89,6 +89,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </span>
           )}
 
+          {/* Multi-execution badge */}
+          {task.taskMode === 'multi' && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+              <FiUsers className="text-[10px]" /> Multi{task.targetExecutionsCount ? ` (${task.targetExecutionsCount})` : ''}
+            </span>
+          )}
+
           {isUrgent && (
             <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-300">
               <FiZap className="text-amber-700 text-[10px]" /> Urgent
@@ -116,7 +123,15 @@ export const TaskRow: React.FC<TaskRowProps> = ({
         {/* Price Tag */}
         <div className="text-left sm:text-right">
           <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-            {rewardDH} <span className="text-xs font-bold text-slate-500">DH</span>
+            {task.taskMode === 'multi' && task.unitPriceDH ? (
+              <>
+                {task.unitPriceDH} <span className="text-xs font-bold text-slate-500">DH/pers</span>
+              </>
+            ) : (
+              <>
+                {rewardDH} <span className="text-xs font-bold text-slate-500">DH</span>
+              </>
+            )}
           </div>
           <div className="text-[10px] text-slate-400 font-medium">
             Délai: {task.timeLimitHours}h

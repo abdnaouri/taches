@@ -11,78 +11,41 @@ interface LiveEvent {
   taskTitle: string;
   priceDH: number;
   userName: string;
-  timeAgo: string;
+  createdAt?: string;
 }
-
-const LIVE_EVENTS: LiveEvent[] = [
-  {
-    id: '1',
-    type: 'paid',
-    city: 'Casablanca (Maârif)',
-    taskTitle: 'Logo & Carte de visite restaurant',
-    priceDH: 150,
-    userName: 'Yassine M.',
-    timeAgo: 'Il y a 2 min',
-  },
-  {
-    id: '2',
-    type: 'completed',
-    city: 'Rabat (Agdal)',
-    taskTitle: 'Saisie de 80 factures sous Excel',
-    priceDH: 90,
-    userName: 'Salma K.',
-    timeAgo: 'Il y a 5 min',
-  },
-  {
-    id: '3',
-    type: 'match',
-    city: 'Tanger',
-    taskTitle: 'Configuration boutique YouCan Shop',
-    priceDH: 250,
-    userName: 'Amine B.',
-    timeAgo: 'Il y a 7 min',
-  },
-  {
-    id: '4',
-    type: 'paid',
-    city: 'Marrakech (Guéliz)',
-    taskTitle: 'Montage 3 vidéos TikTok & Reels',
-    priceDH: 140,
-    userName: 'Karim T.',
-    timeAgo: 'Il y a 11 min',
-  },
-  {
-    id: '5',
-    type: 'completed',
-    city: 'Fès',
-    taskTitle: 'Traduction contrat de bail Arabe ↔ Français',
-    priceDH: 110,
-    userName: 'Fatima Z.',
-    timeAgo: 'Il y a 16 min',
-  },
-  {
-    id: '6',
-    type: 'paid',
-    city: 'Agadir',
-    taskTitle: 'Appel en Darija de 10 grossistes',
-    priceDH: 100,
-    userName: 'Rachid E.',
-    timeAgo: 'Il y a 22 min',
-  },
-];
 
 export const MoroccanLiveActivityTicker: React.FC = () => {
   const { locale, isRTL } = useLanguage();
+  const [events, setEvents] = useState<LiveEvent[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIdx((prev) => (prev + 1) % LIVE_EVENTS.length);
-    }, 4500);
-    return () => clearInterval(timer);
+    fetch('/api/activity')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.items && data.items.length > 0) {
+          setEvents(data.items);
+        }
+      })
+      .catch(err => console.warn('Activity fetch error:', err));
   }, []);
 
-  const event = LIVE_EVENTS[currentIdx];
+  useEffect(() => {
+    if (events.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIdx((prev) => (prev + 1) % events.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [events.length]);
+
+  const event = events[currentIdx] || {
+    id: 'default',
+    type: 'paid',
+    city: 'Casablanca',
+    taskTitle: 'Plateforme en direct 24/7',
+    priceDH: 250,
+    userName: 'Freelance certifié',
+  };
 
   return (
     <div className="bg-slate-900 text-slate-200 border-b border-slate-800 py-2.5 px-4 text-xs">
@@ -99,30 +62,51 @@ export const MoroccanLiveActivityTicker: React.FC = () => {
           </span>
         </div>
 
-        {/* Sliding Event Content */}
-        <div className="flex-1 flex items-center gap-2 overflow-hidden justify-center sm:justify-start">
-          <div key={event.id} className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <FiCheckCircle className="text-xs" />
-              <span>{event.userName}</span>
+        {/* Dynamic Center Event */}
+        <div className="flex-1 truncate flex items-center gap-2 transition-all duration-300">
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-black uppercase shrink-0 ${
+              event.type === 'completed'
+                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                : event.type === 'paid'
+                ? 'bg-brand-950 text-brand-300 border border-brand-800'
+                : 'bg-amber-950 text-amber-300 border border-amber-800'
+            }`}
+          >
+            {event.type === 'completed' && <FiCheckCircle className="text-emerald-400" />}
+            {event.type === 'paid' && <FiShield className="text-brand-300" />}
+            {event.type === 'match' && <FiClock className="text-amber-300" />}
+            <span>
+              {event.type === 'completed'
+                ? locale === 'ar' ? 'تم التسليم' : 'Mission livrée'
+                : event.type === 'paid'
+                ? locale === 'ar' ? 'دفع مؤمن' : 'Paiement garanti'
+                : locale === 'ar' ? 'قيد التنفيذ' : 'En cours'}
             </span>
-            <span className="text-slate-400 hidden md:inline">({event.city})</span>
-            <span className="text-slate-300 font-medium truncate max-w-xs sm:max-w-md">
-              a validé « {event.taskTitle} »
-            </span>
-            <span className="font-black text-amber-400 bg-amber-950/80 border border-amber-500/30 px-2 py-0.2 rounded text-[11px] shrink-0">
-              +{event.priceDH} DH
-            </span>
-          </div>
+          </span>
+
+          <span className="text-slate-300 truncate font-semibold">
+            {event.taskTitle}
+          </span>
+
+          <span className="font-extrabold text-white bg-slate-800 px-2 py-0.5 rounded text-[11px] shrink-0 border border-slate-700">
+            {event.priceDH} DH
+          </span>
+
+          <span className="text-slate-400 text-[11px] hidden md:inline shrink-0 flex items-center gap-1">
+            <FiMapPin className="text-[10px]" />
+            {event.city}
+          </span>
+
+          <span className="text-slate-400 text-[11px] hidden lg:inline shrink-0">
+            • {event.userName}
+          </span>
         </div>
 
-        {/* Right Timestamp / Protection Guarantee */}
-        <div className="shrink-0 flex items-center gap-2 text-[11px] text-slate-400">
-          <span className="hidden lg:inline flex items-center gap-1 text-emerald-400 font-semibold">
-            <FiShield /> 100% Séquestre Daman
-          </span>
-          <span className="text-slate-500 hidden lg:inline">•</span>
-          <span className="text-slate-400 font-mono">{event.timeAgo}</span>
+        {/* Right Guarantee Pill */}
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0 text-slate-300 text-[11px] font-bold">
+          <FiShield className="text-emerald-400" />
+          <span>{locale === 'ar' ? 'ضمان الأداء 100%' : 'Garantie Daman 100%'}</span>
         </div>
 
       </div>

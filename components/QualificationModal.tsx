@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { FiX, FiCheckCircle, FiAward, FiShield } from 'react-icons/fi';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { FiX, FiCheckCircle, FiAward, FiAlertCircle, FiLoader } from 'react-icons/fi';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -10,58 +11,84 @@ interface QualificationModalProps {
   onPassed: () => void;
 }
 
+interface QuestionItem {
+  id: number;
+  questionFr: string;
+  questionAr: string;
+  optionsFr: string[];
+  optionsAr: string[];
+}
+
 export const QualificationModal: React.FC<QualificationModalProps> = ({
   isOpen,
   onClose,
   onPassed,
 }) => {
-  const { t, isRTL } = useLanguage();
-  const [answers, setAnswers] = useState<Record<number, number>>({ 0: 0, 1: 1, 2: 0 });
+  const { t, isRTL, locale } = useLanguage();
+  const { profile, refreshProfile } = useAuth();
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [scorePassed, setScorePassed] = useState(true);
+  const [scorePassed, setScorePassed] = useState(false);
+  const [resultMsg, setResultMsg] = useState('');
+  const [scorePercent, setScorePercent] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSubmitted(false);
+      setAnswers({});
+      setIsLoading(true);
+      fetch('/api/qualification')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.questions) {
+            setQuestions(data.questions);
+          }
+        })
+        .catch(err => console.error('Failed to load qualification questions:', err))
+        .finally(() => setIsLoading(false));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const questions = [
-    {
-      q: t('q1Title'),
-      options: [
-        t('q1Opt0'),
-        t('q1Opt1'),
-        t('q1Opt2')
-      ],
-      correct: 0,
-    },
-    {
-      q: t('q2Title'),
-      options: [
-        t('q2Opt0'),
-        t('q2Opt1'),
-        t('q2Opt2')
-      ],
-      correct: 1,
-    },
-    {
-      q: t('q3Title'),
-      options: [
-        t('q3Opt0'),
-        t('q3Opt1'),
-        t('q3Opt2')
-      ],
-      correct: 0,
-    },
-  ];
 
   const handleSelect = (qIdx: number, oIdx: number) => {
     setAnswers(prev => ({ ...prev, [qIdx]: oIdx }));
   };
 
-  const handleValidate = () => {
-    const passed = questions.every((q, idx) => answers[idx] === q.correct);
-    setScorePassed(passed);
-    setSubmitted(true);
-    if (passed) {
-      onPassed();
+  const handleValidate = async () => {
+    if (Object.keys(answers).length < questions.length) {
+      alert(locale === 'ar' ? 'يرجى الإجابة على جميع الأسئلة للمتابعة.' : 'Veuillez répondre à toutes les questions avant de valider.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/qualification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile?.id || 'demo_user',
+          answers,
+        }),
+      });
+
+      const data = await res.json();
+      setSubmitted(true);
+      setScorePassed(data.passed);
+      setScorePercent(data.scorePercent);
+      setResultMsg(data.message || '');
+
+      if (data.passed) {
+        if (refreshProfile) await refreshProfile();
+        onPassed();
+      }
+    } catch (err: any) {
+      console.error('Qualification submission error:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -91,56 +118,91 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
           {t('qualificationDesc')}
         </p>
 
-        {submitted && scorePassed ? (
+        {isLoading ? (
+          <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-500">
+            <FiLoader className="text-2xl animate-spin text-brand-700" />
+            <span className="text-xs font-semibold">Chargement du test...</span>
+          </div>
+        ) : submitted && scorePassed ? (
           <div className="mt-6 rounded-xl bg-emerald-50 p-5 border border-emerald-200 text-center">
             <FiCheckCircle className="mx-auto text-3xl text-emerald-600 mb-2" />
             <h4 className="text-sm font-bold text-emerald-950">
               {t('qualificationSuccessMsg')}
             </h4>
+            <p className="mt-1 text-xs text-emerald-800">
+              Score obtenu : {scorePercent}% • Vous pouvez désormais postuler à toutes les missions.
+            </p>
             <button
               onClick={onClose}
-              className="mt-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-6 py-2.5 text-xs font-bold text-white transition active:scale-95 cursor-pointer"
+              className="mt-4 rounded-xl bg-emerald-700 px-6 py-2 text-xs font-bold text-white hover:bg-emerald-800 transition cursor-pointer"
             >
-              {t('btnClose')}
+              {locale === 'ar' ? 'بدء العمل على المهام' : 'Commencer à postuler'}
+            </button>
+          </div>
+        ) : submitted && !scorePassed ? (
+          <div className="mt-6 rounded-xl bg-rose-50 p-5 border border-rose-200 text-center">
+            <FiAlertCircle className="mx-auto text-3xl text-rose-600 mb-2" />
+            <h4 className="text-sm font-bold text-rose-950">
+              Score insuffisant ({scorePercent}%)
+            </h4>
+            <p className="mt-1 text-xs text-rose-800">
+              {resultMsg || 'Vous devez obtenir au moins 75% de bonnes réponses.'}
+            </p>
+            <button
+              onClick={() => {
+                setSubmitted(false);
+                setAnswers({});
+              }}
+              className="mt-4 rounded-xl bg-rose-700 px-6 py-2 text-xs font-bold text-white hover:bg-rose-800 transition cursor-pointer"
+            >
+              Réessayer le test
             </button>
           </div>
         ) : (
-          <div className="mt-6 space-y-5">
-            {questions.map((item, qIdx) => (
-              <div key={qIdx} className="space-y-2">
-                <p className="text-xs font-bold text-slate-900">
-                  {qIdx + 1}. {item.q}
-                </p>
-                <div className="space-y-1.5">
-                  {item.options.map((opt, oIdx) => (
-                    <label
-                      key={oIdx}
-                      onClick={() => handleSelect(qIdx, oIdx)}
-                      className={`flex items-start gap-2.5 rounded-xl border p-3 text-xs transition cursor-pointer ${
-                        answers[qIdx] === oIdx
-                          ? 'border-brand-700 bg-brand-50 text-slate-900 font-semibold'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`q_${qIdx}`}
-                        checked={answers[qIdx] === oIdx}
-                        onChange={() => handleSelect(qIdx, oIdx)}
-                        className="mt-0.5 accent-brand-700"
-                      />
-                      <span className="leading-snug">{opt}</span>
-                    </label>
-                  ))}
+          <div className="mt-6 space-y-6">
+            {questions.map((q, qIdx) => {
+              const qText = locale === 'ar' ? q.questionAr : q.questionFr;
+              const options = locale === 'ar' ? q.optionsAr : q.optionsFr;
+              return (
+                <div key={q.id} className="rounded-xl bg-slate-50 p-4 border border-slate-200">
+                  <span className="text-[11px] font-bold text-brand-700 block mb-1">
+                    Question {qIdx + 1} / {questions.length}
+                  </span>
+                  <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                    {qText}
+                  </h4>
+                  <div className="mt-3 space-y-2">
+                    {options.map((opt, oIdx) => (
+                      <label
+                        key={oIdx}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition ${
+                          answers[qIdx] === oIdx
+                            ? 'bg-brand-50 border-brand-700 text-brand-950 font-semibold'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/60'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`question_${qIdx}`}
+                          checked={answers[qIdx] === oIdx}
+                          onChange={() => handleSelect(qIdx, oIdx)}
+                          className="mt-0.5 accent-brand-700"
+                        />
+                        <span className="leading-tight">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             <button
               onClick={handleValidate}
-              className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs font-bold text-white shadow-md active:scale-95 transition cursor-pointer"
+              disabled={isSubmitting || Object.keys(answers).length < questions.length}
+              className="w-full rounded-xl bg-brand-700 py-3 text-xs font-bold text-white hover:bg-brand-800 transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
-              {t('btnValidateAnswers')}
+              {isSubmitting && <FiLoader className="animate-spin text-sm" />}
+              <span>{locale === 'ar' ? 'إرسال الإجابات وتأكيد الاختبار' : 'Valider et soumettre le test'}</span>
             </button>
           </div>
         )}

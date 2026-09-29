@@ -266,6 +266,18 @@ export const MoroccanLiveMatchCalculator: React.FC<MoroccanLiveMatchCalculatorPr
   const { locale, isRTL } = useLanguage();
   const [selectedPresetId, setSelectedPresetId] = useState<string>(TASK_PRESETS[0].id);
   const [units, setUnits] = useState<number>(TASK_PRESETS[0].defaultUnits);
+  const [livePerformersCount, setLivePerformersCount] = useState<number>(48);
+
+  React.useEffect(() => {
+    fetch('/api/activity')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.activePerformersCount) {
+          setLivePerformersCount(data.activePerformersCount);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const currentPreset = TASK_PRESETS.find((p) => p.id === selectedPresetId) || TASK_PRESETS[0];
 
@@ -438,7 +450,7 @@ export const MoroccanLiveMatchCalculator: React.FC<MoroccanLiveMatchCalculatorPr
               <div className="flex items-center justify-between mb-4 bg-emerald-950/80 border border-emerald-500/40 p-3 rounded-xl">
                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>{currentPreset.activeFreelancersCount} freelances connectés</span>
+                  <span>{livePerformersCount} freelances actifs</span>
                 </div>
                 <span className="text-[10px] text-slate-300 font-semibold bg-emerald-900/60 px-2 py-0.5 rounded">
                   100% Maroc

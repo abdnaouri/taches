@@ -59,6 +59,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </span>
             )}
 
+            {/* Multi-execution badge */}
+            {task.taskMode === 'multi' && (
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                <FiUsers className="text-[10px]" /> Multi{task.targetExecutionsCount ? ` (${task.targetExecutionsCount})` : ''}
+              </span>
+            )}
+
             {/* Urgent Badge */}
             {isUrgent && (
               <span className="inline-flex items-center gap-0.5 rounded-lg bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-800">
@@ -78,7 +85,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             className="flex items-baseline gap-1 rounded-lg bg-slate-900 text-white px-3 py-1 text-xs font-black shadow-2xs shrink-0"
             title={`~€${task.reward.toFixed(2)}`}
           >
-            <span>{rewardDH} DH</span>
+            {task.taskMode === 'multi' && task.unitPriceDH ? (
+              <span>{task.unitPriceDH} DH <span className="text-[9px] font-normal text-slate-300">/pers</span></span>
+            ) : (
+              <span>{rewardDH} DH</span>
+            )}
           </div>
         </div>
 

@@ -744,6 +744,7 @@ export const WorkzillaFooter: React.FC = () => {
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li><a href={`/${locale}/tasks`} className="hover:text-white transition-colors">{t('navExplore')}</a></li>
+              <li><a href={`/${locale}/concepts`} className="text-brand-400 font-semibold hover:underline">💡 Modèle & Architecture</a></li>
               <li><a href={`/${locale}/wallet`} className="hover:text-white transition-colors">Portefeuille & Séquestre</a></li>
               <li><a href={`/${locale}#how-it-works`} className="hover:text-white transition-colors">Comment ça marche ?</a></li>
               <li><a href={`/${locale}#trust-daman`} className="hover:text-white transition-colors">Garantie Séquestre</a></li>

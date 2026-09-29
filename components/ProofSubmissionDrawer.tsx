@@ -30,9 +30,7 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [reportText, setReportText] = useState('');
   const [proofLink, setProofLink] = useState('');
-  const [uploadedScreenshots, setUploadedScreenshots] = useState<string[]>([
-    'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&auto=format&fit=crop&q=80'
-  ]);
+  const [uploadedScreenshots, setUploadedScreenshots] = useState<string[]>([]);
   const [checkedChecklist, setCheckedChecklist] = useState<Record<number, boolean>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -40,13 +38,6 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
   if (!task) return null;
 
   const rewardDH = Math.round(task.reward * 10);
-
-  const handleAddSampleImage = () => {
-    setUploadedScreenshots([
-      ...uploadedScreenshots,
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&auto=format&fit=crop&q=80'
-    ]);
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,15 +170,7 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
               <label className="block text-xs font-bold text-slate-700">
                 {t('proofScreenshotsLabel')}
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleAddSampleImage}
-                  className="text-[11px] font-semibold text-brand-700 underline hover:text-brand-900 cursor-pointer"
-                >
-                  {t('proofSimulateAddImg')}
-                </button>
-              </div>
+              <span className="text-[11px] text-slate-500 font-medium">PNG, JPG, PDF, ZIP</span>
             </div>
 
             {uploadError && (

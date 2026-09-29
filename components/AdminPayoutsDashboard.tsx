@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { detectMoroccanBank } from '@/lib/payoutService';
 import {
   FiShield,
@@ -19,7 +20,9 @@ import {
   FiLayers,
   FiX,
   FiTrendingUp,
-  FiExternalLink
+  FiExternalLink,
+  FiLock,
+  FiUser
 } from 'react-icons/fi';
 import { SiBinance } from 'react-icons/si';
 
@@ -42,6 +45,7 @@ interface PayoutItem {
 export const AdminPayoutsDashboard: React.FC = () => {
   const router = useRouter();
   const { locale } = useLanguage();
+  const { isAuthenticated, profile, openAuthModal } = useAuth();
 
   const [items, setItems] = useState<PayoutItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -183,6 +187,31 @@ export const AdminPayoutsDashboard: React.FC = () => {
       return true;
     });
   }, [items, filterStatus, filterMethod, searchTerm]);
+
+  if (!isAuthenticated) {
+    return (
+      <main className="flex-1 py-16 bg-slate-50 flex items-center justify-center">
+        <div className="max-w-md w-full mx-4 bg-white p-8 rounded-3xl border border-slate-200 shadow-xl text-center">
+          <div className="h-12 w-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200">
+            <FiLock className="text-2xl" />
+          </div>
+          <h2 className="text-xl font-extrabold text-slate-900 mb-2">
+            Console Administrateur Protégée
+          </h2>
+          <p className="text-xs text-slate-600 mb-6 leading-relaxed">
+            Veuillez vous connecter avec un compte administrateur autorisé pour accéder aux règlements et virements.
+          </p>
+          <button
+            type="button"
+            onClick={() => openAuthModal('login', 'Connexion Administrateur requise')}
+            className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer"
+          >
+            Se connecter à l'espace Admin
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 py-8 sm:py-12 bg-slate-50/70">

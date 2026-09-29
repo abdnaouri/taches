@@ -64,7 +64,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
   const [isDepositSubmitting, setIsDepositSubmitting] = useState(false);
 
   // Withdraw Form State
-  const [withdrawAmount, setWithdrawAmount] = useState<number>(Math.max(MIN_WITHDRAWAL_DH, Math.min(500, Math.round(user.balanceAvailable * 10))));
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(Math.max(MIN_WITHDRAWAL_DH, Math.round(user.balanceAvailable * 10)));
   const [withdrawMethod, setWithdrawMethod] = useState<PayoutMethod>('RIB');
   const [speedTier, setSpeedTier] = useState<PayoutSpeed>('STANDARD');
   

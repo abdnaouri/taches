@@ -33,6 +33,7 @@ import { WalletPageContent } from '@/components/WalletPageContent';
 import { QualificationModal } from '@/components/QualificationModal';
 import { TaskExamplesPage } from '@/components/TaskExamplesPage';
 import { TaskExample } from '@/lib/taskExamplesData';
+import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
 import {
   WorkzillaHero,
   WorkzillaProofBar,
@@ -64,7 +65,7 @@ interface MarketplaceAppProps {
   forcedLocale?: Locale;
   initialSlug?: string;
   initialTaskId?: string;
-  viewMode?: 'home' | 'tasks' | 'wallet';
+  viewMode?: 'home' | 'tasks' | 'wallet' | 'concepts';
 }
 
 function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewMode = 'home' }: MarketplaceAppProps) {
@@ -338,28 +339,86 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       return;
     }
 
-    // Optimistically assign task to performer
+    // Increment applicants count
     const updated: Task = {
       ...task,
-      status: 'IN_PROGRESS',
-      assignedToId: profile.id,
-      assignedToName: profile.fullName,
-      assignedAt: new Date().toISOString(),
-      applicantsCount: task.applicantsCount + 1,
+      applicantsCount: (task.applicantsCount || 0) + 1,
     };
 
     setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
     showToast(t('toastApplied'));
 
+    // Record bid in backend
+    try {
+      await fetch('/api/bids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          performerId: profile.id,
+          pitch,
+          proposedHours: task.timeLimitHours || 24,
+        }),
+      });
+    } catch (err) {
+      console.warn('Bid post error:', err);
+    }
+  };
+
+  const handleAssignPerformer = async (taskId: string, performerId: string, performerName: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const assignedAt = new Date().toISOString();
+    const updated: Task = {
+      ...task,
+      status: 'IN_PROGRESS',
+      assignedToId: performerId,
+      assignedToName: performerName,
+      assignedAt,
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+    showToast(`Prestataire ${performerName} assigné avec succès !`);
+
     // Supabase Persistence
     await updateDynamicTask(taskId, {
       status: 'IN_PROGRESS',
-      assignedToId: profile.id,
-      assignedToName: profile.fullName,
-      assignedAt: updated.assignedAt,
+      assignedToId: performerId,
+      assignedToName: performerName,
+      assignedAt,
     });
   };
 
+  const handleRequestRevision = async (taskId: string, feedback: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated: Task = {
+      ...task,
+      status: 'REVISION_REQUESTED',
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+    showToast('Demande de retouche transmise au freelance.');
+
+    await updateDynamicTask(taskId, { status: 'REVISION_REQUESTED' });
+
+    // Send revision feedback message into task chat
+    if (profile) {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Client',
+          senderAvatar: profile.avatarUrl || '',
+          content: `⚠️ Demande de retouche : ${feedback}`,
+        }),
+      });
+    }
+  };
 
   const handleSubmitProof = async (taskId: string, reportText: string, proofUrls: string[]) => {
     const task = tasks.find(t => t.id === taskId);
@@ -378,7 +437,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     await updateDynamicTask(taskId, { status: 'UNDER_REVIEW' });
   };
 
-  const handleApproveWork = async (taskId: string) => {
+  const handleApproveWork = async (taskId: string, review?: { rating: number; comment: string }) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -429,7 +488,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       status: 'COMPLETED',
     });
 
-    // Record platform commission entry (Workzilla high margin take-rate)
+    // Record platform commission entry
     await recordDynamicTransaction({
       userId: task.assignedToId || profile?.id || user.id,
       type: 'COMMISSION',
@@ -438,6 +497,26 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       description: `Commission de service Tâches.ma (15%) • -${commissionDH} DH`,
       status: 'COMPLETED',
     });
+
+    // Save review if provided
+    if (review && task.assignedToId && profile) {
+      try {
+        await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId,
+            authorId: profile.id,
+            authorName: profile.fullName || 'Client',
+            targetUserId: task.assignedToId,
+            rating: review.rating,
+            comment: review.comment,
+          }),
+        });
+      } catch (err) {
+        console.warn('Failed to save review:', err);
+      }
+    }
   };
 
   const handleDeposit = async (amountDH: number) => {
@@ -1053,6 +1132,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             onWithdraw={handleWithdraw}
           />
         )
+      ) : viewMode === 'concepts' ? (
+        /* DEDICATED CONCEPTS & ARCHITECTURE EXPLAINER PAGE */
+        <ConceptExplainerPage />
       ) : (
         /* HOME PAGE VIEW - AUTHENTIC WORKZILLA EXPERIENCE */
         <>
@@ -1166,6 +1248,8 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           updateQuery({ proof: task.id });
         }}
         onApproveWork={handleApproveWork}
+        onAssignPerformer={handleAssignPerformer}
+        onRequestRevision={handleRequestRevision}
       />
 
       {isAuthenticated && (

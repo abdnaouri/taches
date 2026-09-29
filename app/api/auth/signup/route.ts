@@ -94,9 +94,15 @@ export async function POST(req: NextRequest) {
           full_name: name,
           avatar_url: defaultAvatar,
           active_role: assignedRole,
-          balance_available: 100.00,
+          balance_available: 0.00,
           balance_escrow: 0.00,
-          passed_qualification: true,
+          passed_qualification: false,
+          performer_rating: 5.0,
+          performer_completed_tasks: 0,
+          performer_reviews_count: 0,
+          customer_rating: 5.0,
+          customer_total_spent: 0.00,
+          customer_tasks_posted: 0,
         });
     }
 

@@ -40,21 +40,22 @@ create table if not exists public.profiles (
   full_name text not null,
   avatar_url text,
   active_role user_role default 'CUSTOMER',
-  balance_available numeric(12, 2) default 100.00 check (balance_available >= 0),
+  balance_available numeric(12, 2) default 0.00 check (balance_available >= 0),
   balance_escrow numeric(12, 2) default 0.00 check (balance_escrow >= 0),
+  is_admin boolean default false,
   
   -- Performer fields
-  performer_tier performer_tier default 'level_3',
-  performer_xp integer default 780,
-  performer_rating numeric(3, 2) default 4.96,
-  performer_reviews_count integer default 48,
-  performer_completed_tasks integer default 52,
-  passed_qualification boolean default true,
+  performer_tier performer_tier default 'level_1',
+  performer_xp integer default 0,
+  performer_rating numeric(3, 2) default 5.00,
+  performer_reviews_count integer default 0,
+  performer_completed_tasks integer default 0,
+  passed_qualification boolean default false,
 
   -- Customer fields
   customer_rating numeric(3, 2) default 5.00,
-  customer_total_spent numeric(12, 2) default 640.00,
-  customer_tasks_posted integer default 11,
+  customer_total_spent numeric(12, 2) default 0.00,
+  customer_tasks_posted integer default 0,
 
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -76,10 +77,10 @@ create table if not exists public.tasks (
 
   -- Client metadata
   client_id uuid references public.profiles(id) on delete set null,
-  client_name text default 'Studio Digital Paris',
+  client_name text default 'Client',
   client_avatar text default 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
-  client_rating numeric(3, 2) default 4.90,
-  client_hire_rate integer default 98,
+  client_rating numeric(3, 2) default 5.00,
+  client_hire_rate integer default 100,
 
   -- Performer assignment
   assigned_to_id uuid references public.profiles(id) on delete set null,
@@ -111,7 +112,34 @@ create table if not exists public.submissions (
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. WALLET TRANSACTIONS LEDGER
+-- 7. REAL-TIME TASK MESSAGES (CHAT)
+create table if not exists public.messages (
+  id uuid default gen_random_uuid() primary key,
+  task_id uuid references public.tasks(id) on delete cascade not null,
+  sender_id uuid references public.profiles(id) on delete cascade not null,
+  sender_name text not null,
+  sender_avatar text,
+  receiver_id uuid references public.profiles(id) on delete set null,
+  content text not null,
+  attachment_url text,
+  is_read boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 8. REVIEWS & RATINGS
+create table if not exists public.reviews (
+  id uuid default gen_random_uuid() primary key,
+  task_id uuid references public.tasks(id) on delete cascade not null,
+  author_id uuid references public.profiles(id) on delete cascade not null,
+  author_name text not null,
+  target_user_id uuid references public.profiles(id) on delete cascade not null,
+  rating numeric(2, 1) not null check (rating >= 1 and rating <= 5),
+  comment text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique (task_id, author_id)
+);
+
+-- 9. WALLET TRANSACTIONS LEDGER
 create table if not exists public.transactions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade,
@@ -123,7 +151,7 @@ create table if not exists public.transactions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. STORAGE BUCKETS SETUP
+-- 10. STORAGE BUCKETS SETUP
 insert into storage.buckets (id, name, public) 
 values ('proofs-and-deliverables', 'proofs-and-deliverables', true)
 on conflict (id) do nothing;
@@ -132,14 +160,16 @@ insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
--- 9. ROW LEVEL SECURITY (RLS)
+-- 11. ROW LEVEL SECURITY (RLS)
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.bids enable row level security;
 alter table public.submissions enable row level security;
+alter table public.messages enable row level security;
+alter table public.reviews enable row level security;
 alter table public.transactions enable row level security;
 
--- Drop existing policies if any to allow safe re-execution
+-- Policies
 drop policy if exists "Profiles are viewable by everyone" on public.profiles;
 create policy "Profiles are viewable by everyone" on public.profiles for select using (true);
 
@@ -170,24 +200,38 @@ create policy "Submissions viewable by everyone" on public.submissions for selec
 drop policy if exists "Performers can place submissions" on public.submissions;
 create policy "Performers can place submissions" on public.submissions for insert with check (true);
 
+drop policy if exists "Messages viewable by participants" on public.messages;
+create policy "Messages viewable by participants" on public.messages for select using (true);
+
+drop policy if exists "Messages can be inserted" on public.messages;
+create policy "Messages can be inserted" on public.messages for insert with check (true);
+
+drop policy if exists "Reviews viewable by everyone" on public.reviews;
+create policy "Reviews viewable by everyone" on public.reviews for select using (true);
+
+drop policy if exists "Reviews can be inserted" on public.reviews;
+create policy "Reviews can be inserted" on public.reviews for insert with check (true);
+
 drop policy if exists "Transactions are viewable" on public.transactions;
 create policy "Transactions are viewable" on public.transactions for select using (true);
 
 drop policy if exists "Transactions can be inserted" on public.transactions;
 create policy "Transactions can be inserted" on public.transactions for insert with check (true);
 
--- 10. AUTH TRIGGER (Auto-create profile when user signs up)
+-- 12. AUTH TRIGGER (Auto-create profile when user signs up)
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url, active_role, balance_available)
+  insert into public.profiles (id, email, full_name, avatar_url, active_role, balance_available, balance_escrow, passed_qualification)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', 'Utilisateur'),
     coalesce(new.raw_user_meta_data->>'avatar_url', ''),
-    'CUSTOMER',
-    100.00
+    coalesce(new.raw_user_meta_data->>'active_role', 'CUSTOMER')::user_role,
+    0.00,
+    0.00,
+    false
   )
   on conflict (id) do nothing;
   return new;

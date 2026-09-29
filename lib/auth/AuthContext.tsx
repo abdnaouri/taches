@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [postAuthCallback, setPostAuthCallback] = useState<(() => void) | null>(null);
 
   // Map DB snake_case to frontend UserProfile
+  // Map DB snake_case to frontend UserProfile
   const mapDbProfile = (row: any, userEmail: string): UserProfile => {
     return {
       id: row.id,
@@ -84,18 +85,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fullName: row.full_name || 'Utilisateur',
       avatarUrl: row.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
       activeRole: (row.active_role as UserRole) || 'CUSTOMER',
-      balanceAvailable: Number(row.balance_available ?? 100),
+      balanceAvailable: Number(row.balance_available ?? 0),
       balanceEscrow: Number(row.balance_escrow ?? 0),
+      isAdmin: Boolean(row.is_admin ?? false),
       createdAt: row.created_at || new Date().toISOString(),
-      performerTier: row.performer_tier || 'level_3',
-      performerXp: Number(row.performer_xp ?? 780),
-      performerRating: Number(row.performer_rating ?? 4.96),
-      performerReviewsCount: Number(row.performer_reviews_count ?? 48),
-      performerCompletedTasks: Number(row.performer_completed_tasks ?? 52),
-      passedQualification: Boolean(row.passed_qualification ?? true),
+      performerTier: row.performer_tier || 'level_1',
+      performerXp: Number(row.performer_xp ?? 0),
+      performerRating: Number(row.performer_rating ?? 5.0),
+      performerReviewsCount: Number(row.performer_reviews_count ?? 0),
+      performerCompletedTasks: Number(row.performer_completed_tasks ?? 0),
+      passedQualification: Boolean(row.passed_qualification ?? false),
       customerRating: Number(row.customer_rating ?? 5.0),
-      customerTotalSpent: Number(row.customer_total_spent ?? 640),
-      customerTasksPosted: Number(row.customer_tasks_posted ?? 11),
+      customerTotalSpent: Number(row.customer_total_spent ?? 0),
+      customerTasksPosted: Number(row.customer_tasks_posted ?? 0),
     };
   };
 
@@ -124,15 +126,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fullName: email.split('@')[0],
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
         activeRole: 'CUSTOMER',
-        balanceAvailable: 100,
+        balanceAvailable: 0,
         balanceEscrow: 0,
+        isAdmin: false,
         createdAt: new Date().toISOString(),
-        performerTier: 'level_3',
-        performerXp: 780,
+        performerTier: 'level_1',
+        performerXp: 0,
         performerRating: 5.0,
         performerReviewsCount: 0,
         performerCompletedTasks: 0,
-        passedQualification: true,
+        passedQualification: false,
         customerRating: 5.0,
         customerTotalSpent: 0,
         customerTasksPosted: 0,
@@ -146,8 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         active_role: fallback.activeRole,
         balance_available: fallback.balanceAvailable,
         balance_escrow: fallback.balanceEscrow,
+        passed_qualification: false,
       });
-
 
       setProfile(fallback);
       try {
@@ -169,15 +172,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fullName: email.split('@')[0],
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
         activeRole: 'CUSTOMER',
-        balanceAvailable: 100,
+        balanceAvailable: 0,
         balanceEscrow: 0,
+        isAdmin: false,
         createdAt: new Date().toISOString(),
-        performerTier: 'level_3',
-        performerXp: 780,
+        performerTier: 'level_1',
+        performerXp: 0,
         performerRating: 5.0,
         performerReviewsCount: 0,
         performerCompletedTasks: 0,
-        passedQualification: true,
+        passedQualification: false,
         customerRating: 5.0,
         customerTotalSpent: 0,
         customerTasksPosted: 0,
