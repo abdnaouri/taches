@@ -132,9 +132,18 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   // Copy Task Example handler
   const handleCopyTaskExample = (example: TaskExample) => {
     const title = example.title[locale] || example.title.fr;
+    const description = example.description[locale] || example.description.fr;
     const budget = example.priceDH;
     const cat = example.category;
-    router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title)}&category=${encodeURIComponent(cat)}&budget=${budget}`);
+    const city = example.city || '';
+    const params = new URLSearchParams({
+      title,
+      description,
+      category: cat,
+      budget: budget.toString(),
+      ...(city ? { city } : {}),
+    });
+    router.push(`/${locale}/tasks/new?${params.toString()}`);
   };
 
   // View & Filter State: default to 'live' so users see real tasks immediately on /tasks

@@ -70,12 +70,13 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
   ];
 
   const citiesList = [
-    { id: 'all', label: { fr: 'Tout le Maroc / En ligne', ar: 'كل المغرب / عن بعد', en: 'All Morocco / Remote' } },
-    { id: 'Casablanca', label: { fr: 'Casablanca', ar: 'الدار البيضاء', en: 'Casablanca' } },
-    { id: 'Rabat', label: { fr: 'Rabat', ar: 'الرباط', en: 'Rabat' } },
-    { id: 'Marrakech', label: { fr: 'Marrakech', ar: 'مراكش', en: 'Marrakech' } },
-    { id: 'Tanger', label: { fr: 'Tanger', ar: 'طنجة', en: 'Tangier' } },
-    { id: 'Fès', label: { fr: 'Fès', ar: 'فاس', en: 'Fez' } },
+    { id: 'all', label: { fr: 'Tout le Maroc / En ligne', ar: 'كل المغرب / عن بعد', en: 'All Morocco / Remote', ru: 'Все города / Онлайн', es: 'Todo Marruecos / Remoto' } },
+    { id: 'Casablanca', label: { fr: 'Casablanca', ar: 'الدار البيضاء', en: 'Casablanca', ru: 'Касабланка', es: 'Casablanca' } },
+    { id: 'Rabat', label: { fr: 'Rabat', ar: 'الرباط', en: 'Rabat', ru: 'Рабат', es: 'Rabat' } },
+    { id: 'Marrakech', label: { fr: 'Marrakech', ar: 'مراكش', en: 'Marrakech', ru: 'Марракеш', es: 'Marrakech' } },
+    { id: 'Tanger', label: { fr: 'Tanger', ar: 'طنجة', en: 'Tangier', ru: 'Танжер', es: 'Tánger' } },
+    { id: 'Fès', label: { fr: 'Fès', ar: 'فاس', en: 'Fez', ru: 'Фес', es: 'Fez' } },
+    { id: 'Agadir', label: { fr: 'Agadir', ar: 'أكادير', en: 'Agadir', ru: 'Агадир', es: 'Agadir' } },
   ];
 
   // Natural search query matching algorithm
@@ -170,7 +171,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
       />
 
-      {/* TOP HEADER HERO BANNER (Work-zilla 3-Banner Metrics) */}
+      {/* TOP HEADER HERO BANNER */}
       <section className="bg-white border-b border-slate-200/80 pt-8 pb-10 shadow-2xs">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           
@@ -200,102 +201,100 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>
                 {locale === 'ar'
-                  ? 'أكثر من 150 ألف مهمة منجزة بنجاح'
+                  ? '⚡ نماذج ومهام منجزة بالمغرب مع ضمان Séquestre'
                   : locale === 'ru'
-                  ? 'Более 150 000 успешно выполненных заданий'
+                  ? '⚡ Реальные примеры заданий в Марокко с гарантией'
                   : locale === 'en'
-                  ? 'Over 150k tasks completed with escrow guarantee'
-                  : 'Plus de 150 000 missions réalisées au Maroc'}
+                  ? '⚡ Real Moroccan Task Templates & Escrow Guarantee'
+                  : '⚡ Modèles & Exemples concrets au Maroc avec garantie Séquestre'}
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
               {locale === 'ar'
-                ? 'أمثلة حقيقية لمهام أنجزها خبراؤنا بالمغرب'
+                ? 'أمثلة حقيقية لمهام منجزة على tâches.ma'
                 : locale === 'ru'
-                ? 'Примеры выполненных заданий на Workzilla'
+                ? 'Примеры выполненных заданий на tâches.ma'
                 : locale === 'en'
                 ? 'Real Completed Task Examples on tâches.ma'
                 : 'Exemples réels de missions réalisées sur tâches.ma'}
             </h1>
             <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
               {locale === 'ar'
-                ? 'ابحث بالنية الطبيعية (يوكان، لوجو، ترجمة عقود، إكسيل، مونتاج ريلز) واستلهم من مهام حقيقية مع أسعار بالدرهم وأراء العملاء.'
+                ? 'ابحث بالنية الطبيعية (يوكان، لوجو، ترجمة عقود، إكسيل، مونتاج ريلز) واستلهم من مهام حقيقية مع أسعار بالدرهم وأنشيء مهمة مطابقة بنقرة واحدة.'
                 : locale === 'ru'
-                ? 'Посмотрите примеры реальных задач, реальные цены и отзывы клиентов. Создайте аналогичное задание в 1 клик.'
+                ? 'Посмотрите примеры реальных задач, реальные цены в MAD и отзывы клиентов. Создайте аналогичное задание в 1 клик.'
                 : locale === 'en'
                 ? 'Search natural tasks (Shopify COD, Logo, Arabic translation, Excel data, Reels editing) and copy templates in 1 click.'
-                : 'Trouvez l’inspiration parmi des centaines de besoins concrets (Boutique YouCan COD, Création Logo, Traduction juridique, Saisie Excel, Montage Reels) et créez une mission identique en 1 clic.'}
+                : 'Trouvez l’inspiration parmi des centaines de besoins concrets (Boutique YouCan COD, Création Logo, Traduction juridique, Saisie Excel, Montage Reels) et dupliquez une mission identique en 1 clic.'}
             </p>
           </div>
 
-          {/* 3 Metric Stat Banners (Work-zilla Style) */}
+          {/* 3 Authentic Metric Stat Banners */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-4">
             
-            {/* Metric 1 */}
+            {/* Metric 1: Rapidité */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/40 border border-blue-100 p-5 sm:p-6 flex items-center gap-4 transition hover:shadow-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white text-2xl shadow-sm">
-                <FiUsers />
+                <FiClock />
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  48 000+
+                  &lt; 10 min
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5 leading-snug">
                   {locale === 'ar'
-                    ? 'منفذ ومستقل جاهز لمساعدتكم فوراً'
+                    ? 'متوسط الوقت لاستقبال أول العروض من المنفذين'
                     : locale === 'ru'
-                    ? 'исполнителей готовых помочь вам'
+                    ? 'среднее время получения первых откликов'
                     : locale === 'en'
-                    ? 'vetted Moroccan freelancers ready to assist'
-                    : 'freelances qualifiés prêts à vous aider'}
+                    ? 'average time to get first qualified proposals'
+                    : 'délai moyen pour recevoir vos premières propositions'}
                 </div>
               </div>
             </div>
 
-            {/* Metric 2 */}
+            {/* Metric 2: Sécurité Daman */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/40 border border-emerald-100 p-5 sm:p-6 flex items-center gap-4 transition hover:shadow-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white text-2xl shadow-sm">
-                <FiCheckCircle />
+                <FiShield />
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  150 000+
+                  100% Sécurisé
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5 leading-snug">
                   {locale === 'ar'
-                    ? 'مهمة ومشروع تم تسليمهم بنجاح'
+                    ? 'ضمان مالي : الدفع محمي ولا يُصرف إلا بعد رضاكم'
                     : locale === 'ru'
-                    ? 'заданий уже успешно выполнены'
+                    ? 'безопасная сделка: оплата только после подтверждения'
                     : locale === 'en'
-                    ? 'tasks completed with 100% escrow protection'
-                    : 'missions déjà réalisées avec succès'}
+                    ? 'Daman escrow: funds released only upon your approval'
+                    : 'fonds sous séquestre Daman débloqués après validation'}
                 </div>
               </div>
             </div>
 
-            {/* Metric 3 */}
+            {/* Metric 3: Tarifs Dirhams CMI */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/40 border border-amber-100 p-5 sm:p-6 flex items-center gap-4 transition hover:shadow-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white text-2xl shadow-sm">
                 <FiTrendingUp />
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  15 000 DH
+                  Dès 50 DH
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5 leading-snug">
                   {locale === 'ar'
-                    ? 'شهرياً يحققها المنفذون النشطون بالمغرب'
+                    ? 'الدفع بالدرهم المغربي عبر CMI والبطاقات البنكية'
                     : locale === 'ru'
-                    ? 'в месяц зарабатывают активные исполнители'
+                    ? 'оплата в MAD местными картами CMI и переводами'
                     : locale === 'en'
-                    ? 'average monthly earnings for active performers'
-                    : 'par mois gagnés par les freelances actifs'}
+                    ? 'all budgets in MAD via Moroccan cards & CMI'
+                    : 'tarifs transparents en MAD par CB marocaine & CMI'}
                 </div>
               </div>
             </div>
-
           </div>
-
         </div>
       </section>
 

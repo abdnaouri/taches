@@ -60,8 +60,10 @@ export const CreateTaskStandalonePage: React.FC = () => {
 
   // Query parameters for pre-filling
   const queryTitle = searchParams.get('title') || searchParams.get('q') || '';
+  const queryDescription = searchParams.get('description') || searchParams.get('desc') || '';
   const queryCategory = searchParams.get('category') || '';
   const queryBudget = searchParams.get('budget') ? parseInt(searchParams.get('budget')!, 10) : undefined;
+  const queryCity = searchParams.get('city') || '';
 
   // Post Creation Mode: Express (1-Step fast mode) vs Advanced (4-Step detailed mode)
   const [modeView, setModeView] = useState<'express' | 'advanced'>(queryTitle ? 'express' : 'express');
@@ -82,10 +84,11 @@ export const CreateTaskStandalonePage: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Decision 3: Specification & Details
-  const [locationMode, setLocationMode] = useState<'online' | 'in_person'>('online');
-  const [selectedCity, setSelectedCity] = useState<string>('Casablanca');
+  const isQueryInPerson = queryCity && queryCity !== 'En ligne' && queryCity !== 'online' && queryCity !== 'all';
+  const [locationMode, setLocationMode] = useState<'online' | 'in_person'>(isQueryInPerson ? 'in_person' : 'online');
+  const [selectedCity, setSelectedCity] = useState<string>(isQueryInPerson ? queryCity : 'Casablanca');
   const [title, setTitle] = useState<string>(queryTitle);
-  const [description, setDescription] = useState<string>('');
+  const [description, setDescription] = useState<string>(queryDescription);
   const [antiSpamKeyword, setAntiSpamKeyword] = useState<string>('MAROC');
 
   const [deliverables, setDeliverables] = useState<string[]>([

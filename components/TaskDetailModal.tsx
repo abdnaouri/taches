@@ -180,6 +180,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const isMyPostedTask = user
     ? task.clientId === user.id || task.clientName.includes('Vous') || task.clientName.includes('You')
     : false;
+  const hasApplied = appliedSuccess || (user ? bids.some((b) => b.performerId === user.id) : false);
+  const canAccessChat = isMyPostedTask || isAssignedToMe || hasApplied || (isAuthenticated && task.status === 'OPEN');
 
   const rewardDH = Math.round(task.reward * 10);
   const rewardEur = Math.round(task.reward);
@@ -371,7 +373,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             Détails & Consignes
           </button>
 
-          {(isMyPostedTask || isAssignedToMe) && (
+          {canAccessChat && (
             <button
               type="button"
               onClick={() => setActiveModalTab('chat')}
@@ -708,9 +710,19 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           {!isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
             <div>
               {appliedSuccess ? (
-                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-in fade-in">
-                  <FiCheck className="text-lg text-emerald-600 shrink-0" />
-                  <span>Votre proposition a été transmise au donneur d’ordre. Vous recevrez une alerte dès sélection.</span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-in fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <FiCheck className="text-lg text-emerald-600 shrink-0" />
+                    <span>Votre proposition a été transmise. Vous pouvez échanger en direct avec le client.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('chat')}
+                    className="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
+                  >
+                    <FiMessageSquare />
+                    <span>Discussion</span>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
