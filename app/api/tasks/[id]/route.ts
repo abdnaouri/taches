@@ -1,17 +1,8 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { Task } from '@/types/database';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 export async function GET(
   req: NextRequest,
@@ -80,20 +71,77 @@ export async function PATCH(
 ) {
   try {
     const { id } = params;
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const supabase = getAdminClient();
 
+    // 1. Fetch current task to verify ownership & permissions
+    const { data: existingTask, error: fetchErr } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !existingTask) {
+      return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    const callerId = authResult.user.id;
+    const isClient = existingTask.client_id === callerId;
+    const isPerformer = existingTask.assigned_to_id === callerId;
+    const isAdmin = authResult.isAdmin;
+
+    if (!isClient && !isPerformer && !isAdmin) {
+      // Allow bidding increment if performer applies, handled via /api/bids
+      return NextResponse.json(
+        { success: false, error: 'Vous n\'avez pas la permission de modifier cette mission.' },
+        { status: 403 }
+      );
+    }
+
     const updates: Record<string, any> = {};
-    if (body.status !== undefined) updates.status = body.status;
-    if (body.assignedToId !== undefined) updates.assigned_to_id = body.assignedToId;
-    if (body.assignedToName !== undefined) updates.assigned_to_name = body.assignedToName;
-    if (body.assignedAt !== undefined) updates.assigned_at = body.assignedAt;
-    if (body.completedAt !== undefined) updates.completed_at = body.completedAt;
-    if (typeof body.applicantsCount === 'number') updates.applicants_count = body.applicantsCount;
-    if (body.settlementProposal !== undefined) updates.settlement_proposal = body.settlementProposal;
-    if (body.finalPayoutPercentage !== undefined) updates.final_payout_percentage = body.finalPayoutPercentage;
-    if (body.finalPerformerAmountDH !== undefined) updates.final_performer_amount_dh = body.finalPerformerAmountDH;
-    if (body.finalClientRefundDH !== undefined) updates.final_client_refund_dh = body.finalClientRefundDH;
+
+    // Client/Admin Actions
+    if (isClient || isAdmin) {
+      if (body.assignedToId !== undefined) updates.assigned_to_id = body.assignedToId;
+      if (body.assignedToName !== undefined) updates.assigned_to_name = body.assignedToName;
+      if (body.assignedAt !== undefined) updates.assigned_at = body.assignedAt;
+      if (body.completedAt !== undefined) updates.completed_at = body.completedAt;
+      if (body.settlementProposal !== undefined) updates.settlement_proposal = body.settlementProposal;
+      if (body.finalPayoutPercentage !== undefined) updates.final_payout_percentage = body.finalPayoutPercentage;
+      if (body.finalPerformerAmountDH !== undefined) updates.final_performer_amount_dh = body.finalPerformerAmountDH;
+      if (body.finalClientRefundDH !== undefined) updates.final_client_refund_dh = body.finalClientRefundDH;
+    }
+
+    // Status Transitions Authorization
+    if (body.status !== undefined) {
+      const targetStatus = body.status;
+
+      // Only client or admin can complete or cancel or request revision
+      if (['COMPLETED', 'REVISION_REQUESTED', 'CANCELLED'].includes(targetStatus) && !isClient && !isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Seul le donneur d\'ordre ou un administrateur peut valider, réviser ou annuler la mission.' },
+          { status: 403 }
+        );
+      }
+
+      // Performer can mark UNDER_REVIEW or ARBITRATION
+      if (['UNDER_REVIEW', 'ARBITRATION'].includes(targetStatus) && !isPerformer && !isClient && !isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Statut non autorisé.' },
+          { status: 403 }
+        );
+      }
+
+      updates.status = targetStatus;
+    }
 
     const { data, error } = await supabase
       .from('tasks')
@@ -106,8 +154,8 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 
-    // If status transitioned to COMPLETED, release escrow to performer
-    if (updates.status === 'COMPLETED' && data.assigned_to_id && data.client_id) {
+    // If status transitioned to COMPLETED, atomically release escrow to performer
+    if (updates.status === 'COMPLETED' && existingTask.status !== 'COMPLETED' && data.assigned_to_id && data.client_id) {
       const rewardEur = Number(data.reward);
       const commissionEur = Number((rewardEur * 0.15).toFixed(2));
       const netPerformerEur = Number((rewardEur - commissionEur).toFixed(2));

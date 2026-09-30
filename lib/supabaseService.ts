@@ -1,4 +1,5 @@
 import { Task, WalletTransaction } from '@/types/database';
+import { getAuthHeaders } from '@/lib/supabase';
 
 export interface TasksApiResponse {
   isDbReady: boolean;
@@ -25,8 +26,12 @@ export async function fetchDynamicTasks(filters?: { category?: string; status?: 
     if (filters?.status) params.set('status', filters.status);
     if (filters?.clientId) params.set('clientId', filters.clientId);
 
+    const headers = await getAuthHeaders(false);
     const query = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/tasks${query}`, { cache: 'no-store' });
+    const res = await fetch(`/api/tasks${query}`, {
+      headers,
+      cache: 'no-store',
+    });
     if (!res.ok) {
       throw new Error(`Tasks fetch failed with HTTP ${res.status}`);
     }
@@ -47,7 +52,11 @@ export async function fetchDynamicTasks(filters?: { category?: string; status?: 
  */
 export async function fetchDynamicTaskById(taskId: string): Promise<Task | null> {
   try {
-    const res = await fetch(`/api/tasks/${taskId}`, { cache: 'no-store' });
+    const headers = await getAuthHeaders(false);
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      headers,
+      cache: 'no-store',
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return data.task || null;
@@ -62,9 +71,10 @@ export async function fetchDynamicTaskById(taskId: string): Promise<Task | null>
  */
 export async function createDynamicTask(task: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'>): Promise<{ success: boolean; task?: Task; error?: string }> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch('/api/tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(task),
     });
     const data = await res.json();
@@ -83,9 +93,10 @@ export async function createDynamicTask(task: Omit<Task, 'id' | 'applicantsCount
  */
 export async function updateDynamicTask(taskId: string, updates: Partial<Task>): Promise<boolean> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(updates),
     });
     return res.ok;
@@ -105,9 +116,10 @@ export async function submitDynamicProof(
   proofUrls: string[]
 ): Promise<boolean> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch('/api/submissions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ taskId, performerId, reportText, proofUrls }),
     });
     return res.ok;
@@ -122,11 +134,13 @@ export async function submitDynamicProof(
  */
 export async function uploadDynamicProofFile(file: File): Promise<UploadApiResponse> {
   try {
+    const authHeaders = await getAuthHeaders(false);
     const formData = new FormData();
     formData.append('file', file);
 
     const res = await fetch('/api/upload', {
       method: 'POST',
+      headers: authHeaders,
       body: formData,
     });
 
@@ -151,8 +165,12 @@ export async function uploadDynamicProofFile(file: File): Promise<UploadApiRespo
  */
 export async function fetchDynamicTransactions(userId?: string): Promise<WalletTransaction[]> {
   try {
+    const headers = await getAuthHeaders(false);
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    const res = await fetch(`/api/wallet${query}`, { cache: 'no-store' });
+    const res = await fetch(`/api/wallet${query}`, {
+      headers,
+      cache: 'no-store',
+    });
     if (!res.ok) return [];
     const data = await res.json();
     return data.transactions || [];
@@ -167,9 +185,10 @@ export async function fetchDynamicTransactions(userId?: string): Promise<WalletT
  */
 export async function recordDynamicTransaction(tx: Omit<WalletTransaction, 'id' | 'createdAt'>): Promise<void> {
   try {
+    const headers = await getAuthHeaders(true);
     await fetch('/api/wallet', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(tx),
     });
   } catch (err: any) {
@@ -187,9 +206,10 @@ export async function executeDynamicDeposit(payload: {
   paymentDetails?: any;
 }): Promise<{ success: boolean; transaction?: WalletTransaction; error?: string }> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch('/api/wallet/deposit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
     return await res.json();
@@ -210,9 +230,10 @@ export async function executeDynamicWithdrawal(payload: {
   payoutDetails: any;
 }): Promise<{ success: boolean; transaction?: WalletTransaction; feeCalculation?: any; error?: string }> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch('/api/wallet/withdraw', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
     return await res.json();
@@ -227,7 +248,11 @@ export async function executeDynamicWithdrawal(payload: {
  */
 export async function fetchDynamicProfile(userId: string): Promise<any> {
   try {
-    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+    const headers = await getAuthHeaders(false);
+    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, {
+      headers,
+      cache: 'no-store',
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return data.profile || null;
@@ -242,9 +267,10 @@ export async function fetchDynamicProfile(userId: string): Promise<any> {
  */
 export async function updateDynamicProfile(userId: string, updates: any): Promise<boolean> {
   try {
+    const headers = await getAuthHeaders(true);
     const res = await fetch('/api/profile', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ userId, ...updates }),
     });
     return res.ok;

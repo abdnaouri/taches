@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -17,6 +18,14 @@ const ALLOWED_EXTENSIONS = new Set([
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { error: authResult.error || 'Authentification requise pour téléverser un fichier.' },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -44,11 +53,11 @@ export async function POST(req: NextRequest) {
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .slice(0, 40);
 
-    const fileName = `proof_${Date.now()}_${sanitizedBase || 'deliverable'}.${rawExt}`;
+    const userId = authResult.user.id;
+    const fileName = `${userId}/proof_${Date.now()}_${sanitizedBase || 'deliverable'}.${rawExt}`;
     const filePath = `${fileName}`;
 
     if (!serviceRoleKey) {
-      // Fallback for offline development / preview environments
       return NextResponse.json({
         success: true,
         fileName,

@@ -1,31 +1,29 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { WalletTransaction } from '@/types/database';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, isDbReady: false, transactions: [], error: authResult.error || 'Authentification requise.' },
+        { status: 401 }
+      );
+    }
+
+    const requestedUserId = req.nextUrl.searchParams.get('userId');
+    const targetUserId = authResult.isAdmin && requestedUserId ? requestedUserId : authResult.user.id;
+
     const supabase = getAdminClient();
 
     let query = supabase
       .from('transactions')
       .select('*')
+      .eq('user_id', targetUserId)
       .order('created_at', { ascending: false });
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
 
     const { data, error } = await query;
 
@@ -68,6 +66,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Seuls les processus autorisés ou administrateurs peuvent insérer directement des transactions.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { userId, type, amount, currency = 'EUR', description, status = 'COMPLETED' } = body;
 

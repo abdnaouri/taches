@@ -1,16 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -70,17 +61,51 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { taskId, performerId, pitch, proposedHours = 24 } = body;
-
-    if (!taskId || !performerId || !pitch) {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
       return NextResponse.json(
-        { success: false, error: 'Champs requis manquants (taskId, performerId, pitch)' },
+        { success: false, error: authResult.error || 'Authentification requise pour postuler.' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { taskId, pitch, proposedHours = 24 } = body;
+
+    if (!taskId || !pitch?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Champs requis manquants (taskId, pitch)' },
         { status: 400 }
       );
     }
 
+    const performerId = authResult.user.id;
     const supabase = getAdminClient();
+
+    // Check task status & prevent client from bidding on own task
+    const { data: task, error: taskErr } = await supabase
+      .from('tasks')
+      .select('client_id, status')
+      .eq('id', taskId)
+      .single();
+
+    if (taskErr || !task) {
+      return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    if (task.client_id === performerId) {
+      return NextResponse.json(
+        { success: false, error: 'Vous ne pouvez pas postuler à votre propre mission.' },
+        { status: 400 }
+      );
+    }
+
+    if (task.status !== 'OPEN') {
+      return NextResponse.json(
+        { success: false, error: 'Cette mission n\'accepte plus de nouvelles candidatures.' },
+        { status: 400 }
+      );
+    }
 
     const { data: createdBid, error: bidError } = await supabase
       .from('bids')
@@ -95,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     if (bidError) {
       console.error('Bid insertion error:', bidError);
-      return NextResponse.json({ success: false, error: bidError.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Vous avez déjà postulé à cette mission.' }, { status: 400 });
     }
 
     // Increment applicants count on task

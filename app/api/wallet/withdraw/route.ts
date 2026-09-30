@@ -1,36 +1,35 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { calculatePayoutFees, PayoutMethod, PayoutSpeed } from '@/lib/payoutService';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour demander un retrait.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
-      userId,
       amountDH,
       payoutMethod = 'RIB',
       speedTier = 'STANDARD',
       payoutDetails = {},
     } = body;
 
-    if (!userId || !amountDH || Number(amountDH) <= 0) {
+    if (!amountDH || Number(amountDH) <= 0) {
       return NextResponse.json(
         { success: false, error: 'Paramètres de retrait invalides ou montant manquant.' },
         { status: 400 }
       );
     }
 
+    const userId = authResult.user.id;
     const supabase = getAdminClient();
 
     // 1. Fetch user profile to verify current balance

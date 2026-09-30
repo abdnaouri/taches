@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { detectMoroccanBank } from '@/lib/payoutService';
+import { getAuthHeaders } from '@/lib/supabase';
 import {
   FiShield,
   FiArrowUpRight,
@@ -64,7 +65,10 @@ export const AdminPayoutsDashboard: React.FC = () => {
   const fetchPayouts = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/payouts');
+      const authHeaders = await getAuthHeaders(false);
+      const res = await fetch('/api/admin/payouts', {
+        headers: authHeaders,
+      });
       const data = await res.json();
       if (data.success && data.items) {
         setItems(data.items);
@@ -77,8 +81,12 @@ export const AdminPayoutsDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchPayouts();
-  }, []);
+    if (isAuthenticated && profile?.isAdmin) {
+      fetchPayouts();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, profile?.isAdmin]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -131,9 +139,10 @@ export const AdminPayoutsDashboard: React.FC = () => {
     const targetStatus = actionType === 'COMPLETE' ? 'COMPLETED' : actionType === 'PROCESS' ? 'PROCESSING' : 'CANCELLED';
 
     try {
+      const authHeaders = await getAuthHeaders(true);
       const res = await fetch('/api/admin/payouts', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           transactionId: selectedItem.id,
           status: targetStatus,
@@ -188,7 +197,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
     });
   }, [items, filterStatus, filterMethod, searchTerm]);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !profile?.isAdmin) {
     return (
       <main className="flex-1 py-16 bg-slate-50 flex items-center justify-center">
         <div className="max-w-md w-full mx-4 bg-white p-8 rounded-3xl border border-slate-200 shadow-xl text-center">
@@ -199,14 +208,16 @@ export const AdminPayoutsDashboard: React.FC = () => {
             Console Administrateur Protégée
           </h2>
           <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-            Veuillez vous connecter avec un compte administrateur autorisé pour accéder aux règlements et virements.
+            {isAuthenticated
+              ? 'Votre compte n\'a pas les privilèges administrateur requis pour accéder aux règlements et virements.'
+              : 'Veuillez vous connecter avec un compte administrateur autorisé pour accéder aux règlements et virements.'}
           </p>
           <button
             type="button"
             onClick={() => openAuthModal('login', 'Connexion Administrateur requise')}
             className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer"
           >
-            Se connecter à l'espace Admin
+            {isAuthenticated ? 'Changer de compte' : 'Se connecter à l\'espace Admin'}
           </button>
         </div>
       </main>
@@ -224,6 +235,42 @@ export const AdminPayoutsDashboard: React.FC = () => {
             <div className="text-sm font-semibold">{toastMessage}</div>
           </div>
         )}
+
+        {/* Admin Subheader Navigation Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-900 text-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+              <FiShield className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Console d&apos;Administration</span>
+              <h2 className="text-base font-black text-white">Règlement des Gains & Payouts</h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60">
+            <button
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-lg shadow-sm flex items-center gap-1.5"
+            >
+              <FiDollarSign className="w-4 h-4 text-white" />
+              <span>Virements Payouts</span>
+            </button>
+            <button
+              onClick={() => router.push(`/${locale}/admin/disputes`)}
+              className="px-3.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <FiAlertTriangle className="w-4 h-4 text-amber-400" />
+              <span>Litiges & Arbitrage</span>
+            </button>
+            <button
+              onClick={() => router.push(`/${locale}/admin/kyc`)}
+              className="px-3.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <FiShield className="w-4 h-4 text-emerald-400" />
+              <span>Vérifications KYC</span>
+            </button>
+          </div>
+        </div>
 
         {/* Header Title & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">

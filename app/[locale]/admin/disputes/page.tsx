@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Header } from '@/components/Header';
 import { WorkzillaFooter } from '@/components/WorkzillaLandingSections';
+import { getAuthHeaders } from '@/lib/supabase';
 import {
   FiShield,
   FiAlertTriangle,
@@ -52,7 +53,10 @@ export default function AdminDisputesPage() {
   const fetchDisputes = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/disputes');
+      const authHeaders = await getAuthHeaders(false);
+      const res = await fetch('/api/admin/disputes', {
+        headers: authHeaders,
+      });
       const data = await res.json();
       if (data.success && data.disputes) {
         setDisputes(data.disputes);
@@ -65,17 +69,22 @@ export default function AdminDisputesPage() {
   };
 
   useEffect(() => {
-    fetchDisputes();
-  }, []);
+    if (isAuthenticated && profile?.isAdmin) {
+      fetchDisputes();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, profile?.isAdmin]);
 
   const handleExecuteRuling = async (ruling: 'REFUND_CLIENT' | 'RELEASE_PERFORMER') => {
     if (!selectedDispute) return;
     setIsSubmitting(true);
 
     try {
+      const authHeaders = await getAuthHeaders(true);
       const res = await fetch('/api/admin/disputes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId: selectedDispute.id,
           ruling,
@@ -102,20 +111,24 @@ export default function AdminDisputesPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !profile?.isAdmin) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
         <Header />
         <main className="max-w-md mx-auto py-16 px-4 text-center">
           <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4">
             <FiShield className="text-4xl text-amber-600 mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">Console d'Arbitrage Daman</h1>
-            <p className="text-xs text-slate-600">Veuillez vous connecter avec un compte administrateur.</p>
+            <h1 className="text-xl font-bold text-slate-900">Console d'Arbitrage Protégée</h1>
+            <p className="text-xs text-slate-600">
+              {isAuthenticated
+                ? 'Votre compte n\'a pas les privilèges administrateur requis.'
+                : 'Veuillez vous connecter avec un compte administrateur autorisé.'}
+            </p>
             <button
               onClick={() => openAuthModal('login', 'Connexion requise')}
               className="w-full bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs"
             >
-              Se connecter
+              {isAuthenticated ? 'Changer de compte' : 'Se connecter'}
             </button>
           </div>
         </main>
@@ -125,8 +138,46 @@ export default function AdminDisputesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between">
       <Header />
+
+      {/* Admin Subheader Navigation Bar */}
+      <div className="bg-slate-900 border-b border-slate-800 py-3 px-4 sm:px-8">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg">
+              <FiShield className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Console d&apos;Administration</span>
+              <h1 className="text-lg font-black text-white">Médiation & Litiges Séquestre</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60">
+            <button
+              onClick={() => router.push(`/${locale}/admin/payouts`)}
+              className="px-3.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <FiDollarSign className="w-4 h-4 text-emerald-400" />
+              <span>Virements Payouts</span>
+            </button>
+            <button
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-amber-600 rounded-lg shadow-sm flex items-center gap-1.5"
+            >
+              <FiAlertTriangle className="w-4 h-4 text-white" />
+              <span>Litiges & Arbitrage</span>
+            </button>
+            <button
+              onClick={() => router.push(`/${locale}/admin/kyc`)}
+              className="px-3.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <FiShield className="w-4 h-4 text-emerald-400" />
+              <span>Vérifications KYC</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         {toastMsg && (

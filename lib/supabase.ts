@@ -31,3 +31,25 @@ export const isSupabaseConfigured = () => {
   );
 };
 
+/**
+ * Returns Authorization header with Supabase access token if session is active
+ */
+export async function getAuthHeaders(includeContentType = true): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  if (includeContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+  } catch (err) {
+    console.error('Error retrieving session for auth headers:', err);
+  }
+
+  return headers;
+}
+
+

@@ -1,20 +1,19 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, requireAdminUser } from '@/lib/auth/serverAuth';
 import { sendPayoutNotification } from '@/lib/notificationService';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAdminUser(req);
+    if (!authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Accès réservé aux administrateurs.' },
+        { status: authResult.status || 403 }
+      );
+    }
+
     const supabase = getAdminClient();
 
     // 1. Fetch all withdrawal transactions
@@ -25,7 +24,7 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     // 2. Fetch all profiles for reference
-    const { data: profiles, error: profileError } = await supabase
+    const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, email, avatar_url, performer_tier, performer_completed_tasks');
 
@@ -109,6 +108,14 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const authResult = await requireAdminUser(req);
+    if (!authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Accès réservé aux administrateurs.' },
+        { status: authResult.status || 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       transactionId,

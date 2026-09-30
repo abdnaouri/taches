@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { UserProfile, UserRole } from '@/types/database';
 
 interface AuthContextType {
@@ -41,8 +41,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authPromptMessage, setAuthPromptMessage] = useState<string | null>(null);
   const [postAuthCallback, setPostAuthCallback] = useState<(() => void) | null>(null);
 
+  const setAdminCookie = (isAdmin: boolean) => {
+    if (typeof document === 'undefined') return;
+    if (isAdmin) {
+      document.cookie = `taches_is_admin=true; path=/; max-age=604800; SameSite=Lax`;
+    } else {
+      document.cookie = `taches_is_admin=; path=/; max-age=0; SameSite=Lax`;
+    }
+  };
+
   // Map DB snake_case to frontend UserProfile
   const mapDbProfile = (row: any, userEmail: string): UserProfile => {
+    const isAdmin = Boolean(row.is_admin ?? false);
+    setAdminCookie(isAdmin);
+
     return {
       id: row.id,
       email: row.email || userEmail,
@@ -51,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       activeRole: (row.active_role as UserRole) || 'CUSTOMER',
       balanceAvailable: Number(row.balance_available ?? 0),
       balanceEscrow: Number(row.balance_escrow ?? 0),
-      isAdmin: Boolean(row.is_admin ?? false),
+      isAdmin,
       createdAt: row.created_at || new Date().toISOString(),
       performerTier: row.performer_tier || 'level_1',
       performerXp: Number(row.performer_xp ?? 0),
@@ -71,6 +83,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       whatsappEnabled: row.whatsapp_enabled !== undefined ? Boolean(row.whatsapp_enabled) : true,
       cin: row.cin || '',
       cinVerified: Boolean(row.cin_verified ?? false),
+      cinDocumentFrontUrl: row.cin_document_front_url || '',
+      cinDocumentBackUrl: row.cin_document_back_url || '',
+      kycStatus: row.kyc_status || (row.cin_verified ? 'VERIFIED' : 'UNVERIFIED'),
+      kycSubmittedAt: row.kyc_submitted_at || undefined,
+      kycRejectionReason: row.kyc_rejection_reason || '',
       languages: row.languages || [],
       skills: row.skills || [],
       specializedCategories: row.specialized_categories || [],
@@ -89,7 +106,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch profile for authenticated user from Supabase API
   const fetchProfile = useCallback(async (userId: string, email: string): Promise<UserProfile | null> => {
     try {
-      const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+      const authHeaders = await getAuthHeaders(false);
+      const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, {
+        headers: authHeaders,
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.profile) {
@@ -253,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       setProfile(null);
+      setAdminCookie(false);
       try {
         localStorage.removeItem(LOCAL_STORAGE_PROFILE_KEY);
       } catch { }
@@ -272,9 +294,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch { }
 
     try {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ userId: targetId, ...updates }),
       });
     } catch (err) {

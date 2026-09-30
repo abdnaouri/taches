@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Task, UserProfile, TaskBid, TaskMessage, TaskProofSubmission, TaskReview } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { getAuthHeaders, supabase } from '@/lib/supabase';
+import { sounds } from '@/lib/soundEffects';
 import {
   FiX,
   FiClock,
@@ -109,11 +111,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     '📄 Parfaite maîtrise des consignes, livraison conforme avant le délai.',
   ];
 
-  // 2. Fetch Bids if task is open or client is owner
+  // 2. Fetch Bids & Realtime Subscription
   useEffect(() => {
-    if (task?.id) {
-      setIsLoadingBids(true);
-      fetch(`/api/bids?taskId=${task.id}`)
+    if (!task?.id) return;
+
+    setIsLoadingBids(true);
+    getAuthHeaders(false).then((authHeaders) => {
+      fetch(`/api/bids?taskId=${task.id}`, { headers: authHeaders })
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.bids) {
@@ -122,48 +126,138 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         })
         .catch((err) => console.warn('Failed to fetch bids:', err))
         .finally(() => setIsLoadingBids(false));
-    }
+    });
+
+    const bidsChannel = supabase
+      .channel(`task_bids_${task.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_bids',
+          filter: `task_id=eq.${task.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const row = payload.new as any;
+            const newBid: TaskBid = {
+              id: row.id,
+              taskId: row.task_id,
+              performerId: row.performer_id,
+              performerName: row.performer_name || 'Candidat',
+              performerAvatar: row.performer_avatar || '',
+              performerTier: row.performer_tier || 'level_1',
+              performerRating: Number(row.performer_rating ?? 5.0),
+              performerCompletedCount: Number(row.performer_completed_tasks ?? 0),
+              proposedHours: Number(row.proposed_hours ?? 24),
+              pitch: row.pitch || '',
+              createdAt: row.created_at || new Date().toISOString(),
+            };
+            setBids((prev) => {
+              if (prev.some((b) => b.id === newBid.id)) return prev;
+              return [newBid, ...prev];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bidsChannel);
+    };
   }, [task?.id]);
 
-  // 3. Fetch In-Task Messages
+  // 3. Fetch In-Task Messages & Realtime Subscription
   useEffect(() => {
-    if (task?.id) {
-      fetch(`/api/messages?taskId=${task.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.messages) {
-            setMessages(data.messages);
-          }
-        })
-        .catch((err) => console.warn('Failed to fetch task messages:', err));
-    }
-  }, [task?.id]);
+    if (!task?.id) return;
+
+    const fetchMessages = () => {
+      getAuthHeaders(false).then((authHeaders) => {
+        fetch(`/api/messages?taskId=${task.id}`, { headers: authHeaders })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.messages) {
+              setMessages(data.messages);
+            }
+          })
+          .catch((err) => console.warn('Failed to fetch task messages:', err));
+      });
+    };
+
+    fetchMessages();
+
+    const chatChannel = supabase
+      .channel(`task_chat_realtime_${task.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_messages',
+          filter: `task_id=eq.${task.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row) return;
+
+          const formattedMsg: TaskMessage = {
+            id: row.id,
+            taskId: row.task_id,
+            senderId: row.sender_id,
+            senderName: row.sender_name || 'Utilisateur',
+            senderAvatar: row.sender_avatar || '',
+            receiverId: row.receiver_id,
+            content: row.content,
+            attachmentUrl: row.attachment_url,
+            createdAt: row.created_at || new Date().toISOString(),
+          };
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === formattedMsg.id)) return prev;
+            if (user && formattedMsg.senderId !== user.id) {
+              sounds.playMessage();
+            }
+            return [...prev, formattedMsg];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chatChannel);
+    };
+  }, [task?.id, user]);
 
   // 4. Fetch Submissions if under review or completed
   useEffect(() => {
     if (task?.id && (task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED')) {
-      fetch(`/api/submissions?taskId=${task.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.submission) {
-            setSubmission(data.submission);
-          }
-        })
-        .catch((err) => console.warn('Failed to fetch submission:', err));
+      getAuthHeaders(false).then((authHeaders) => {
+        fetch(`/api/submissions?taskId=${task.id}`, { headers: authHeaders })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.submission) {
+              setSubmission(data.submission);
+            }
+          })
+          .catch((err) => console.warn('Failed to fetch submission:', err));
+      });
     }
   }, [task?.id, task?.status]);
 
   // 5. Fetch Reviews for this task
   useEffect(() => {
     if (task?.id && task.status === 'COMPLETED') {
-      fetch(`/api/reviews?taskId=${task.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.reviews) {
-            setTaskReviews(data.reviews);
-          }
-        })
-        .catch((err) => console.warn('Failed to fetch reviews:', err));
+      getAuthHeaders(false).then((authHeaders) => {
+        fetch(`/api/reviews?taskId=${task.id}`, { headers: authHeaders })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.reviews) {
+              setTaskReviews(data.reviews);
+            }
+          })
+          .catch((err) => console.warn('Failed to fetch reviews:', err));
+      });
     }
   }, [task?.id, task?.status]);
 
@@ -208,9 +302,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     setChatInput('');
 
     try {
+      const authHeaders = await getAuthHeaders(true);
       const res = await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId: task.id,
           senderId: user.id,

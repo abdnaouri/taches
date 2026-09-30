@@ -107,6 +107,11 @@ alter table public.profiles add column if not exists portfolio jsonb default '[]
 alter table public.profiles add column if not exists certifications jsonb default '[]'::jsonb;
 alter table public.profiles add column if not exists notify_whatsapp boolean default true;
 alter table public.profiles add column if not exists notify_email boolean default true;
+alter table public.profiles add column if not exists cin_document_front_url text;
+alter table public.profiles add column if not exists cin_document_back_url text;
+alter table public.profiles add column if not exists kyc_status text default 'UNVERIFIED';
+alter table public.profiles add column if not exists kyc_submitted_at timestamp with time zone;
+alter table public.profiles add column if not exists kyc_rejection_reason text;
 
 -- 4. TASKS TABLE
 create table if not exists public.tasks (
@@ -231,54 +236,109 @@ alter table public.messages enable row level security;
 alter table public.reviews enable row level security;
 alter table public.transactions enable row level security;
 
--- Policies
+-- Profiles Policies
 drop policy if exists "Profiles are viewable by everyone" on public.profiles;
-create policy "Profiles are viewable by everyone" on public.profiles for select using (true);
+create policy "Profiles are viewable by everyone" on public.profiles
+  for select using (true);
 
 drop policy if exists "Users can update their own profile" on public.profiles;
-create policy "Users can update their own profile" on public.profiles for update using (true);
+create policy "Users can update their own profile" on public.profiles
+  for update using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 drop policy if exists "Users can insert profiles" on public.profiles;
-create policy "Users can insert profiles" on public.profiles for insert with check (true);
+create policy "Users can insert profiles" on public.profiles
+  for insert with check (auth.uid() = id);
 
+-- Tasks Policies
 drop policy if exists "Public tasks viewable by all" on public.tasks;
-create policy "Public tasks viewable by all" on public.tasks for select using (true);
+create policy "Public tasks viewable by all" on public.tasks
+  for select using (true);
 
 drop policy if exists "Authenticated users can create tasks" on public.tasks;
-create policy "Authenticated users can create tasks" on public.tasks for insert with check (true);
+create policy "Authenticated users can create tasks" on public.tasks
+  for insert with check (auth.uid() = client_id);
 
 drop policy if exists "Clients can update their tasks" on public.tasks;
-create policy "Clients can update their tasks" on public.tasks for update using (true);
+create policy "Clients can update their tasks" on public.tasks
+  for update using (auth.uid() = client_id or auth.uid() = assigned_to_id);
 
+-- Bids Policies
 drop policy if exists "Bids viewable by everyone" on public.bids;
-create policy "Bids viewable by everyone" on public.bids for select using (true);
+create policy "Bids viewable by everyone" on public.bids
+  for select using (true);
 
 drop policy if exists "Performers can place bids" on public.bids;
-create policy "Performers can place bids" on public.bids for insert with check (true);
+create policy "Performers can place bids" on public.bids
+  for insert with check (auth.uid() = performer_id);
 
+drop policy if exists "Performers can update their own bids" on public.bids;
+create policy "Performers can update their own bids" on public.bids
+  for update using (auth.uid() = performer_id);
+
+-- Submissions Policies
 drop policy if exists "Submissions viewable by everyone" on public.submissions;
-create policy "Submissions viewable by everyone" on public.submissions for select using (true);
+drop policy if exists "Submissions viewable by participants" on public.submissions;
+create policy "Submissions viewable by participants" on public.submissions
+  for select using (
+    auth.uid() = performer_id or
+    exists (
+      select 1 from public.tasks t
+      where t.id = submissions.task_id and t.client_id = auth.uid()
+    ) or
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 drop policy if exists "Performers can place submissions" on public.submissions;
-create policy "Performers can place submissions" on public.submissions for insert with check (true);
+create policy "Performers can place submissions" on public.submissions
+  for insert with check (auth.uid() = performer_id);
 
+-- Messages Policies (Strict Chat Privacy)
 drop policy if exists "Messages viewable by participants" on public.messages;
-create policy "Messages viewable by participants" on public.messages for select using (true);
+create policy "Messages viewable by participants" on public.messages
+  for select using (
+    auth.uid() = sender_id or
+    auth.uid() = receiver_id or
+    exists (
+      select 1 from public.tasks t
+      where t.id = messages.task_id and (t.client_id = auth.uid() or t.assigned_to_id = auth.uid())
+    ) or
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 drop policy if exists "Messages can be inserted" on public.messages;
-create policy "Messages can be inserted" on public.messages for insert with check (true);
+create policy "Messages can be inserted" on public.messages
+  for insert with check (auth.uid() = sender_id);
 
+-- Reviews Policies
 drop policy if exists "Reviews viewable by everyone" on public.reviews;
-create policy "Reviews viewable by everyone" on public.reviews for select using (true);
+create policy "Reviews viewable by everyone" on public.reviews
+  for select using (true);
 
 drop policy if exists "Reviews can be inserted" on public.reviews;
-create policy "Reviews can be inserted" on public.reviews for insert with check (true);
+create policy "Reviews can be inserted" on public.reviews
+  for insert with check (auth.uid() = author_id);
 
+-- Transactions Policies (Strict Ledger Isolation)
 drop policy if exists "Transactions are viewable" on public.transactions;
-create policy "Transactions are viewable" on public.transactions for select using (true);
+drop policy if exists "Users view own transactions" on public.transactions;
+create policy "Users view own transactions" on public.transactions
+  for select using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 drop policy if exists "Transactions can be inserted" on public.transactions;
-create policy "Transactions can be inserted" on public.transactions for insert with check (true);
+
 
 -- 12. ATOMIC FINANCIAL PROCEDURES (RPCs) FOR SECURE ESCROW
 -- A. Lock Escrow when Task is Created

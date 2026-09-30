@@ -1,17 +1,8 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { Task } from '@/types/database';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -102,12 +93,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour publier une mission.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const supabase = getAdminClient();
 
     if (!body.title || !body.reward) {
       return NextResponse.json(
-        { success: false, error: 'Titre et rémunération sont obligatoires' },
+        { success: false, error: 'Titre et rémunération sont obligatoires.' },
         { status: 400 }
       );
     }
@@ -115,6 +114,42 @@ export async function POST(req: NextRequest) {
     const reward = Number(body.reward);
     const platformFee = Number(body.platformFee || 0);
     const totalBudget = Number(body.totalBudget || (reward + platformFee));
+
+    if (totalBudget <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Le budget de la mission doit être supérieur à zéro.' },
+        { status: 400 }
+      );
+    }
+
+    const clientId = authResult.user.id;
+
+    // Check client profile balance
+    const { data: profile, error: profErr } = await supabase
+      .from('profiles')
+      .select('balance_available, balance_escrow, customer_tasks_posted, full_name, avatar_url')
+      .eq('id', clientId)
+      .single();
+
+    if (profErr || !profile) {
+      return NextResponse.json(
+        { success: false, error: 'Profil client introuvable.' },
+        { status: 404 }
+      );
+    }
+
+    const currentBalance = Number(profile.balance_available || 0);
+    if (currentBalance < totalBudget) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Solde disponible insuffisant (${Math.round(currentBalance * 10)} DH). Veuillez recharger votre compte de ${Math.round((totalBudget - currentBalance) * 10)} DH pour bloquer le séquestre.`,
+          requiredAmountDH: Math.round(totalBudget * 10),
+          availableBalanceDH: Math.round(currentBalance * 10),
+        },
+        { status: 402 }
+      );
+    }
 
     const dbPayload: Record<string, any> = {
       title: body.title.trim(),
@@ -126,7 +161,7 @@ export async function POST(req: NextRequest) {
       unit_price_dh: body.unitPriceDH ? Number(body.unitPriceDH) : undefined,
       target_executions_count: body.targetExecutionsCount ? Number(body.targetExecutionsCount) : 1,
       anti_spam_keyword: body.antiSpamKeyword || undefined,
-      status: body.status || 'OPEN',
+      status: 'OPEN',
       reward,
       platform_fee: platformFee,
       total_budget: totalBudget,
@@ -134,15 +169,12 @@ export async function POST(req: NextRequest) {
       min_level_required: Number(body.minLevelRequired || 1),
       required_proofs: body.requiredProofs || [],
       applicants_count: 0,
-      client_name: body.clientName || 'Client',
-      client_avatar: body.clientAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-      client_rating: Number(body.clientRating || 5.0),
-      client_hire_rate: Number(body.clientHireRate || 100),
+      client_id: clientId,
+      client_name: profile.full_name || body.clientName || 'Client',
+      client_avatar: profile.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+      client_rating: 5.0,
+      client_hire_rate: 100,
     };
-
-    if (body.clientId && body.clientId.includes('-')) {
-      dbPayload.client_id = body.clientId;
-    }
 
     const { data, error } = await supabase
       .from('tasks')
@@ -158,40 +190,30 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Lock Escrow & Record transaction if valid clientId
-    if (dbPayload.client_id) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('balance_available, balance_escrow, customer_tasks_posted')
-        .eq('id', dbPayload.client_id)
-        .single();
+    // Lock Escrow atomically
+    const newAvailable = Math.max(0, currentBalance - totalBudget);
+    const newEscrow = Number(profile.balance_escrow || 0) + totalBudget;
+    const newPosted = Number(profile.customer_tasks_posted || 0) + 1;
 
-      if (profile) {
-        const newAvailable = Math.max(0, Number(profile.balance_available || 0) - totalBudget);
-        const newEscrow = Number(profile.balance_escrow || 0) + totalBudget;
-        const newPosted = Number(profile.customer_tasks_posted || 0) + 1;
+    await supabase
+      .from('profiles')
+      .update({
+        balance_available: newAvailable,
+        balance_escrow: newEscrow,
+        customer_tasks_posted: newPosted,
+      })
+      .eq('id', clientId);
 
-        await supabase
-          .from('profiles')
-          .update({
-            balance_available: newAvailable,
-            balance_escrow: newEscrow,
-            customer_tasks_posted: newPosted,
-          })
-          .eq('id', dbPayload.client_id);
-
-        await supabase
-          .from('transactions')
-          .insert({
-            user_id: dbPayload.client_id,
-            type: 'ESCROW_LOCK',
-            amount: totalBudget,
-            currency: 'EUR',
-            description: `Séquestre Daman bloqué pour mission #${data.id.slice(0, 8)}: "${data.title.slice(0, 30)}"`,
-            status: 'COMPLETED',
-          });
-      }
-    }
+    await supabase
+      .from('transactions')
+      .insert({
+        user_id: clientId,
+        type: 'ESCROW_LOCK',
+        amount: totalBudget,
+        currency: 'EUR',
+        description: `Séquestre Daman bloqué pour mission #${data.id.slice(0, 8)}: "${data.title.slice(0, 30)}"`,
+        status: 'COMPLETED',
+      });
 
     const createdTask: Task = {
       id: data.id,

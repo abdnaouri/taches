@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { UserProfile, UserPortfolioItem, UserLanguage, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { uploadDynamicProofFile } from '@/lib/supabaseService';
 import {
   FiUser,
   FiAward,
@@ -33,7 +34,11 @@ import {
   FiTrendingUp,
   FiAlertCircle,
   FiRefreshCw,
-  FiCopy
+  FiCopy,
+  FiUploadCloud,
+  FiFileText,
+  FiCamera,
+  FiX
 } from 'react-icons/fi';
 
 const MOROCCAN_CITIES = [
@@ -244,6 +249,18 @@ export const ProfilePageContent: React.FC = () => {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState<boolean>(false);
   const [withdrawAmountDH, setWithdrawAmountDH] = useState<number>(Math.round(user.balanceAvailable * 10));
 
+  // KYC & CIN Documents State
+  const [cinDocumentFrontUrl, setCinDocumentFrontUrl] = useState<string>(user.cinDocumentFrontUrl || '');
+  const [cinDocumentBackUrl, setCinDocumentBackUrl] = useState<string>(user.cinDocumentBackUrl || '');
+  const [kycStatus, setKycStatus] = useState<'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED'>(
+    user.kycStatus || (user.cinVerified ? 'VERIFIED' : 'UNVERIFIED')
+  );
+  const [kycRejectionReason, setKycRejectionReason] = useState<string>(user.kycRejectionReason || '');
+  const [isUploadingFront, setIsUploadingFront] = useState<boolean>(false);
+  const [isUploadingBack, setIsUploadingBack] = useState<boolean>(false);
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState<boolean>(false);
+  const [kycFeedbackMsg, setKycFeedbackMsg] = useState<string | null>(null);
+
   // Sync when user prop updates
   useEffect(() => {
     if (user) {
@@ -255,6 +272,10 @@ export const ProfilePageContent: React.FC = () => {
       setPhone(user.phone || '');
       setWhatsappEnabled(user.whatsappEnabled ?? true);
       setCin(user.cin || '');
+      setCinDocumentFrontUrl(user.cinDocumentFrontUrl || '');
+      setCinDocumentBackUrl(user.cinDocumentBackUrl || '');
+      setKycStatus(user.kycStatus || (user.cinVerified ? 'VERIFIED' : 'UNVERIFIED'));
+      setKycRejectionReason(user.kycRejectionReason || '');
       setIsAvailableForHire(user.isAvailableForHire ?? true);
       setMinTaskReward(user.minTaskReward || 30);
       setSpecializedCategories(user.specializedCategories || ['development', 'design', 'assistance', 'copywriting']);
@@ -269,6 +290,62 @@ export const ProfilePageContent: React.FC = () => {
       setWithdrawAmountDH(Math.round(user.balanceAvailable * 10));
     }
   }, [user]);
+
+  // Upload KYC Document (Front / Back)
+  const handleUploadKycDoc = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (side === 'front') setIsUploadingFront(true);
+    else setIsUploadingBack(true);
+
+    try {
+      const res = await uploadDynamicProofFile(file);
+      if (res.success && res.url) {
+        if (side === 'front') {
+          setCinDocumentFrontUrl(res.url);
+        } else {
+          setCinDocumentBackUrl(res.url);
+        }
+      } else {
+        alert(res.error || 'Erreur lors du téléversement du document.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors du téléversement.');
+    } finally {
+      if (side === 'front') setIsUploadingFront(false);
+      else setIsUploadingBack(false);
+    }
+  };
+
+  // Submit KYC Dossier for Admin Review
+  const handleSubmitKycDossier = async () => {
+    if (!cin.trim()) {
+      alert('Veuillez renseigner votre numéro de CIN.');
+      return;
+    }
+    if (!cinDocumentFrontUrl) {
+      alert('Veuillez téléverser le recto de votre carte d\'identité nationale.');
+      return;
+    }
+
+    setIsSubmittingKyc(true);
+    try {
+      await updateProfile({
+        cin,
+        cinDocumentFrontUrl,
+        cinDocumentBackUrl,
+        kycStatus: 'PENDING',
+      });
+      setKycStatus('PENDING');
+      setKycFeedbackMsg('Votre dossier KYC a été soumis avec succès et est en cours d\'examen par notre équipe.');
+      setTimeout(() => setKycFeedbackMsg(null), 5000);
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la soumission du dossier.');
+    } finally {
+      setIsSubmittingKyc(false);
+    }
+  };
 
   // Save General Profile Info
   const handleSaveProfile = async () => {
@@ -871,23 +948,215 @@ export const ProfilePageContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* Moroccan CIN */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Numéro CIN Marocain (Garantie Daman)
-                </label>
-                <div className="flex items-center gap-2">
+              {/* Moroccan CIN & KYC Verification Block */}
+              <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl">
+                      <FiShield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Vérification d&apos;Identité KYC (Garantie Daman Maroc)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        La vérification de votre CIN confère le badge officiel et rassure les donneurs d&apos;ordre.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div>
+                    {kycStatus === 'VERIFIED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+                        <FiCheckCircle className="w-4 h-4" />
+                        <span>Identité Vérifiée 🛡️</span>
+                      </span>
+                    ) : kycStatus === 'PENDING' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold">
+                        <FiClock className="w-4 h-4 animate-spin" />
+                        <span>Examen en cours</span>
+                      </span>
+                    ) : kycStatus === 'REJECTED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 text-xs font-bold">
+                        <FiAlertCircle className="w-4 h-4" />
+                        <span>Dossier Refusé</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                        <FiShield className="w-4 h-4" />
+                        <span>Non Vérifié</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Feedback message banner */}
+                {kycFeedbackMsg && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <FiCheckCircle className="w-4 h-4 shrink-0" />
+                    <span>{kycFeedbackMsg}</span>
+                  </div>
+                )}
+
+                {/* Rejection Notice if rejected */}
+                {kycStatus === 'REJECTED' && kycRejectionReason && (
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-xl text-xs font-medium flex items-start gap-2">
+                    <FiAlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Motif du rejet par le modérateur : </span>
+                      {kycRejectionReason}. Veuillez téléverser des documents plus nets.
+                    </div>
+                  </div>
+                )}
+
+                {/* CIN Number Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Numéro de Carte d&apos;Identité Nationale (CIN)
+                  </label>
                   <input
                     type="text"
                     value={cin}
+                    disabled={kycStatus === 'VERIFIED'}
                     onChange={(e) => setCin(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none uppercase"
-                    placeholder="Ex: BK123456"
+                    className="w-full max-w-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:border-brand-700 focus:outline-none uppercase font-mono disabled:opacity-70 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                    placeholder="Ex: BK123456 ou AB98765"
                   />
-                  <span className="shrink-0 inline-flex items-center gap-1 rounded-xl bg-emerald-100 text-emerald-800 px-2.5 py-2 text-[10px] font-bold">
-                    <FiCheck /> Vérifié
-                  </span>
                 </div>
+
+                {/* Document Uploads Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* Front ID */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      1. Photo CIN Recto (Face avant avec photo) <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-3 bg-white dark:bg-slate-900/80 hover:border-brand-500 transition-all text-center">
+                      {cinDocumentFrontUrl ? (
+                        <div className="relative group">
+                          <img
+                            src={cinDocumentFrontUrl}
+                            alt="CIN Recto"
+                            className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                          />
+                          {kycStatus !== 'VERIFIED' && (
+                            <button
+                              type="button"
+                              onClick={() => setCinDocumentFrontUrl('')}
+                              className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full shadow transition-all"
+                              title="Supprimer"
+                            >
+                              <FiX className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <div className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                            <FiCheckCircle className="w-3.5 h-3.5" />
+                            <span>Document Recto chargé</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center py-4 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,application/pdf"
+                            disabled={isUploadingFront || kycStatus === 'VERIFIED'}
+                            onChange={(e) => handleUploadKycDoc(e, 'front')}
+                            className="hidden"
+                          />
+                          <div className="w-10 h-10 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl flex items-center justify-center mb-2">
+                            {isUploadingFront ? (
+                              <FiRefreshCw className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <FiCamera className="w-5 h-5" />
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {isUploadingFront ? 'Téléversement en cours...' : 'Sélectionner Photo Recto'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG ou PDF (Max 15 Mo)</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Back ID */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      2. Photo CIN Verso (Face arrière avec adresse)
+                    </label>
+                    <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-3 bg-white dark:bg-slate-900/80 hover:border-brand-500 transition-all text-center">
+                      {cinDocumentBackUrl ? (
+                        <div className="relative group">
+                          <img
+                            src={cinDocumentBackUrl}
+                            alt="CIN Verso"
+                            className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                          />
+                          {kycStatus !== 'VERIFIED' && (
+                            <button
+                              type="button"
+                              onClick={() => setCinDocumentBackUrl('')}
+                              className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full shadow transition-all"
+                              title="Supprimer"
+                            >
+                              <FiX className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <div className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                            <FiCheckCircle className="w-3.5 h-3.5" />
+                            <span>Document Verso chargé</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center py-4 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,application/pdf"
+                            disabled={isUploadingBack || kycStatus === 'VERIFIED'}
+                            onChange={(e) => handleUploadKycDoc(e, 'back')}
+                            className="hidden"
+                          />
+                          <div className="w-10 h-10 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-xl flex items-center justify-center mb-2">
+                            {isUploadingBack ? (
+                              <FiRefreshCw className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <FiUploadCloud className="w-5 h-5" />
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {isUploadingBack ? 'Téléversement en cours...' : 'Sélectionner Photo Verso'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG ou PDF (Max 15 Mo)</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit KYC Dossier Button */}
+                {kycStatus !== 'VERIFIED' && (
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSubmitKycDossier}
+                      disabled={isSubmittingKyc || isUploadingFront || isUploadingBack || !cin.trim() || !cinDocumentFrontUrl}
+                      className="px-5 py-2.5 bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      {isSubmittingKyc ? (
+                        <>
+                          <FiRefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Transmission du dossier...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiShield className="w-4 h-4" />
+                          <span>Soumettre mon dossier KYC pour vérification</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Avatar URL */}

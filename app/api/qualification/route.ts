@@ -1,16 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 // Secure question bank stored only on the server
 const QUALIFICATION_QUESTIONS = [
@@ -98,15 +89,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, answers } = await req.json();
-
-    if (!userId || !answers || typeof answers !== 'object') {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
       return NextResponse.json(
-        { success: false, error: 'Paramètres manquants' },
+        { success: false, error: authResult.error || 'Authentification requise pour valider le test de qualification.' },
+        { status: 401 }
+      );
+    }
+
+    const { answers } = await req.json();
+
+    if (!answers || typeof answers !== 'object') {
+      return NextResponse.json(
+        { success: false, error: 'Réponses manquantes' },
         { status: 400 }
       );
     }
 
+    const userId = authResult.user.id;
     let correctCount = 0;
     const total = QUALIFICATION_QUESTIONS.length;
 
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     const scorePercent = Math.round((correctCount / total) * 100);
     const passed = scorePercent >= 75;
 
-    if (passed && userId.includes('-')) {
+    if (passed) {
       const admin = getAdminClient();
       await admin
         .from('profiles')

@@ -22,6 +22,7 @@ import {
   PLATFORM_PERFORMER_COMMISSION_RATE,
   MAD_TO_EUR_RATE
 } from '@/lib/payoutService';
+import { getAuthHeaders } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskMiniCard } from '@/components/TaskMiniCard';
@@ -403,9 +404,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
     // Record bid in backend
     try {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/bids', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           performerId: profile.id,
@@ -502,9 +504,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     await updateDynamicTask(taskId, { status: 'ARBITRATION' });
 
     if (profile) {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           senderId: profile.id,
@@ -532,9 +535,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
     // Send revision feedback message into task chat
     if (profile) {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           senderId: profile.id,
@@ -627,9 +631,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     // Save review if provided
     if (review && task.assignedToId && profile) {
       try {
+        const authHeaders = await getAuthHeaders(true);
         await fetch('/api/reviews', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             taskId,
             authorId: profile.id,
@@ -681,9 +686,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     } as any);
 
     if (profile) {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           senderId: profile.id,
@@ -796,9 +802,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     // Save review if client provided one in proposal
     if (proposal.rating && task.assignedToId) {
       try {
+        const authHeaders = await getAuthHeaders(true);
         await fetch('/api/reviews', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             taskId,
             authorId: task.clientId || profile?.id,
@@ -815,9 +822,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
     // Announce in chat
     if (profile) {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           senderId: profile.id,
@@ -852,9 +860,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     } as any);
 
     if (profile) {
+      const authHeaders = await getAuthHeaders(true);
       await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId,
           senderId: profile.id,

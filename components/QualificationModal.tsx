@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { getAuthHeaders } from '@/lib/supabase';
 import { sounds } from '@/lib/soundEffects';
 import {
   FiX,
@@ -78,11 +79,12 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const authHeaders = await getAuthHeaders(true);
       const res = await fetch('/api/qualification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
-          userId: profile?.id || 'demo_user',
+          userId: profile?.id,
           answers,
         }),
       });

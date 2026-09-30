@@ -1,34 +1,33 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { MAD_TO_EUR_RATE } from '@/lib/payoutService';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour effectuer une recharge.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
-      userId,
       amountDH,
       depositMethod = 'CARD',
     } = body;
 
-    if (!userId || !amountDH || Number(amountDH) <= 0) {
+    if (!amountDH || Number(amountDH) <= 0) {
       return NextResponse.json(
-        { success: false, error: 'Montant de recharge invalide ou utilisateur manquant.' },
+        { success: false, error: 'Montant de recharge invalide.' },
         { status: 400 }
       );
     }
 
+    const userId = authResult.user.id;
     const amountEur = Number((Number(amountDH) * MAD_TO_EUR_RATE).toFixed(2));
     const supabase = getAdminClient();
 

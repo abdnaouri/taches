@@ -1,16 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +10,50 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'taskId required' }, { status: 400 });
     }
 
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour lire les messages.' },
+        { status: 401 }
+      );
+    }
+
     const supabase = getAdminClient();
+    const callerId = authResult.user.id;
+
+    // Check task access permission: caller must be client, assigned performer, or admin
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('client_id, assigned_to_id')
+      .eq('id', taskId)
+      .single();
+
+    if (!task) {
+      return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    const isAuthorized =
+      task.client_id === callerId ||
+      task.assigned_to_id === callerId ||
+      authResult.isAdmin;
+
+    // Also allow applicants who have placed a bid to participate in discussion
+    if (!isAuthorized) {
+      const { data: bid } = await supabase
+        .from('bids')
+        .select('id')
+        .eq('task_id', taskId)
+        .eq('performer_id', callerId)
+        .single();
+
+      if (!bid) {
+        return NextResponse.json(
+          { success: false, error: 'Accès non autorisé à cette discussion.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -50,21 +84,41 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { taskId, senderId, senderName, senderAvatar, receiverId, content, attachmentUrl } = body;
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour envoyer un message.' },
+        { status: 401 }
+      );
+    }
 
-    if (!taskId || !senderId || !content?.trim()) {
-      return NextResponse.json({ success: false, error: 'Champs requis manquants' }, { status: 400 });
+    const body = await req.json();
+    const { taskId, receiverId, content, attachmentUrl } = body;
+
+    if (!taskId || !content?.trim()) {
+      return NextResponse.json({ success: false, error: 'Champs requis manquants (taskId, content)' }, { status: 400 });
     }
 
     const supabase = getAdminClient();
+    const senderId = authResult.user.id;
+
+    // Fetch sender profile to guarantee genuine name and avatar
+    const { data: senderProf } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', senderId)
+      .single();
+
+    const senderName = senderProf?.full_name || 'Utilisateur';
+    const senderAvatar = senderProf?.avatar_url || '';
+
     const { data, error } = await supabase
       .from('messages')
       .insert({
         task_id: taskId,
         sender_id: senderId,
-        sender_name: senderName || 'Utilisateur',
-        sender_avatar: senderAvatar || '',
+        sender_name: senderName,
+        sender_avatar: senderAvatar,
         receiver_id: receiverId || null,
         content: content.trim(),
         attachment_url: attachmentUrl || null,
@@ -73,18 +127,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({
-        success: true,
-        message: {
-          id: `msg_${Date.now()}`,
-          taskId,
-          senderId,
-          senderName: senderName || 'Utilisateur',
-          senderAvatar,
-          content: content.trim(),
-          createdAt: new Date().toISOString(),
-        }
-      });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({

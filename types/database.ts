@@ -70,6 +70,11 @@ export interface UserProfile {
   whatsappEnabled?: boolean;
   cin?: string;
   cinVerified?: boolean;
+  cinDocumentFrontUrl?: string;
+  cinDocumentBackUrl?: string;
+  kycStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  kycSubmittedAt?: string;
+  kycRejectionReason?: string;
   languages?: UserLanguage[];
   skills?: string[];
   specializedCategories?: string[];
@@ -96,6 +101,23 @@ export interface UserProfile {
 
   // Admin Role
   isAdmin?: boolean;
+}
+
+export interface KycSubmissionItem {
+  userId: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  cin?: string;
+  cinDocumentFrontUrl?: string;
+  cinDocumentBackUrl?: string;
+  kycStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  kycSubmittedAt?: string;
+  kycRejectionReason?: string;
+  avatarUrl?: string;
+  performerTier?: string;
+  createdAt?: string;
 }
 
 export interface TaskMessage {

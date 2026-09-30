@@ -1,20 +1,18 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { sendPayoutNotification } from '@/lib/notificationService';
+import { getAdminClient, requireAdminUser } from '@/lib/auth/serverAuth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAdminUser(req);
+    if (!authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Accès réservé aux administrateurs.' },
+        { status: authResult.status || 403 }
+      );
+    }
+
     const supabase = getAdminClient();
 
     // Fetch tasks currently in ARBITRATION or UNDER_REVIEW with disputes
@@ -54,10 +52,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requireAdminUser(req);
+    if (!authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Accès réservé aux administrateurs.' },
+        { status: authResult.status || 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       taskId,
-      ruling, // 'REFUND_CLIENT' | 'RELEASE_PERFORMER' | 'SPLIT_50_50'
+      ruling, // 'REFUND_CLIENT' | 'RELEASE_PERFORMER'
       arbitrationNotes,
     } = body;
 
@@ -170,7 +176,7 @@ export async function POST(req: NextRequest) {
     // 3. Post system message into task chat
     await supabase.from('messages').insert({
       task_id: taskId,
-      sender_id: '00000000-0000-0000-0000-000000000000',
+      sender_id: authResult.user!.id,
       sender_name: 'Arbitrage Officiel Tâches.ma',
       content: `⚖️ Décision finale d'arbitrage : ${
         ruling === 'REFUND_CLIENT'

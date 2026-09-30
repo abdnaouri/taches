@@ -1,16 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +10,40 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'taskId required' }, { status: 400 });
     }
 
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise.' },
+        { status: 401 }
+      );
+    }
+
     const supabase = getAdminClient();
+    const callerId = authResult.user.id;
+
+    // Check task access
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('client_id, assigned_to_id')
+      .eq('id', taskId)
+      .single();
+
+    if (!task) {
+      return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    const isAuthorized =
+      task.client_id === callerId ||
+      task.assigned_to_id === callerId ||
+      authResult.isAdmin;
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: 'Accès non autorisé aux livrables de cette mission.' },
+        { status: 403 }
+      );
+    }
+
     const { data, error } = await supabase
       .from('submissions')
       .select('*')
@@ -51,17 +75,45 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { taskId, performerId, reportText, proofUrls } = body;
-
-    if (!taskId || !performerId || !reportText) {
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
       return NextResponse.json(
-        { success: false, error: 'Champs requis manquants (taskId, performerId, reportText)' },
+        { success: false, error: authResult.error || 'Authentification requise pour soumettre un livrable.' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { taskId, reportText, proofUrls } = body;
+
+    if (!taskId || !reportText?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Champs requis manquants (taskId, reportText)' },
         { status: 400 }
       );
     }
 
+    const performerId = authResult.user.id;
     const supabase = getAdminClient();
+
+    // Verify caller is assigned to task
+    const { data: task, error: taskErr } = await supabase
+      .from('tasks')
+      .select('client_id, assigned_to_id, status, task_mode')
+      .eq('id', taskId)
+      .single();
+
+    if (taskErr || !task) {
+      return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    const isAssigned = task.assigned_to_id === performerId || task.task_mode === 'multi';
+    if (!isAssigned && !authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Vous devez être assigné à cette mission pour soumettre un livrable.' },
+        { status: 403 }
+      );
+    }
 
     const { data: submission, error: subError } = await supabase
       .from('submissions')

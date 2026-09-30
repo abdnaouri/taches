@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Task, TaskMessage, UserProfile } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { uploadDynamicProofFile } from '@/lib/supabaseService';
+import { getAuthHeaders, supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/soundEffects';
 import {
   FiMessageSquare,
@@ -101,7 +102,10 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
   const loadMessagesForTask = async (taskId: string, silent: boolean = false) => {
     try {
       if (!silent) setIsSyncing(true);
-      const res = await fetch(`/api/messages?taskId=${taskId}`);
+      const authHeaders = await getAuthHeaders(false);
+      const res = await fetch(`/api/messages?taskId=${taskId}`, {
+        headers: authHeaders,
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
         setMessagesByTask((prev) => {
@@ -129,17 +133,64 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     }
   }, [isOpen, userTasks]);
 
-  // Real-time live polling every 3.5s when active dialogue is open
+  // Supabase Realtime Channel for instant live messaging
   useEffect(() => {
     if (!isOpen || !selectedTaskId) return;
 
     loadMessagesForTask(selectedTaskId, false);
+
+    // Setup Realtime WebSocket Channel
+    const channel = supabase
+      .channel(`messenger_realtime_${selectedTaskId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_messages',
+          filter: `task_id=eq.${selectedTaskId}`,
+        },
+        (payload) => {
+          const newRow = payload.new as any;
+          if (!newRow) return;
+
+          const formattedMsg: TaskMessage = {
+            id: newRow.id,
+            taskId: newRow.task_id,
+            senderId: newRow.sender_id,
+            senderName: newRow.sender_name || 'Utilisateur',
+            senderAvatar: newRow.sender_avatar || '',
+            receiverId: newRow.receiver_id,
+            content: newRow.content,
+            attachmentUrl: newRow.attachment_url,
+            createdAt: newRow.created_at || new Date().toISOString(),
+          };
+
+          setMessagesByTask((prev) => {
+            const existing = prev[selectedTaskId] || [];
+            if (existing.some((m) => m.id === formattedMsg.id)) return prev;
+            if (currentUser && formattedMsg.senderId !== currentUser.id) {
+              sounds.playMessage();
+            }
+            return {
+              ...prev,
+              [selectedTaskId]: [...existing, formattedMsg],
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    // Occasional low-frequency fallback sync
     const interval = setInterval(() => {
       loadMessagesForTask(selectedTaskId, true);
-    }, 3500);
+    }, 15000);
 
-    return () => clearInterval(interval);
-  }, [isOpen, selectedTaskId]);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [isOpen, selectedTaskId, currentUser]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -185,9 +236,10 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
       sounds.playMessage();
 
       try {
+        const authHeaders = await getAuthHeaders(true);
         await fetch('/api/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             taskId: selectedTaskId,
             senderId: currentUser.id,
@@ -237,9 +289,10 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     }));
 
     try {
+      const authHeaders = await getAuthHeaders(true);
       const res = await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           taskId: selectedTaskId,
           senderId: currentUser.id,

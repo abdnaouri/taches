@@ -1,16 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-function getAdminClient() {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
+import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,14 +26,36 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { taskId, authorId, authorName, targetUserId, rating, comment } = body;
+    const authResult = await getAuthenticatedUser(req);
+    if (!authResult.user) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Authentification requise pour publier un avis.' },
+        { status: 401 }
+      );
+    }
 
-    if (!taskId || !authorId || !targetUserId || !rating || !comment?.trim()) {
+    const body = await req.json();
+    const { taskId, targetUserId, rating, comment } = body;
+
+    if (!taskId || !targetUserId || !rating || !comment?.trim()) {
       return NextResponse.json({ success: false, error: 'Champs requis manquants' }, { status: 400 });
     }
 
+    const authorId = authResult.user.id;
+    if (authorId === targetUserId) {
+      return NextResponse.json({ success: false, error: 'Vous ne pouvez pas vous évaluer vous-même.' }, { status: 400 });
+    }
+
     const supabase = getAdminClient();
+
+    // Fetch author profile
+    const { data: authorProf } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', authorId)
+      .single();
+
+    const authorName = authorProf?.full_name || 'Client';
     const numericRating = Math.min(5, Math.max(1, Number(rating)));
 
     // 1. Insert review
@@ -51,13 +64,18 @@ export async function POST(req: NextRequest) {
       .insert({
         task_id: taskId,
         author_id: authorId,
-        author_name: authorName || 'Client',
+        author_name: authorName,
         target_user_id: targetUserId,
         rating: numericRating,
         comment: comment.trim(),
       })
       .select()
       .single();
+
+    if (reviewError) {
+      console.error('Review insertion error:', reviewError);
+      return NextResponse.json({ success: false, error: 'Avis déjà soumis pour cette mission.' }, { status: 400 });
+    }
 
     // 2. Recalculate target profile rating
     if (targetUserId.includes('-')) {
@@ -82,16 +100,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      review: reviewData || {
-        id: `rev_${Date.now()}`,
-        taskId,
-        authorId,
-        authorName,
-        targetUserId,
-        rating: numericRating,
-        comment,
-        createdAt: new Date().toISOString(),
-      },
+      review: reviewData,
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
