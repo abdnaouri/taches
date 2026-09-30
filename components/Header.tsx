@@ -30,23 +30,23 @@ import {
 interface HeaderProps {
   user?: UserProfile | null;
   onRoleToggle?: (role: UserRole) => void;
-  onOpenCreateTask: () => void;
-  onOpenWallet: () => void;
-  onOpenQualification: () => void;
-  onViewMyWork: () => void;
-  activeTab: 'explore' | 'my-tasks' | 'examples' | 'live';
-  setActiveTab: (tab: 'explore' | 'my-tasks' | 'examples' | 'live') => void;
+  onOpenCreateTask?: () => void;
+  onOpenWallet?: () => void;
+  onOpenQualification?: () => void;
+  onViewMyWork?: () => void;
+  activeTab?: 'explore' | 'my-tasks' | 'examples' | 'live';
+  setActiveTab?: (tab: 'explore' | 'my-tasks' | 'examples' | 'live') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   user,
   onRoleToggle,
-  onOpenCreateTask,
-  onOpenWallet,
-  onOpenQualification,
-  onViewMyWork,
-  activeTab,
-  setActiveTab,
+  onOpenCreateTask: customOpenCreateTask,
+  onOpenWallet: customOpenWallet,
+  onOpenQualification: customOpenQualification,
+  onViewMyWork: customViewMyWork,
+  activeTab = 'explore',
+  setActiveTab: customSetActiveTab,
 }) => {
   const { isAuthenticated, profile, openAuthModal, signOut, toggleRole } = useAuth();
   const currentUser = isAuthenticated && profile ? profile : (isAuthenticated ? user : null);
@@ -58,6 +58,12 @@ export const Header: React.FC<HeaderProps> = ({
   const isTasksPage = Boolean(pathname?.includes('/tasks'));
   const isCustomer = currentUser ? currentUser.activeRole === 'CUSTOMER' : true;
   const balanceDH = currentUser ? Math.round(currentUser.balanceAvailable * 10) : 0;
+
+  const onOpenCreateTask = customOpenCreateTask || (() => router.push(`/${locale}/tasks/new`));
+  const onOpenWallet = customOpenWallet || (() => router.push(`/${locale}/wallet`));
+  const onOpenQualification = customOpenQualification || (() => router.push(`/${locale}?action=qualify`));
+  const onViewMyWork = customViewMyWork || (() => router.push(`/${locale}/tasks?tab=my-tasks`));
+  const setActiveTab = customSetActiveTab || ((tab) => router.push(`/${locale}/tasks?tab=${tab}`));
   const escrowDH = currentUser ? Math.round(currentUser.balanceEscrow * 10) : 0;
 
   // Mobile menu state
@@ -286,6 +292,17 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
 
                       <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            router.push(`/${locale}/profile`);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-brand-800 bg-brand-50/50 hover:bg-brand-50 transition cursor-pointer"
+                        >
+                          <FiUser className="text-brand-700 text-sm" />
+                          <span>Mon Profil Freelance & Stats</span>
+                        </button>
+
                         <button
                           onClick={() => {
                             setIsUserMenuOpen(false);
@@ -559,6 +576,21 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Navigation
               </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push(`/${locale}/profile`);
+                }}
+                className="flex w-full items-center justify-between rounded-xl p-3 text-xs font-bold text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <FiUser className="text-base text-brand-700" />
+                  <span className="font-extrabold text-brand-900">Mon Profil Freelance & Stats</span>
+                </div>
+                {isRTL ? <FiChevronLeft className="text-slate-400" /> : <FiChevronRight className="text-slate-400" />}
+              </button>
 
               <button
                 type="button"

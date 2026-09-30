@@ -244,7 +244,7 @@ interface WorkzillaCategoryGridProps {
 }
 
 export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ onSelectCategory }) => {
-  const { isRTL } = useLanguage();
+  const { isRTL, locale } = useLanguage();
 
   const categories = [
     {
@@ -313,12 +313,16 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <nav aria-label="Catégories principales" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {categories.map((cat) => (
-            <div
+            <a
               key={cat.key}
-              onClick={() => onSelectCategory(cat.key)}
-              className="functional-card p-6 flex flex-col justify-between hover:border-brand-600 transition-all cursor-pointer group bg-white"
+              href={`/${locale}/tasks?category=${cat.key}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onSelectCategory(cat.key);
+              }}
+              className="functional-card p-6 flex flex-col justify-between hover:border-brand-600 transition-all cursor-pointer group bg-white no-underline text-inherit block"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -342,9 +346,9 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
                 <span>Commander ce service</span>
                 {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
               </div>
-            </div>
+            </a>
           ))}
-        </div>
+        </nav>
 
       </div>
     </section>
@@ -737,50 +741,48 @@ export const WorkzillaFooter: React.FC = () => {
             </p>
           </div>
 
-          {/* Column 1: Navigation */}
+          {/* Column 1: Navigation & Freelance Maroc */}
           <div>
             <h4 className="font-bold text-white uppercase text-xs tracking-wider mb-3">
-              Navigation
+              Services Freelance Maroc
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href={`/${locale}/tasks`} className="hover:text-white transition-colors">{t('navExplore')}</a></li>
-              <li><a href={`/${locale}/concepts`} className="text-brand-400 font-semibold hover:underline">💡 Modèle & Architecture</a></li>
-              <li><a href={`/${locale}/wallet`} className="hover:text-white transition-colors">Portefeuille & Séquestre</a></li>
-              <li><a href={`/${locale}#how-it-works`} className="hover:text-white transition-colors">Comment ça marche ?</a></li>
-              <li><a href={`/${locale}#trust-daman`} className="hover:text-white transition-colors">Garantie Séquestre</a></li>
-              <li><a href={`/${locale}#help-faq`} className="hover:text-white transition-colors">Questions fréquentes</a></li>
+              <li><a href={`/${locale}/freelance-maroc`} className="text-brand-400 font-bold hover:underline">🇲🇦 Guide Freelance Maroc</a></li>
+              <li><a href={`/${locale}/services/graphiste-freelance-maroc`} className="hover:text-white transition-colors">Graphiste & Logo Maroc</a></li>
+              <li><a href={`/${locale}/services/developpeur-freelance-maroc`} className="hover:text-white transition-colors">Développeur Web & Mobile</a></li>
+              <li><a href={`/${locale}/services/gestion-boutique-youcan-maroc`} className="hover:text-white transition-colors">Expert YouCan & Shopify</a></li>
+              <li><a href={`/${locale}/services/saisie-donnees-maroc`} className="hover:text-white transition-colors">Saisie Données & Excel</a></li>
+              <li><a href={`/${locale}/services/traduction-darija-maroc`} className="hover:text-white transition-colors">Traduction Darija / Arabe</a></li>
             </ul>
           </div>
 
-          {/* Column 2: Sécurité & Daman */}
+          {/* Column 2: Spécialités & Missions */}
           <div>
             <h4 className="font-bold text-white uppercase text-xs tracking-wider mb-3">
-              Sécurité & Daman
+              Spécialités Populaires
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href={`/${locale}/wallet`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Protégé</a></li>
+              <li><a href={`/${locale}/services/community-manager-maroc`} className="hover:text-white transition-colors">Community Manager Maroc</a></li>
+              <li><a href={`/${locale}/services/montage-video-freelance-maroc`} className="hover:text-white transition-colors">Monteur Vidéo TikTok / Reels</a></li>
+              <li><a href={`/${locale}/services/expert-seo-maroc`} className="hover:text-white transition-colors">Expert SEO & Référencement</a></li>
+              <li><a href={`/${locale}/services/creation-logo-maroc`} className="hover:text-white transition-colors">Création de Logo Pro</a></li>
+              <li><a href={`/${locale}/tasks`} className="text-brand-400 font-semibold hover:underline">Toutes les micro-tâches</a></li>
+              <li><a href={`/${locale}/concepts`} className="hover:text-white transition-colors">💡 Modèle & Architecture</a></li>
+            </ul>
+          </div>
+
+          {/* Column 3: Sécurité & Daman */}
+          <div>
+            <h4 className="font-bold text-white uppercase text-xs tracking-wider mb-3">
+              Garantie & Séquestre
+            </h4>
+            <ul className="space-y-2 text-xs text-slate-400">
+              <li><a href={`/${locale}/wallet`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Daman</a></li>
               <li><span>Paiement CMI & Banques Maroc</span></li>
-              <li><span>Vérification CIN des freelances</span></li>
-              <li><span>Arbitrage sous 24 heures</span></li>
+              <li><span>Vérification CIN des prestataires</span></li>
+              <li><span>Virements CIH, Attijari, BCP sous 24h</span></li>
+              <li><a href={`/${locale}#help-faq`} className="hover:text-white transition-colors">Questions fréquentes (FAQ)</a></li>
             </ul>
-          </div>
-
-          {/* Column 3: Contact & Support */}
-          <div>
-            <h4 className="font-bold text-white uppercase text-xs tracking-wider mb-3">
-              Assistance au Maroc
-            </h4>
-            <p className="text-xs text-slate-400 leading-relaxed mb-3">
-              Notre équipe à Casablanca et Rabat vous accompagne 7j/7 en Darija et Français.
-            </p>
-            <a
-              href="https://wa.me/212600000000"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-bold text-brand-400 hover:text-brand-300 text-xs"
-            >
-              <FiPhoneCall /> WhatsApp : +212 6 00 00 00 00
-            </a>
           </div>
 
         </div>

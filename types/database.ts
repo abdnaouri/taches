@@ -21,6 +21,29 @@ export type TaskCategory =
 
 export type PerformerTier = 'level_1' | 'level_2' | 'level_3' | 'level_4' | 'level_5';
 
+export interface UserPortfolioItem {
+  id: string;
+  title: string;
+  description: string;
+  category: TaskCategory | string;
+  imageUrl?: string;
+  linkUrl?: string;
+  completedAt?: string;
+}
+
+export interface UserLanguage {
+  language: string;
+  level: 'native' | 'fluent' | 'intermediate';
+}
+
+export interface UserCertification {
+  id: string;
+  title: string;
+  score: number;
+  passedAt: string;
+  category: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -38,6 +61,33 @@ export interface UserProfile {
   performerReviewsCount: number;
   performerCompletedTasks: number;
   passedQualification: boolean;
+
+  // Worker Extended Profile (Work-zilla style)
+  headline?: string;
+  bio?: string;
+  city?: string;
+  phone?: string;
+  whatsappEnabled?: boolean;
+  cin?: string;
+  cinVerified?: boolean;
+  languages?: UserLanguage[];
+  skills?: string[];
+  specializedCategories?: string[];
+  minTaskReward?: number;
+  isAvailableForHire?: boolean;
+
+  // Banking & Payout (Morocco)
+  bankName?: string;
+  bankRib?: string;
+  bankAccountHolder?: string;
+
+  // Portfolio & Certs
+  portfolio?: UserPortfolioItem[];
+  certifications?: UserCertification[];
+
+  // Notification Preferences
+  notifyWhatsapp?: boolean;
+  notifyEmail?: boolean;
 
   // Customer Specific
   customerRating: number;

@@ -98,6 +98,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       customerRating: Number(row.customer_rating ?? 5.0),
       customerTotalSpent: Number(row.customer_total_spent ?? 0),
       customerTasksPosted: Number(row.customer_tasks_posted ?? 0),
+
+      // Extended Worker Fields
+      headline: row.headline || initialUser.headline,
+      bio: row.bio || initialUser.bio,
+      city: row.city || initialUser.city || 'Casablanca',
+      phone: row.phone || initialUser.phone,
+      whatsappEnabled: row.whatsapp_enabled !== undefined ? Boolean(row.whatsapp_enabled) : initialUser.whatsappEnabled,
+      cin: row.cin || initialUser.cin,
+      cinVerified: row.cin_verified !== undefined ? Boolean(row.cin_verified) : initialUser.cinVerified,
+      languages: row.languages || initialUser.languages,
+      skills: row.skills || initialUser.skills,
+      specializedCategories: row.specialized_categories || initialUser.specializedCategories,
+      minTaskReward: row.min_task_reward ?? initialUser.minTaskReward,
+      isAvailableForHire: row.is_available_for_hire !== undefined ? Boolean(row.is_available_for_hire) : initialUser.isAvailableForHire,
+      bankName: row.bank_name || initialUser.bankName,
+      bankRib: row.bank_rib || initialUser.bankRib,
+      bankAccountHolder: row.bank_account_holder || initialUser.bankAccountHolder,
+      portfolio: row.portfolio || initialUser.portfolio,
+      certifications: row.certifications || initialUser.certifications,
+      notifyWhatsapp: row.notify_whatsapp !== undefined ? Boolean(row.notify_whatsapp) : initialUser.notifyWhatsapp,
+      notifyEmail: row.notify_email !== undefined ? Boolean(row.notify_email) : initialUser.notifyEmail,
     };
   };
 
@@ -427,6 +448,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (updates.passedQualification !== undefined) dbUpdates.passed_qualification = updates.passedQualification;
         if (updates.customerTasksPosted !== undefined) dbUpdates.customer_tasks_posted = updates.customerTasksPosted;
         if (updates.customerTotalSpent !== undefined) dbUpdates.customer_total_spent = updates.customerTotalSpent;
+        if (updates.performerCompletedTasks !== undefined) dbUpdates.performer_completed_tasks = updates.performerCompletedTasks;
+        if (updates.headline !== undefined) dbUpdates.headline = updates.headline;
+        if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
+        if (updates.city !== undefined) dbUpdates.city = updates.city;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.whatsappEnabled !== undefined) dbUpdates.whatsapp_enabled = updates.whatsappEnabled;
+        if (updates.cin !== undefined) dbUpdates.cin = updates.cin;
+        if (updates.cinVerified !== undefined) dbUpdates.cin_verified = updates.cinVerified;
+        if (updates.languages !== undefined) dbUpdates.languages = updates.languages;
+        if (updates.skills !== undefined) dbUpdates.skills = updates.skills;
+        if (updates.specializedCategories !== undefined) dbUpdates.specialized_categories = updates.specializedCategories;
+        if (updates.minTaskReward !== undefined) dbUpdates.min_task_reward = updates.minTaskReward;
+        if (updates.isAvailableForHire !== undefined) dbUpdates.is_available_for_hire = updates.isAvailableForHire;
+        if (updates.bankName !== undefined) dbUpdates.bank_name = updates.bankName;
+        if (updates.bankRib !== undefined) dbUpdates.bank_rib = updates.bankRib;
+        if (updates.bankAccountHolder !== undefined) dbUpdates.bank_account_holder = updates.bankAccountHolder;
+        if (updates.portfolio !== undefined) dbUpdates.portfolio = updates.portfolio;
+        if (updates.certifications !== undefined) dbUpdates.certifications = updates.certifications;
+        if (updates.notifyWhatsapp !== undefined) dbUpdates.notify_whatsapp = updates.notifyWhatsapp;
+        if (updates.notifyEmail !== undefined) dbUpdates.notify_email = updates.notifyEmail;
 
         if (Object.keys(dbUpdates).length > 0) {
           await (supabase as any).from('profiles').update(dbUpdates).eq('id', user.id);

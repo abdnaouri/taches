@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Home & Core Locales -->
   <url>
     <loc>https://taches.ma/</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://taches.ma/fr" />
     <xhtml:link rel="alternate" hreflang="fr" href="https://taches.ma/fr" />
     <xhtml:link rel="alternate" hreflang="ar" href="https://taches.ma/ar" />
     <lastmod>2026-09-29</lastmod>
@@ -24,13 +26,15 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+
+  <!-- Tasks Marketplace Feed -->
   <url>
     <loc>https://taches.ma/fr/tasks</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://taches.ma/fr/tasks" />
     <xhtml:link rel="alternate" hreflang="ar" href="https://taches.ma/ar/tasks" />
     <lastmod>2026-09-29</lastmod>
     <changefreq>hourly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
   </url>
   <url>
     <loc>https://taches.ma/ar/tasks</loc>
@@ -38,12 +42,70 @@
     <xhtml:link rel="alternate" hreflang="fr" href="https://taches.ma/fr/tasks" />
     <lastmod>2026-09-29</lastmod>
     <changefreq>hourly</changefreq>
+    <priority>0.95</priority>
+  </url>
+
+  <!-- Categories Sitelinks (FR) -->
+  <url>
+    <loc>https://taches.ma/fr/tasks?category=micro</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://taches.ma/fr/tasks?category=assistance</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/fr/tasks?category=development</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/fr/tasks?category=marketing</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/fr/tasks?category=copywriting</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/fr/tasks?category=design</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Concepts & Architecture -->
+  <url>
+    <loc>https://taches.ma/fr/concepts</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/ar/concepts</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Wallet & Escrow -->
+  <url>
     <loc>https://taches.ma/fr/wallet</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://taches.ma/fr/wallet" />
-    <xhtml:link rel="alternate" hreflang="ar" href="https://taches.ma/ar/wallet" />
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://taches.ma/ar/wallet</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>

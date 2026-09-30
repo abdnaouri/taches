@@ -83,7 +83,6 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [selectedCity, setSelectedCity] = useState<string>('Casablanca');
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
-  const [isEnhancingAI, setIsEnhancingAI] = useState(false);
   const [antiSpamKeyword, setAntiSpamKeyword] = useState<string>('MAROC');
 
   const [deliverables, setDeliverables] = useState<string[]>([
@@ -228,38 +227,6 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
     setIsDropdownOpen(false);
     setSearchQuery('');
-  };
-
-  // AI Prompt-to-Spec Assistant
-  const handleEnhanceWithAI = async () => {
-    if (!title.trim() && !description.trim()) return;
-    setIsEnhancingAI(true);
-
-    try {
-      const res = await fetch('/api/ai/enhance-task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          categoryName: activeCategory.name,
-          timeLimitHours,
-          taskExecutionMode,
-          deliverables,
-          antiSpamKeyword,
-          locale,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.enhancedDescription) {
-        setDescription(data.enhancedDescription);
-      }
-    } catch (err) {
-      console.error('Failed to enhance brief with AI:', err);
-    } finally {
-      setIsEnhancingAI(false);
-    }
   };
 
   // Add / Remove Deliverables
@@ -1087,22 +1054,11 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               />
             </div>
 
-            {/* Description & AI Enhancer */}
+            {/* Description */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-800">
-                  Consignes détaillées & Brief :
-                </label>
-                <button
-                  type="button"
-                  onClick={handleEnhanceWithAI}
-                  disabled={isEnhancingAI}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-2 py-0.5 rounded-md border border-brand-200 transition cursor-pointer"
-                >
-                  <FiZap className={isEnhancingAI ? 'animate-spin text-amber-500' : 'text-amber-500'} />
-                  <span>{isEnhancingAI ? 'Génération...' : '✨ Structurer avec l’IA'}</span>
-                </button>
-              </div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Consignes détaillées & Brief :
+              </label>
               <textarea
                 rows={4}
                 value={description}

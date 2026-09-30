@@ -34,6 +34,7 @@ import { QualificationModal } from '@/components/QualificationModal';
 import { TaskExamplesPage } from '@/components/TaskExamplesPage';
 import { TaskExample } from '@/lib/taskExamplesData';
 import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
+import { ProfilePageContent } from '@/components/ProfilePageContent';
 import {
   WorkzillaHero,
   WorkzillaProofBar,
@@ -65,7 +66,7 @@ interface MarketplaceAppProps {
   forcedLocale?: Locale;
   initialSlug?: string;
   initialTaskId?: string;
-  viewMode?: 'home' | 'tasks' | 'wallet' | 'concepts';
+  viewMode?: 'home' | 'tasks' | 'wallet' | 'concepts' | 'profile';
 }
 
 function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewMode = 'home' }: MarketplaceAppProps) {
@@ -102,25 +103,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   // Copy Task Example handler
   const handleCopyTaskExample = (example: TaskExample) => {
     const title = example.title[locale] || example.title.fr;
-    const desc = example.description[locale] || example.description.fr;
     const budget = example.priceDH;
     const cat = example.category;
-
-    setPrefillTaskTitle(title);
-    setPrefillTaskDesc(desc);
-    setPrefillTaskBudget(budget);
-    setPrefillTaskCategory(cat);
-
-    if (!isAuthenticated) {
-      openAuthModal('login', 'Connectez-vous pour publier cette tâche', () => {
-        updateQuery({ create: 'true' });
-      });
-      return;
-    }
-    if (profile?.activeRole !== 'CUSTOMER') {
-      toggleRole('CUSTOMER');
-    }
-    updateQuery({ create: 'true' });
+    router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title)}&category=${encodeURIComponent(cat)}&budget=${budget}`);
   };
 
   // View & Filter State
@@ -164,12 +149,12 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     }
   }, [isCreateModalOpen, isAuthenticated, authLoading]);
 
-  // If ?wallet=true query param is present and not on wallet page, redirect smoothly to dedicated page
+  // Redirect ?create=true or ?action=create to dedicated standalone tasks/new page
   useEffect(() => {
-    if (isWalletOpen && viewMode !== 'wallet') {
-      router.push(`/${locale}/wallet`);
+    if (searchParams.get('create') === 'true' || searchParams.get('action') === 'create') {
+      router.push(`/${locale}/tasks/new`);
     }
-  }, [isWalletOpen, viewMode, locale, router]);
+  }, [searchParams, locale, router]);
 
   // Feedback Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -195,29 +180,15 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // Direct Post from Hero
   const handleDirectHeroPost = (title: string) => {
-    if (!isAuthenticated) {
-      setPrefillTaskTitle(title);
-      openAuthModal('login', 'Connectez-vous pour publier une tâche', () => {
-        updateQuery({ create: 'true' });
-      });
-      return;
+    if (title.trim()) {
+      router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title.trim())}`);
+    } else {
+      router.push(`/${locale}/tasks/new`);
     }
-    setPrefillTaskTitle(title);
-    if (profile?.activeRole !== 'CUSTOMER') {
-      toggleRole('CUSTOMER');
-    }
-    updateQuery({ create: 'true' });
   };
 
   const handleOpenCreateTask = () => {
-    if (!isAuthenticated) {
-      openAuthModal('login', 'Connectez-vous pour publier une tâche', () => {
-        updateQuery({ create: 'true' });
-      });
-      return;
-    }
-    setPrefillTaskTitle('');
-    updateQuery({ create: 'true' });
+    router.push(`/${locale}/tasks/new`);
   };
 
   // Navigate to task details modal route: /:locale/task/:slug
@@ -1132,6 +1103,11 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             onWithdraw={handleWithdraw}
           />
         )
+      ) : viewMode === 'profile' ? (
+        /* DEDICATED WORKER & USER PROFILE MANAGEMENT HUB */
+        <main className="flex-1">
+          <ProfilePageContent />
+        </main>
       ) : viewMode === 'concepts' ? (
         /* DEDICATED CONCEPTS & ARCHITECTURE EXPLAINER PAGE */
         <ConceptExplainerPage />

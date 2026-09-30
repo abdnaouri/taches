@@ -19,6 +19,96 @@ export const initialUser: UserProfile = {
   performerCompletedTasks: 52,
   passedQualification: true,
 
+  // Worker Extended Profile (Work-zilla style)
+  headline: 'Expert Shopify / YouCan & Développeur Web Fullstack',
+  bio: 'Freelance passionné basé à Casablanca avec plus de 4 ans d’expérience en création de sites e-commerce, intégration Tailwind CSS / Next.js et assistance technique. Réactivité garantie sous 15 minutes et 100% de respect des délais.',
+  city: 'Casablanca',
+  phone: '+212 6 61 23 45 67',
+  whatsappEnabled: true,
+  cin: 'BK654321',
+  cinVerified: true,
+  languages: [
+    { language: 'Français', level: 'native' },
+    { language: 'Arabe (Darija & Standard)', level: 'native' },
+    { language: 'Anglais', level: 'fluent' },
+    { language: 'Espagnol', level: 'intermediate' },
+  ],
+  skills: [
+    'YouCan Shop',
+    'Shopify',
+    'Next.js & React',
+    'Tailwind CSS',
+    'WordPress & WooCommerce',
+    'Traduction Arabe-Français',
+    'Saisie de données Excel',
+    'Canva Pro & Graphisme',
+    'Intégration CMI & Stripe',
+  ],
+  specializedCategories: ['development', 'design', 'assistance', 'copywriting'],
+  minTaskReward: 30,
+  isAvailableForHire: true,
+
+  // Banking & Payout (Morocco)
+  bankName: 'CIH Bank',
+  bankRib: '230 780 4567890123456789 45',
+  bankAccountHolder: 'Mehdi Aero',
+
+  // Portfolio & Certs
+  portfolio: [
+    {
+      id: 'port_1',
+      title: 'Boutique E-commerce YouCan pour Marque de Cosmétiques Naturels',
+      description: 'Configuration intégrale du thème, optimisation mobile, intégration des passerelles de paiement CMI et configuration du suivi WhatsApp.',
+      category: 'development',
+      imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800&auto=format&fit=crop&q=80',
+      linkUrl: 'https://example.com/demo-boutique',
+      completedAt: '12 Sep 2026',
+    },
+    {
+      id: 'port_2',
+      title: 'Identité Visuelle & Carte de Menu pour Restaurant à Marrakech',
+      description: 'Création du logo vectoriel SVG, charte graphique sobre et design du menu 2 volets prêt pour impression.',
+      category: 'design',
+      imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
+      completedAt: '05 Sep 2026',
+    },
+    {
+      id: 'port_3',
+      title: 'Automatisation & Saisie de 500 Fiches Produits E-commerce',
+      description: 'Extraction, nettoyage de données sous Excel et importation massive sans aucune erreur de tarification.',
+      category: 'assistance',
+      imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
+      completedAt: '28 Août 2026',
+    },
+  ],
+  certifications: [
+    {
+      id: 'cert_1',
+      title: 'Test Général de Qualification Tâches.ma (Règles Séquestre & Daman)',
+      score: 100,
+      passedAt: '15 Jan 2026',
+      category: 'general',
+    },
+    {
+      id: 'cert_2',
+      title: 'Certification E-commerce & Intégration YouCan Shop',
+      score: 96,
+      passedAt: '20 Fév 2026',
+      category: 'development',
+    },
+    {
+      id: 'cert_3',
+      title: 'Test d’Orthographe & Rédaction Commerciale (Français / Arabe)',
+      score: 98,
+      passedAt: '10 Mar 2026',
+      category: 'copywriting',
+    },
+  ],
+
+  // Notification Preferences
+  notifyWhatsapp: true,
+  notifyEmail: true,
+
   // Customer stats
   customerRating: 5.0,
   customerTotalSpent: 640.0,
@@ -526,6 +616,57 @@ export const initialTransactions: WalletTransaction[] = [
   },
 ];
 
+export const initialReviews = [
+  {
+    id: 'rev_1',
+    taskId: 'tsk_102',
+    authorId: 'cli_01',
+    authorName: 'Karim Bennani (Restaurant Gauthier)',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+    rating: 5.0,
+    comment: 'Travail exceptionnel ! Le logo et la carte de menu ont été livrés en avance au format vectoriel et prêts pour impression. Très réactif sur WhatsApp. Je recommande les yeux fermés !',
+    createdAt: 'Il y a 2 jours',
+    taskTitle: 'Création de logo & design du menu pour café/restaurant à Casablanca',
+    rewardDH: 700,
+  },
+  {
+    id: 'rev_2',
+    taskId: 'tsk_101',
+    authorId: 'cli_02',
+    authorName: 'Amina El Fassi (Boutique Bio)',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+    rating: 5.0,
+    comment: 'Boutique YouCan configurée parfaitement avec paiement CMI et livraison Amana. Mehdi est un vrai expert du e-commerce au Maroc.',
+    createdAt: 'Il y a 1 semaine',
+    taskTitle: 'Configuration et personnalisation boutique YouCan / Shopify',
+    rewardDH: 450,
+  },
+  {
+    id: 'rev_3',
+    taskId: 'tsk_103',
+    authorId: 'cli_03',
+    authorName: 'Youssef Mansouri (Cabinet Comptable)',
+    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
+    rating: 4.9,
+    comment: 'Saisie rigoureuse des 180 factures sous Excel avec formules et rapprochement bancaire impeccable. Travail soigné et rapide.',
+    createdAt: 'Il y a 2 semaines',
+    taskTitle: 'Saisie de 180 factures et rapprochement sous Excel',
+    rewardDH: 320,
+  },
+  {
+    id: 'rev_4',
+    taskId: 'tsk_104',
+    authorId: 'cli_04',
+    authorName: 'Cabinet Juridique Atlas',
+    authorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80',
+    rating: 5.0,
+    comment: 'Traduction juridique Arabe vers Français d’une grande précision, respect scrupuleux des termes du droit commercial marocain.',
+    createdAt: 'Il y a 3 semaines',
+    taskTitle: 'Traduction d’un contrat commercial Arabe vers Français (5 pages)',
+    rewardDH: 280,
+  },
+];
+
 export function getLocalizedTask(task: Task, locale: Locale): Task {
   const trans = taskTranslations[task.id];
   if (!trans) return task;
@@ -548,3 +689,4 @@ export function getLocalizedTransaction(
     description: trans[locale] || tx.description,
   };
 }
+
