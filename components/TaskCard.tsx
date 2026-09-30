@@ -3,6 +3,7 @@
 import React from 'react';
 import { Task, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { formatRelativeTime } from '@/lib/dateUtils';
 import {
   FiClock,
   FiCheckCircle,
@@ -27,7 +28,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   userId,
   onSelectTask,
 }) => {
-  const { t, isRTL, getCategoryLabel } = useLanguage();
+  const { t, locale, isRTL, getCategoryLabel } = useLanguage();
   const isAssignedToMe = (userId && task.assignedToId === userId) || Boolean(task.assignedToName?.includes('Vous') || task.assignedToName?.includes('You'));
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
@@ -58,6 +59,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ) : (
               <span className="inline-flex items-center gap-0.5 rounded-lg bg-slate-50 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
                 <FiGlobe className="text-[10px]" /> En ligne
+              </span>
+            )}
+
+            {/* Relative creation time */}
+            {task.createdAt && (
+              <span className="inline-flex items-center gap-0.5 rounded-lg bg-slate-50 border border-slate-200/60 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                {formatRelativeTime(task.createdAt, locale)}
               </span>
             )}
 

@@ -366,22 +366,22 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
   const steps = [
     {
       num: '1',
-      title: '1. Décrivez votre tâche',
-      desc: 'Écrivez en quelques mots simples ce que vous souhaitez faire et indiquez votre budget en Dirhams (dès 50 DH). La publication est 100% gratuite.',
+      title: t('wzStep1Title'),
+      desc: t('wzStep1Desc'),
       icon: <FiFileText className="text-brand-700 text-xl" />,
       color: 'bg-brand-50 border-brand-200 text-brand-700',
     },
     {
       num: '2',
-      title: '2. Choisissez votre prestataire',
-      desc: 'En quelques minutes (dès 35 secondes), des personnes sérieuses et vérifiées avec Carte d’Identité Nationale (CIN) vous répondent.',
+      title: t('wzStep2Title'),
+      desc: t('wzStep2Desc'),
       icon: <FiUsers className="text-amber-700 text-xl" />,
       color: 'bg-amber-50 border-amber-200 text-amber-700',
     },
     {
       num: '3',
-      title: '3. Payez seulement si vous êtes satisfait',
-      desc: 'Votre argent est gardé en sécurité sous séquestre (Daman). Vous ne payez que lorsque vous avez vérifié et validé le résultat final.',
+      title: t('wzStep3Title'),
+      desc: t('wzStep3Desc'),
       icon: <FiShield className="text-brand-700 text-xl" />,
       color: 'bg-brand-50 border-brand-200 text-brand-700',
     },
@@ -393,7 +393,9 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
 
         {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="section-kicker mb-2">Simplicité & Transparence</p>
+          <p className="section-kicker mb-2">
+            {isRTL ? 'بساطة وشفافية كاملة' : 'Simplicité & Transparence'}
+          </p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
             {t('wzHowTitle')}
           </h2>

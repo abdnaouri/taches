@@ -3,6 +3,7 @@
 import React from 'react';
 import { Task, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { formatRelativeTime } from '@/lib/dateUtils';
 import {
   FiClock,
   FiUsers,
@@ -33,7 +34,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   onActionClick,
   onOpenChat,
 }) => {
-  const { t, isRTL, getCategoryLabel } = useLanguage();
+  const { t, locale, isRTL, getCategoryLabel } = useLanguage();
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
 
@@ -124,8 +125,8 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </span>
           )}
 
-          <span className="text-[11px] text-slate-400">
-            {task.createdAt}
+          <span className="text-[11px] text-slate-400 font-medium">
+            {formatRelativeTime(task.createdAt, locale)}
           </span>
         </div>
 

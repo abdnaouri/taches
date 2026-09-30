@@ -17,6 +17,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Redirect /tasks/new to /task/new across all locales
+  if (pathname.includes('/tasks/new')) {
+    const fixedPath = pathname.replace('/tasks/new', '/task/new');
+    return NextResponse.redirect(new URL(`${fixedPath}${search}`, request.url));
+  }
+
   // 2. Check if pathname already starts with a supported locale (/fr, /en, /ar, /es)
   const pathnameHasLocale = LOCALES.some(
     (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
