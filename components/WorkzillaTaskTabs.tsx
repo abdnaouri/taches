@@ -5,6 +5,7 @@ import { Task, UserProfile, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { TaskRow } from '@/components/TaskRow';
 import { TaskCard } from '@/components/TaskCard';
+import { sounds } from '@/lib/soundEffects';
 import {
   FiClock,
   FiCheckCircle,
@@ -23,7 +24,8 @@ import {
   FiTrash2,
   FiUserCheck,
   FiZap,
-  FiFileText
+  FiFileText,
+  FiAward
 } from 'react-icons/fi';
 
 export type WorkzillaTab = 'new' | 'open' | 'history' | 'examples';
@@ -66,17 +68,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
 
   const categories = ['all', 'development', 'design', 'assistance', 'copywriting', 'marketing', 'micro'] as const;
 
-  // 1. Group tasks according to Work-zilla logic
-  // TAB 'new':
-  // - Customer: Tasks posted by me that are OPEN (looking for performers / receiving applications).
-  // - Performer: All tasks on the platform that are OPEN (available for bidding).
-  // TAB 'open' (In Progress):
-  // - Customer: Tasks posted by me that are IN_PROGRESS, UNDER_REVIEW, REVISION_REQUESTED, ARBITRATION.
-  // - Performer: Tasks assigned to me that are IN_PROGRESS, UNDER_REVIEW, REVISION_REQUESTED, ARBITRATION.
-  // TAB 'history':
-  // - Customer: Tasks posted by me that are COMPLETED or CANCELLED.
-  // - Performer: Tasks assigned to me that are COMPLETED or CANCELLED.
-
+  // Group tasks according to Work-zilla logic
   const { newTasks, openTasks, historyTasks } = useMemo(() => {
     if (isCustomer) {
       const myCreated = tasks.filter(
@@ -363,83 +355,123 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
             </div>
           </div>
         ) : viewLayout === 'list' ? (
-          <div className="space-y-2.5">
-            {filteredList.map((task) => (
-              <div key={task.id} className="relative group">
-                <TaskRow
-                  task={task}
-                  userRole={user?.activeRole || 'PERFORMER'}
-                  isMyTaskView={true}
-                  onSelectTask={onSelectTask}
-                />
+          <div className="space-y-3">
+            {filteredList.map((task) => {
+              const isMulti = task.taskMode === 'multi';
+              const rewardDH = Math.round(task.reward * 10);
 
-                {/* Quick In-Tab Work-zilla Controls */}
-                <div className="mt-1.5 flex items-center justify-end gap-2 px-2 text-xs">
-                  {/* Direct Chat Button */}
-                  {onOpenChatForTask && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenChatForTask(task)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-800 text-slate-700 px-2.5 py-1 text-[11px] font-bold border border-slate-200 transition cursor-pointer"
-                    >
-                      <FiMessageSquare className="text-xs text-brand-700" />
-                      <span>Discussion</span>
-                    </button>
+              return (
+                <div key={task.id} className="relative group bg-white border border-slate-200 rounded-2xl p-1 shadow-2xs hover:border-brand-400 transition">
+                  <TaskRow
+                    task={task}
+                    userRole={user?.activeRole}
+                    isMyTaskView={true}
+                    onSelectTask={onSelectTask}
+                    onOpenChat={onOpenChatForTask}
+                  />
+
+                  {/* Multi-execution spots progress bar if multi-task */}
+                  {isMulti && task.targetExecutionsCount && task.targetExecutionsCount > 1 && (
+                    <div className="px-4 py-2 bg-indigo-50/50 border-t border-slate-100 flex items-center justify-between text-xs rounded-b-xl">
+                      <div className="flex items-center gap-2 font-bold text-indigo-950">
+                        <FiUsers className="text-indigo-600" />
+                        <span>Progression des places :</span>
+                        <span className="text-indigo-800 font-extrabold">{task.applicantsCount} / {task.targetExecutionsCount}</span>
+                      </div>
+                      <div className="w-32 bg-indigo-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-indigo-600 h-full rounded-full transition-all"
+                          style={{ width: `${Math.min(100, Math.round((task.applicantsCount / task.targetExecutionsCount) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
 
-                  {/* Customer Action: Cancel open task */}
-                  {isCustomer && task.status === 'OPEN' && onCancelTask && (
-                    <button
-                      type="button"
-                      onClick={() => onCancelTask(task)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 text-[11px] font-bold border border-rose-200 transition cursor-pointer"
-                    >
-                      <FiTrash2 className="text-xs" />
-                      <span>Annuler la commande</span>
-                    </button>
-                  )}
+                  {/* Quick Action Footer Bar */}
+                  <div className="px-4 py-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                      <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
+                        <FiShield className="text-[10px]" /> Daman Séquestre {rewardDH} DH
+                      </span>
+                    </div>
 
-                  {/* Worker Action: Submit deliverable */}
-                  {!isCustomer && task.status === 'IN_PROGRESS' && onOpenProofDrawer && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenProofDrawer(task)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
-                    >
-                      <FiUploadCloud className="text-xs" />
-                      <span>Envoyer le travail</span>
-                    </button>
-                  )}
-
-                  {/* Customer Action: Review submission */}
-                  {isCustomer && task.status === 'UNDER_REVIEW' && (
-                    <>
-                      {onRequestRevision && (
+                    <div className="flex items-center gap-2">
+                      {/* Direct Chat Button */}
+                      {onOpenChatForTask && (
                         <button
                           type="button"
-                          onClick={() => onRequestRevision(task)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 px-2.5 py-1 text-[11px] font-bold border border-amber-300 transition cursor-pointer"
+                          onClick={() => {
+                            sounds.playMessage();
+                            onOpenChatForTask(task);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-800 text-slate-700 px-2.5 py-1 text-[11px] font-bold border border-slate-200 transition cursor-pointer"
                         >
-                          <FiRepeat className="text-xs" />
-                          <span>Demander retouche</span>
+                          <FiMessageSquare className="text-xs text-brand-700" />
+                          <span>Chat direct</span>
                         </button>
                       )}
 
-                      {onApproveTask && (
+                      {/* Customer Action: Cancel open task */}
+                      {isCustomer && task.status === 'OPEN' && onCancelTask && (
                         <button
                           type="button"
-                          onClick={() => onApproveTask(task)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
+                          onClick={() => {
+                            sounds.playCash();
+                            onCancelTask(task);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 text-[11px] font-bold border border-rose-200 transition cursor-pointer"
                         >
-                          <FiCheck className="text-xs" />
-                          <span>Valider & Payer ({Math.round(task.reward * 10)} DH)</span>
+                          <FiTrash2 className="text-xs" />
+                          <span>Annuler</span>
                         </button>
                       )}
-                    </>
-                  )}
+
+                      {/* Worker Action: Submit deliverable */}
+                      {!isCustomer && task.status === 'IN_PROGRESS' && onOpenProofDrawer && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenProofDrawer(task)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
+                        >
+                          <FiUploadCloud className="text-xs" />
+                          <span>Envoyer le travail</span>
+                        </button>
+                      )}
+
+                      {/* Customer Action: Review submission */}
+                      {isCustomer && task.status === 'UNDER_REVIEW' && (
+                        <>
+                          {onRequestRevision && (
+                            <button
+                              type="button"
+                              onClick={() => onRequestRevision(task)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 px-2.5 py-1 text-[11px] font-bold border border-amber-300 transition cursor-pointer"
+                            >
+                              <FiRepeat className="text-xs" />
+                              <span>Retouche</span>
+                            </button>
+                          )}
+
+                          {onApproveTask && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                sounds.playCash();
+                                onApproveTask(task);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
+                            >
+                              <FiCheck className="text-xs" />
+                              <span>Valider & Payer ({rewardDH} DH)</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,7 +479,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
               <TaskCard
                 key={task.id}
                 task={task}
-                userRole={user?.activeRole || 'CUSTOMER'}
+                userRole={user?.activeRole}
                 onSelectTask={onSelectTask}
               />
             ))}

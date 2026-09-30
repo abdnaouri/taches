@@ -204,3 +204,36 @@ export async function executeDynamicWithdrawal(payload: {
   }
 }
 
+/**
+ * Fetch user profile from backend API
+ */
+export async function fetchDynamicProfile(userId: string): Promise<any> {
+  try {
+    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.profile;
+  } catch (err: any) {
+    console.warn('Failed to fetch profile from API:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Update user profile via backend API
+ */
+export async function updateDynamicProfile(userId: string, updates: any): Promise<boolean> {
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, ...updates }),
+    });
+    return res.ok;
+  } catch (err: any) {
+    console.warn('Failed to update profile via API:', err.message);
+    return false;
+  }
+}
+
+

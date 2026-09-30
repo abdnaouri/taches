@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Task, TaskMessage, UserProfile } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { uploadDynamicProofFile } from '@/lib/supabaseService';
+import { sounds } from '@/lib/soundEffects';
 import {
   FiMessageSquare,
   FiX,
@@ -15,7 +17,10 @@ import {
   FiMaximize2,
   FiChevronLeft,
   FiExternalLink,
-  FiRefreshCw
+  FiRefreshCw,
+  FiImage,
+  FiLoader,
+  FiDownload
 } from 'react-icons/fi';
 
 interface FloatingMessengerWidgetProps {
@@ -45,8 +50,10 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
   const [chatInput, setChatInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats' | 'dialogue'>('chats');
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync external active task ID
   useEffect(() => {
@@ -56,7 +63,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     }
   }, [externalActiveTaskId]);
 
-  // Tasks relevant to current user (either created by them or assigned to them, or all tasks with messages)
+  // Tasks relevant to current user
   const userTasks = useMemo(() => {
     if (!currentUser) return tasks.slice(0, 5);
     const myId = currentUser.id;
@@ -91,43 +98,111 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
   }, [selectedTaskId, tasks]);
 
   // Load messages for a given task
-  const loadMessagesForTask = async (taskId: string) => {
+  const loadMessagesForTask = async (taskId: string, silent: boolean = false) => {
     try {
+      if (!silent) setIsSyncing(true);
       const res = await fetch(`/api/messages?taskId=${taskId}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
-        setMessagesByTask((prev) => ({
-          ...prev,
-          [taskId]: data.messages,
-        }));
+        setMessagesByTask((prev) => {
+          const prevCount = prev[taskId]?.length || 0;
+          if (data.messages.length > prevCount && prevCount > 0) {
+            sounds.playMessage();
+          }
+          return {
+            ...prev,
+            [taskId]: data.messages,
+          };
+        });
       }
     } catch (err) {
       console.warn('Failed to load messages for task:', taskId, err);
+    } finally {
+      if (!silent) setIsSyncing(false);
     }
   };
 
-  // Preload messages for user tasks on open
+  // Preload messages on open
   useEffect(() => {
     if (isOpen) {
-      setIsSyncing(true);
-      const promises = userTasks.slice(0, 8).map((t) => loadMessagesForTask(t.id));
-      Promise.all(promises).finally(() => setIsSyncing(false));
+      userTasks.slice(0, 8).forEach((t) => loadMessagesForTask(t.id, true));
     }
   }, [isOpen, userTasks]);
 
-  // Auto-fetch active dialogue messages
+  // Real-time live polling every 3.5s when active dialogue is open
   useEffect(() => {
-    if (selectedTaskId) {
-      loadMessagesForTask(selectedTaskId);
-    }
-  }, [selectedTaskId]);
+    if (!isOpen || !selectedTaskId) return;
 
-  // Scroll to bottom on new messages in active dialogue
+    loadMessagesForTask(selectedTaskId, false);
+    const interval = setInterval(() => {
+      loadMessagesForTask(selectedTaskId, true);
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isOpen, selectedTaskId]);
+
+  // Scroll to bottom on new messages
   useEffect(() => {
     if (activeTab === 'dialogue' && selectedTaskId) {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messagesByTask, activeTab, selectedTaskId]);
+
+  // File upload directly within chat
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTaskId || !currentUser) return;
+
+    setIsUploadingFile(true);
+    const uploadRes = await uploadDynamicProofFile(file);
+    setIsUploadingFile(false);
+
+    if (uploadRes.success && uploadRes.url) {
+      // Send attachment message
+      const fileUrl = uploadRes.url;
+      const isMyTask = selectedTask
+        ? selectedTask.clientId === currentUser.id || selectedTask.clientName.includes('Vous')
+        : true;
+      const receiverId = isMyTask ? selectedTask?.assignedToId : selectedTask?.clientId;
+
+      const attachmentMsg: TaskMessage = {
+        id: `msg_${Date.now()}`,
+        taskId: selectedTaskId,
+        senderId: currentUser.id,
+        senderName: currentUser.fullName || 'Vous',
+        senderAvatar: currentUser.avatarUrl || '',
+        receiverId,
+        content: `📎 Fichier joint : ${file.name}`,
+        attachmentUrl: fileUrl,
+        createdAt: new Date().toISOString(),
+      };
+
+      setMessagesByTask((prev) => ({
+        ...prev,
+        [selectedTaskId]: [...(prev[selectedTaskId] || []), attachmentMsg],
+      }));
+
+      sounds.playMessage();
+
+      try {
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: selectedTaskId,
+            senderId: currentUser.id,
+            senderName: currentUser.fullName || 'Vous',
+            senderAvatar: currentUser.avatarUrl || '',
+            receiverId,
+            content: `📎 Fichier joint : ${file.name}`,
+            attachmentUrl: fileUrl,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to post attachment message:', err);
+      }
+    }
+  };
 
   // Send message handler
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -137,6 +212,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     const content = chatInput.trim();
     setChatInput('');
     setIsSending(true);
+    sounds.playMessage();
 
     const isMyTask = selectedTask
       ? selectedTask.clientId === currentUser.id || selectedTask.clientName.includes('Vous')
@@ -190,18 +266,13 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     }
   };
 
-  // Canned quick replies
+  // Canned quick replies in French & Darija
   const quickReplies = [
-    '👋 Bonjour ! Où en est l’avancement ?',
+    '👋 Salam ! Où en est l’avancement ?',
     '⚡ Tout avance parfaitement, livraison bientôt.',
     '📎 Fichier prêt pour vérification.',
-    '👍 Parfait, merci pour votre réactivité !',
+    '👍 Parfait, c’est validé, merci !',
   ];
-
-  // Total unread / total messages count badge
-  const totalMessagesCount = useMemo(() => {
-    return Object.values(messagesByTask).reduce((acc, list) => acc + list.length, 0);
-  }, [messagesByTask]);
 
   return (
     <>
@@ -236,7 +307,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
         <div
           className={`fixed bottom-4 ${
             isRTL ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
-          } z-50 flex flex-col w-[94vw] sm:w-96 md:w-[420px] h-[520px] max-h-[85vh] rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150`}
+          } z-50 flex flex-col w-[94vw] sm:w-96 md:w-[420px] h-[530px] max-h-[85vh] rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150`}
         >
           {/* Header Bar */}
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between shrink-0">
@@ -276,7 +347,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
               <button
                 type="button"
                 onClick={() => {
-                  if (selectedTaskId) loadMessagesForTask(selectedTaskId);
+                  if (selectedTaskId) loadMessagesForTask(selectedTaskId, false);
                 }}
                 disabled={isSyncing}
                 className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
@@ -425,6 +496,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
 
                 {(messagesByTask[selectedTask.id] || []).map((m) => {
                   const isMe = m.senderId === currentUser?.id;
+                  const hasImage = m.attachmentUrl && (m.attachmentUrl.endsWith('.png') || m.attachmentUrl.endsWith('.jpg') || m.attachmentUrl.endsWith('.jpeg') || m.attachmentUrl.endsWith('.webp'));
 
                   return (
                     <div
@@ -443,6 +515,30 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                         }`}
                       >
                         {m.content}
+
+                        {/* Inline Image attachment */}
+                        {hasImage && (
+                          <div className="mt-2 rounded-xl overflow-hidden border border-white/20">
+                            <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                              <img src={m.attachmentUrl} alt="Attachment" className="max-h-40 w-full object-cover" />
+                            </a>
+                          </div>
+                        )}
+
+                        {/* File download link */}
+                        {m.attachmentUrl && !hasImage && (
+                          <a
+                            href={m.attachmentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`mt-2 flex items-center gap-1.5 p-1.5 rounded-lg text-[11px] font-bold ${
+                              isMe ? 'bg-white/20 text-white' : 'bg-slate-100 text-brand-700'
+                            }`}
+                          >
+                            <FiDownload className="text-xs" />
+                            <span>Télécharger le livrable</span>
+                          </a>
+                        )}
                       </div>
                     </div>
                   );
@@ -471,6 +567,25 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 onSubmit={handleSendMessage}
                 className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2"
               >
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*,.pdf,.zip"
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingFile}
+                  className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
+                  title="Joindre une image ou un document"
+                >
+                  {isUploadingFile ? <FiLoader className="animate-spin text-sm text-brand-700" /> : <FiPaperclip className="text-sm" />}
+                </button>
+
                 <input
                   type="text"
                   value={chatInput}

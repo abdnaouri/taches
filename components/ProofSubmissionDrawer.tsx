@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Task } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { uploadDynamicProofFile } from '@/lib/supabaseService';
+import { sounds } from '@/lib/soundEffects';
 import { 
   FiX, 
   FiUploadCloud, 
@@ -76,6 +77,7 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
       allUrls.push(proofLink.trim());
     }
 
+    sounds.playSuccess();
     onSubmitProof(task.id, reportText, allUrls);
     onClose();
   };

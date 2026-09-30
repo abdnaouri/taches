@@ -16,7 +16,7 @@ import {
 
 interface TaskCardProps {
   task: Task;
-  userRole: UserRole;
+  userRole?: UserRole;
   onSelectTask: (task: Task) => void;
 }
 
