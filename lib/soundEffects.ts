@@ -132,6 +132,41 @@ class SoundService {
       // AudioContext failure gracefully ignored
     }
   }
+
+  /**
+   * Alert or soft error cue
+   */
+  public playAlert() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch (e) {
+      // AudioContext failure gracefully ignored
+    }
+  }
+
+  public playError() {
+    this.playAlert();
+  }
 }
 
 export const sounds = new SoundService();

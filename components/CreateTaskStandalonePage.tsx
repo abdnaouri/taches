@@ -63,7 +63,10 @@ export const CreateTaskStandalonePage: React.FC = () => {
   const queryCategory = searchParams.get('category') || '';
   const queryBudget = searchParams.get('budget') ? parseInt(searchParams.get('budget')!, 10) : undefined;
 
-  // Decision Tree Current Step
+  // Post Creation Mode: Express (1-Step fast mode) vs Advanced (4-Step detailed mode)
+  const [modeView, setModeView] = useState<'express' | 'advanced'>(queryTitle ? 'express' : 'express');
+
+  // Decision Tree Current Step (for Advanced mode)
   const [currentStep, setCurrentStep] = useState<DecisionStep>(1);
 
   // Decision 1: Execution Mode & Capacity
@@ -466,48 +469,80 @@ export const CreateTaskStandalonePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Stepper Header */}
-          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm mb-8">
-            <div className="grid grid-cols-4 gap-2 sm:gap-4">
-              {[
-                { step: 1, title: '1. Type', sub: 'Mode d’exécution' },
-                { step: 2, title: '2. Catégorie', sub: 'Domaine & Modèle' },
-                { step: 3, title: '3. Détails', sub: 'Brief & Livrables' },
-                { step: 4, title: '4. Budget', sub: 'Dirhams & Séquestre' },
-              ].map((s) => {
-                const isActive = currentStep === s.step;
-                const isPassed = currentStep > s.step;
-                return (
-                  <button
-                    key={s.step}
-                    type="button"
-                    onClick={() => {
-                      if (isPassed || (s.step === 2 && isStep1Valid) || (s.step === 3 && isStep2Valid) || (s.step === 4 && isStep3Valid)) {
-                        setCurrentStep(s.step as DecisionStep);
-                      }
-                    }}
-                    className={`text-left p-2.5 sm:p-3 rounded-xl transition cursor-pointer border ${
-                      isActive
-                        ? 'bg-brand-50/80 border-brand-600 ring-2 ring-brand-600/20 shadow-xs'
-                        : isPassed
-                        ? 'bg-emerald-50/60 border-emerald-300 text-slate-900'
-                        : 'bg-slate-50/60 border-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-black ${isActive ? 'text-brand-700' : isPassed ? 'text-emerald-700' : 'text-slate-500'}`}>
-                        {s.title}
-                      </span>
-                      {isPassed && <FiCheckCircle className="text-emerald-600 text-xs hidden sm:inline" />}
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium hidden sm:block truncate mt-0.5">
-                      {s.sub}
-                    </div>
-                  </button>
-                );
-              })}
+          {/* Mode Selector Toggle: Express vs Advanced */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="inline-flex items-center bg-slate-200/70 p-1 rounded-2xl max-w-md w-full shadow-inner">
+              <button
+                type="button"
+                onClick={() => setModeView('express')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition cursor-pointer ${
+                  modeView === 'express'
+                    ? 'bg-white text-brand-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FiZap className="text-amber-500 text-sm" />
+                <span>⚡ Mode Express (30s)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModeView('advanced')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition cursor-pointer ${
+                  modeView === 'advanced'
+                    ? 'bg-white text-brand-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FiSliders className="text-sm" />
+                <span>⚙️ Mode Avancé (4 étapes)</span>
+              </button>
             </div>
           </div>
+
+          {/* Stepper Header (Only shown in Advanced Mode) */}
+          {modeView === 'advanced' && (
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm mb-8 animate-in fade-in duration-150">
+              <div className="grid grid-cols-4 gap-2 sm:gap-4">
+                {[
+                  { step: 1, title: '1. Type', sub: 'Mode d’exécution' },
+                  { step: 2, title: '2. Catégorie', sub: 'Domaine & Modèle' },
+                  { step: 3, title: '3. Détails', sub: 'Brief & Livrables' },
+                  { step: 4, title: '4. Budget', sub: 'Dirhams & Séquestre' },
+                ].map((s) => {
+                  const isActive = currentStep === s.step;
+                  const isPassed = currentStep > s.step;
+                  return (
+                    <button
+                      key={s.step}
+                      type="button"
+                      onClick={() => {
+                        if (isPassed || (s.step === 2 && isStep1Valid) || (s.step === 3 && isStep2Valid) || (s.step === 4 && isStep3Valid)) {
+                          setCurrentStep(s.step as DecisionStep);
+                        }
+                      }}
+                      className={`text-left p-2.5 sm:p-3 rounded-xl transition cursor-pointer border ${
+                        isActive
+                          ? 'bg-brand-50/80 border-brand-600 ring-2 ring-brand-600/20 shadow-xs'
+                          : isPassed
+                          ? 'bg-emerald-50/60 border-emerald-300 text-slate-900'
+                          : 'bg-slate-50/60 border-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-black ${isActive ? 'text-brand-700' : isPassed ? 'text-emerald-700' : 'text-slate-500'}`}>
+                          {s.title}
+                        </span>
+                        {isPassed && <FiCheckCircle className="text-emerald-600 text-xs hidden sm:inline" />}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium hidden sm:block truncate mt-0.5">
+                        {s.sub}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Main Grid: Form Left, Sticky Summary Right */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -515,8 +550,187 @@ export const CreateTaskStandalonePage: React.FC = () => {
             {/* Form Column (8 cols) */}
             <div className="lg:col-span-8 bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
 
-              {/* STEP 1: EXECUTION MODE */}
-              {currentStep === 1 && (
+              {/* EXPRESS 1-STEP FORM */}
+              {modeView === 'express' && (
+                <div className="space-y-6 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>⚡ Publication Express</span>
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          Moins de 1 minute
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Remplissez l'essentiel, fixez votre budget et recevez vos premières propositions immédiatement.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Que souhaitez-vous faire réaliser ? <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex: Traduction de contrat Arabe vers Français (3 pages), Création de Logo, etc."
+                      className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs sm:text-sm text-slate-900 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 font-medium"
+                    />
+                  </div>
+
+                  {/* Category Pills */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                      Domaine d'activité :
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {TASK_CATEGORIES.map((cat) => {
+                        const isSelected = selectedCategoryKey === cat.key;
+                        return (
+                          <button
+                            key={cat.key}
+                            type="button"
+                            onClick={() => setSelectedCategoryKey(cat.key)}
+                            className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-brand-50 border-brand-700 text-brand-900 font-bold shadow-xs'
+                                : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="text-lg">{cat.icon}</span>
+                            <div className="text-xs truncate">{cat.name}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Budget Selector */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold text-slate-700">
+                        Budget proposé : <span className="text-brand-700 font-extrabold text-sm">{rewardDH} DH</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        ≈ {(rewardDH * 0.095).toFixed(1)} €
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                      {[50, 100, 150, 250, 500, 1000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setRewardDH(amt)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                            rewardDH === amt
+                              ? 'bg-brand-700 text-white border-brand-700 shadow-xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {amt} DH
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      min={30}
+                      value={rewardDH}
+                      onChange={(e) => setRewardDH(Math.max(30, parseInt(e.target.value) || 30))}
+                      className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-bold"
+                    />
+                  </div>
+
+                  {/* Description / Instructions */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Instructions & Détails pour le prestataire : <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Expliquez ce qui est attendu, les consignes particulières, et ce que le freelance doit livrer comme preuve..."
+                      className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs text-slate-900 outline-none focus:border-brand-700 leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Time limit & Location */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Délai de réalisation :
+                      </label>
+                      <select
+                        value={timeLimitHours}
+                        onChange={(e) => setTimeLimitHours(parseInt(e.target.value, 10))}
+                        className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 cursor-pointer font-medium"
+                      >
+                        <option value={12}>⚡ 12 Heures (Urgent)</option>
+                        <option value={24}>⏱️ 24 Heures (Standard)</option>
+                        <option value={48}>📅 48 Heures</option>
+                        <option value={72}>🗓️ 3 Jours</option>
+                        <option value={168}>📆 7 Jours (Projet complet)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Lieu d'exécution :
+                      </label>
+                      <select
+                        value={locationMode === 'online' ? 'online' : selectedCity}
+                        onChange={(e) => {
+                          if (e.target.value === 'online') {
+                            setLocationMode('online');
+                          } else {
+                            setLocationMode('in_person');
+                            setSelectedCity(e.target.value);
+                          }
+                        }}
+                        className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 cursor-pointer font-medium"
+                      >
+                        <option value="online">🌐 100% En ligne (À distance)</option>
+                        {MOROCCAN_CITIES.map((city) => (
+                          <option key={city} value={city}>📍 {city}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Express Direct Submit Button */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleSubmitTask}
+                      disabled={isSubmitting || !title.trim() || description.trim().length < 5}
+                      className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm sm:text-base font-black shadow-lg shadow-brand-700/20 transition active:scale-98 cursor-pointer"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <FiRefreshCw className="animate-spin text-lg" />
+                          <span>Publication en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiShield className="text-lg text-emerald-300" />
+                          <span>⚡ Publier la mission ({rewardDH} DH sous Séquestre)</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[11px] text-center text-slate-500 mt-2">
+                      Fonds protégés à 100% par le séquestre Daman • Prestataires notifiés instantanément.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 1: EXECUTION MODE (Only shown in Advanced Mode) */}
+              {modeView === 'advanced' && currentStep === 1 && (
                 <div className="space-y-6 animate-in fade-in duration-150">
                   <div>
                     <h2 className="text-lg sm:text-xl font-bold text-slate-900">

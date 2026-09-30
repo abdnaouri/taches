@@ -53,10 +53,15 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
     if (res.success && res.url) {
       setUploadedScreenshots(prev => [...prev, res.url]);
     } else {
-      setUploadError(res.error || 'Erreur de téléversement');
-      // Fallback preview
-      const localUrl = URL.createObjectURL(file);
-      setUploadedScreenshots(prev => [...prev, localUrl]);
+      setUploadError(res.error || 'Téléversement cloud indisponible, fichier converti en preuve locale sécurisée.');
+      // Persistent base64 data URL fallback so proof is visible across sessions
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setUploadedScreenshots(prev => [...prev, event.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 

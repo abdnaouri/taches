@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { initialTasks, initialUser, initialTransactions, getLocalizedTask } from '@/lib/mockData';
+import { getLocalizedTask } from '@/lib/mockData';
 import { Task, UserProfile, UserRole, WalletTransaction } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { Locale } from '@/lib/i18n/types';
@@ -37,6 +37,7 @@ import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
 import { ProfilePageContent } from '@/components/ProfilePageContent';
 import { FloatingMessengerWidget } from '@/components/FloatingMessengerWidget';
 import { WorkzillaTaskTabs, WorkzillaTab } from '@/components/WorkzillaTaskTabs';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import {
   WorkzillaHero,
   WorkzillaProofBar,
@@ -88,13 +89,34 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const router = useRouter();
   const pathname = usePathname();
 
-  // Active User Profile (Supabase Auth profile or fallback)
-  const user: UserProfile = profile || initialUser;
+  const defaultGuestUser: UserProfile = {
+    id: 'guest',
+    email: 'contact@taches.ma',
+    fullName: 'Utilisateur Tâches.ma',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
+    activeRole: 'PERFORMER',
+    balanceAvailable: 0,
+    balanceEscrow: 0,
+    isAdmin: false,
+    performerTier: 'level_1',
+    performerXp: 0,
+    performerRating: 5.0,
+    performerReviewsCount: 0,
+    performerCompletedTasks: 0,
+    passedQualification: false,
+    customerRating: 5.0,
+    customerTotalSpent: 0,
+    customerTasksPosted: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  // Active User Profile (Supabase Auth profile or guest fallback)
+  const user: UserProfile = profile || defaultGuestUser;
   const isCustomer = user.activeRole === 'CUSTOMER';
 
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(initialTransactions);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(true);
 
   // Floating Chat Widget State
   const [isChatWidgetOpen, setIsChatWidgetOpen] = useState<boolean>(false);
@@ -114,9 +136,25 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title)}&category=${encodeURIComponent(cat)}&budget=${budget}`);
   };
 
-  // View & Filter State
-  const activeTab = (searchParams.get('tab') as 'examples' | 'live' | 'explore' | 'my-tasks' | 'new' | 'open' | 'history') || 'examples';
+  // View & Filter State: default to 'live' so users see real tasks immediately on /tasks
+  const tabParam = searchParams.get('tab');
+  const activeTab = (tabParam as 'examples' | 'live' | 'explore' | 'my-tasks' | 'new' | 'open' | 'history') || 'live';
   const [workzillaSubTab, setWorkzillaSubTab] = useState<WorkzillaTab>('new');
+
+  // Synchronize sub-tab from query parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'open') {
+      setWorkzillaSubTab('open');
+    } else if (tab === 'history') {
+      setWorkzillaSubTab('history');
+    } else if (tab === 'my-tasks') {
+      setWorkzillaSubTab(isCustomer ? 'new' : 'open');
+    } else if (tab === 'new' || tab === 'live' || tab === 'explore' || !tab) {
+      setWorkzillaSubTab('new');
+    }
+  }, [searchParams, isCustomer]);
+
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [myTasksStatusFilter, setMyTasksStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'under_review' | 'completed'>('all');
   const [filterUrgent, setFilterUrgent] = useState<boolean>(false);
@@ -233,11 +271,11 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     setIsSyncing(true);
     try {
       const res = await fetchDynamicTasks();
-      if (res.tasks && res.tasks.length > 0) {
+      if (res.tasks && Array.isArray(res.tasks)) {
         setTasks(res.tasks);
       }
-      const txs = await fetchDynamicTransactions();
-      if (Array.isArray(txs) && txs.length > 0) {
+      const txs = await fetchDynamicTransactions(profile?.id);
+      if (Array.isArray(txs)) {
         setTransactions(txs);
       }
     } catch (err) {
@@ -959,23 +997,23 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
               <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
                 <button
                   type="button"
+                  onClick={() => updateQuery({ tab: 'live' })}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeTab !== 'examples'
+                      ? 'bg-white text-brand-800 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🔴 Tableau de bord des missions
+                </button>
+                <button
+                  type="button"
                   onClick={() => updateQuery({ tab: 'examples' })}
                   className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'examples' ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  ⚡ Exemples de missions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateQuery({ tab: 'live' })}
-                  className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    activeTab === 'live' || activeTab === 'explore' || activeTab === 'new' || activeTab === 'open' || activeTab === 'history'
-                      ? 'bg-white text-brand-800 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  🔴 Tableau de bord Work-zilla
+                  ⚡ Modèles & Exemples
                 </button>
               </div>
 
@@ -1012,7 +1050,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                 tasks={localizedTasks}
                 user={user}
                 activeTab={workzillaSubTab}
-                onTabChange={(st) => setWorkzillaSubTab(st)}
+                onTabChange={(st) => {
+                  setWorkzillaSubTab(st);
+                  updateQuery({ tab: st });
+                }}
                 onSelectTask={handleOpenTask}
                 onOpenCreateTask={handleOpenCreateTask}
                 onOpenChatForTask={handleOpenChatForTask}
@@ -1202,6 +1243,12 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           }
           showToast(t('toastQualificationPassed'));
         }}
+      />
+
+      {/* Mobile Bottom Navigation Bar (Persistent 1-click access) */}
+      <MobileBottomNav
+        onOpenCreateTask={handleOpenCreateTask}
+        onOpenChat={() => setIsChatWidgetOpen(true)}
       />
     </div>
   );

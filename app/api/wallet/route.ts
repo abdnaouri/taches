@@ -2,7 +2,6 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { initialTransactions } from '@/lib/mockData';
 import { WalletTransaction } from '@/types/database';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vzrmunzfkftydvgmylvu.supabase.co';
@@ -14,22 +13,33 @@ function getAdminClient() {
   });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const userId = req.nextUrl.searchParams.get('userId');
     const supabase = getAdminClient();
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('transactions')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      return NextResponse.json({
-        isDbReady: !error,
-        transactions: initialTransactions,
-      });
+    if (userId) {
+      query = query.eq('user_id', userId);
     }
 
-    const formatted: WalletTransaction[] = data.map((t: any) => ({
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching transactions from Supabase:', error);
+      return NextResponse.json({
+        success: false,
+        isDbReady: false,
+        transactions: [],
+        error: error.message,
+      }, { status: 500 });
+    }
+
+    const formatted: WalletTransaction[] = (data || []).map((t: any) => ({
       id: t.id,
       userId: t.user_id,
       type: t.type,
@@ -41,44 +51,67 @@ export async function GET() {
     }));
 
     return NextResponse.json({
+      success: true,
       isDbReady: true,
       transactions: formatted,
     });
   } catch (err: any) {
+    console.error('Wallet GET error:', err);
     return NextResponse.json({
+      success: false,
       isDbReady: false,
-      transactions: initialTransactions,
+      transactions: [],
       error: err.message,
-    });
+    }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const supabase = getAdminClient();
+    const { userId, type, amount, currency = 'EUR', description, status = 'COMPLETED' } = body;
 
-    if (body.userId && body.userId.includes('-')) {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: body.userId,
-          type: body.type,
-          amount: body.amount,
-          currency: body.currency || 'EUR',
-          description: body.description,
-          status: body.status || 'COMPLETED',
-        })
-        .select()
-        .single();
-
-      if (!error && data) {
-        return NextResponse.json({ success: true, transaction: data });
-      }
+    if (!userId || !type || amount === undefined || !description) {
+      return NextResponse.json(
+        { success: false, error: 'Champs obligatoires manquants (userId, type, amount, description)' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true, transaction: body });
+    const supabase = getAdminClient();
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        type,
+        amount: Number(amount),
+        currency,
+        description,
+        status,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error recording transaction:', error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+
+    const formatted: WalletTransaction = {
+      id: data.id,
+      userId: data.user_id,
+      type: data.type,
+      amount: Number(data.amount),
+      currency: data.currency,
+      description: data.description,
+      status: data.status,
+      createdAt: data.created_at,
+    };
+
+    return NextResponse.json({ success: true, transaction: formatted });
   } catch (err: any) {
+    console.error('Wallet POST error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

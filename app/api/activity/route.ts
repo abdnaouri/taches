@@ -16,13 +16,18 @@ export async function GET() {
   try {
     const supabase = getAdminClient();
 
-    // 1. Fetch recent transactions & tasks
-    const { data: recentTasks } = await supabase
+    // 1. Fetch recent real tasks
+    const { data: recentTasks, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, title, reward, category, city, status, created_at, assigned_to_name')
+      .select('id, title, reward, category, city, status, created_at, assigned_to_name, client_name')
       .order('created_at', { ascending: false })
       .limit(10);
 
+    if (tasksError) {
+      console.error('Error fetching activity tasks:', tasksError);
+    }
+
+    // 2. Fetch real active performers count
     const { count: performersCount } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
@@ -33,26 +38,23 @@ export async function GET() {
       type: t.status === 'COMPLETED' ? 'completed' : t.status === 'IN_PROGRESS' ? 'match' : 'paid',
       city: t.city || 'Casablanca',
       taskTitle: t.title,
-      priceDH: Math.round(Number(t.reward || 15) * 10),
-      userName: t.assigned_to_name || 'Prestataire vérifié',
+      priceDH: Math.round(Number(t.reward || 0) * 10),
+      userName: t.assigned_to_name || t.client_name || 'Utilisateur vérifié',
       createdAt: t.created_at,
     }));
 
     return NextResponse.json({
       success: true,
-      items: items.length > 0 ? items : [
-        { id: '1', type: 'completed', city: 'Casablanca (Maârif)', taskTitle: 'Logo & Charte graphique restaurant', priceDH: 250, userName: 'Yassine M.', createdAt: new Date().toISOString() },
-        { id: '2', type: 'match', city: 'Rabat (Agdal)', taskTitle: 'Saisie de 80 factures sous Excel', priceDH: 120, userName: 'Salma K.', createdAt: new Date().toISOString() },
-        { id: '3', type: 'paid', city: 'Tanger', taskTitle: 'Configuration boutique YouCan Shop', priceDH: 300, userName: 'Amine B.', createdAt: new Date().toISOString() },
-      ],
-      activePerformersCount: performersCount && performersCount > 0 ? performersCount : 142,
+      items,
+      activePerformersCount: performersCount ?? 0,
     });
   } catch (err: any) {
+    console.error('Activity GET error:', err);
     return NextResponse.json({
       success: false,
       items: [],
-      activePerformersCount: 142,
+      activePerformersCount: 0,
       error: err.message,
-    });
+    }, { status: 500 });
   }
 }

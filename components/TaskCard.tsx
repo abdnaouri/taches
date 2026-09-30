@@ -17,16 +17,18 @@ import {
 interface TaskCardProps {
   task: Task;
   userRole?: UserRole;
+  userId?: string;
   onSelectTask: (task: Task) => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   userRole,
+  userId,
   onSelectTask,
 }) => {
   const { t, isRTL, getCategoryLabel } = useLanguage();
-  const isAssignedToMe = task.assignedToId === 'usr_me_1';
+  const isAssignedToMe = (userId && task.assignedToId === userId) || Boolean(task.assignedToName?.includes('Vous') || task.assignedToName?.includes('You'));
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
 

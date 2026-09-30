@@ -24,7 +24,8 @@ import {
   FiAward,
   FiCheck,
   FiUser,
-  FiLogOut
+  FiLogOut,
+  FiBell
 } from 'react-icons/fi';
 
 interface HeaderProps {
@@ -69,15 +70,27 @@ export const Header: React.FC<HeaderProps> = ({
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: 'Séquestre Daman activé pour votre mission.', time: 'Il y a 5 min', unread: true, href: `/${locale}/tasks?tab=open` },
+    { id: 2, text: 'Nouvelle proposition reçue pour votre besoin.', time: 'Il y a 25 min', unread: true, href: `/${locale}/tasks?tab=open` },
+    { id: 3, text: 'Solde portefeuille disponible mis à jour.', time: 'Il y a 2h', unread: false, href: `/${locale}/wallet` },
+  ]);
+
+  const unreadNotifCount = notifications.filter(n => n.unread).length;
 
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -245,6 +258,70 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="hidden sm:inline">1 {t('btnInProgress')}</span>
                   </button>
                 )}
+
+                {/* Notification Bell Dropdown */}
+                <div className="relative" ref={notifRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    className="relative flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition cursor-pointer"
+                    title="Notifications"
+                  >
+                    <FiBell className="text-base" />
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white ring-2 ring-white">
+                        {unreadNotifCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {isNotificationsOpen && (
+                    <div
+                      className={`absolute z-50 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-100 ${
+                        isRTL ? 'left-0' : 'right-0'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                        <span className="text-xs font-black text-slate-900">Notifications</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotifications(notifications.map(n => ({ ...n, unread: false })));
+                          }}
+                          className="text-[10px] text-brand-700 font-bold hover:underline cursor-pointer"
+                        >
+                          Tout marquer lu
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                        {notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              setNotifications(notifications.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+                              setIsNotificationsOpen(false);
+                              router.push(notif.href);
+                            }}
+                            className={`p-2.5 rounded-xl text-xs transition cursor-pointer ${
+                              notif.unread
+                                ? 'bg-brand-50/60 border border-brand-100 text-slate-900 font-medium'
+                                : 'bg-white hover:bg-slate-50 text-slate-600'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="leading-snug text-[11px]">{notif.text}</span>
+                              {notif.unread && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-700 shrink-0 mt-1" />
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-1">{notif.time}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Language Selector (Desktop) */}
                 <div className="hidden sm:block">

@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ success: true, bids: [] });
+      console.error('Error fetching bids:', error);
+      return NextResponse.json({ success: false, error: error.message, bids: [] }, { status: 500 });
     }
 
     // Fetch performers profiles for richer details
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, bids: formattedBids });
   } catch (err: any) {
+    console.error('Bids GET error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
@@ -69,53 +71,52 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { taskId, performerId, pitch, proposedHours } = body;
+    const { taskId, performerId, pitch, proposedHours = 24 } = body;
+
+    if (!taskId || !performerId || !pitch) {
+      return NextResponse.json(
+        { success: false, error: 'Champs requis manquants (taskId, performerId, pitch)' },
+        { status: 400 }
+      );
+    }
+
     const supabase = getAdminClient();
 
-    let createdBid = null;
+    const { data: createdBid, error: bidError } = await supabase
+      .from('bids')
+      .insert({
+        task_id: taskId,
+        performer_id: performerId,
+        pitch: pitch.trim(),
+        proposed_hours: proposedHours,
+      })
+      .select()
+      .single();
 
-    if (taskId && taskId.includes('-') && performerId && performerId.includes('-')) {
-      const { data, error } = await supabase
-        .from('bids')
-        .insert({
-          task_id: taskId,
-          performer_id: performerId,
-          pitch,
-          proposed_hours: proposedHours || 24,
-        })
-        .select()
-        .single();
-
-      if (!error && data) {
-        createdBid = data;
-      }
-
-      // Increment applicants count
-      const { data: taskData } = await supabase
-        .from('tasks')
-        .select('applicants_count')
-        .eq('id', taskId)
-        .single();
-
-      const newCount = Number(taskData?.applicants_count || 0) + 1;
-      await supabase
-        .from('tasks')
-        .update({ applicants_count: newCount })
-        .eq('id', taskId);
+    if (bidError) {
+      console.error('Bid insertion error:', bidError);
+      return NextResponse.json({ success: false, error: bidError.message }, { status: 400 });
     }
+
+    // Increment applicants count on task
+    const { data: taskData } = await supabase
+      .from('tasks')
+      .select('applicants_count')
+      .eq('id', taskId)
+      .single();
+
+    const newCount = Number(taskData?.applicants_count || 0) + 1;
+    await supabase
+      .from('tasks')
+      .update({ applicants_count: newCount })
+      .eq('id', taskId);
 
     return NextResponse.json({
       success: true,
-      bid: createdBid || {
-        id: `bid_${Date.now()}`,
-        taskId,
-        performerId,
-        pitch,
-        proposedHours: proposedHours || 24,
-        createdAt: new Date().toISOString(),
-      },
+      bid: createdBid,
     });
   } catch (err: any) {
+    console.error('Bids POST error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

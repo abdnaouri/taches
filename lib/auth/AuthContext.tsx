@@ -5,8 +5,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { UserProfile, UserRole } from '@/types/database';
 
-import { initialUser } from '@/lib/mockData';
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -30,39 +28,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_PROFILE_KEY = 'taches_auth_profile';
-const LOCAL_STORAGE_DEMO_KEY = 'taches_demo_auth_active';
-
-const createDemoUserAndSession = (customProfile?: UserProfile) => {
-  const profileToUse = customProfile || initialUser;
-  const mockUser: User = {
-    id: profileToUse.id || 'usr_me_1',
-    app_metadata: { provider: 'email', providers: ['email'] },
-    user_metadata: {
-      full_name: profileToUse.fullName,
-      avatar_url: profileToUse.avatarUrl,
-      active_role: profileToUse.activeRole,
-    },
-    aud: 'authenticated',
-    confirmation_sent_at: new Date().toISOString(),
-    confirmed_at: new Date().toISOString(),
-    created_at: profileToUse.createdAt || new Date().toISOString(),
-    email: profileToUse.email,
-    phone: '',
-    role: 'authenticated',
-    updated_at: new Date().toISOString(),
-  } as User;
-
-  const mockSession: Session = {
-    access_token: 'demo-access-token',
-    refresh_token: 'demo-refresh-token',
-    expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600 * 24 * 7,
-    token_type: 'bearer',
-    user: mockUser,
-  };
-
-  return { mockUser, mockSession, profile: profileToUse };
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -77,12 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [postAuthCallback, setPostAuthCallback] = useState<(() => void) | null>(null);
 
   // Map DB snake_case to frontend UserProfile
-  // Map DB snake_case to frontend UserProfile
   const mapDbProfile = (row: any, userEmail: string): UserProfile => {
     return {
       id: row.id,
       email: row.email || userEmail,
-      fullName: row.full_name || 'Utilisateur',
+      fullName: row.full_name || userEmail.split('@')[0],
       avatarUrl: row.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
       activeRole: (row.active_role as UserRole) || 'CUSTOMER',
       balanceAvailable: Number(row.balance_available ?? 0),
@@ -100,39 +64,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       customerTasksPosted: Number(row.customer_tasks_posted ?? 0),
 
       // Extended Worker Fields
-      headline: row.headline || initialUser.headline,
-      bio: row.bio || initialUser.bio,
-      city: row.city || initialUser.city || 'Casablanca',
-      phone: row.phone || initialUser.phone,
-      whatsappEnabled: row.whatsapp_enabled !== undefined ? Boolean(row.whatsapp_enabled) : initialUser.whatsappEnabled,
-      cin: row.cin || initialUser.cin,
-      cinVerified: row.cin_verified !== undefined ? Boolean(row.cin_verified) : initialUser.cinVerified,
-      languages: row.languages || initialUser.languages,
-      skills: row.skills || initialUser.skills,
-      specializedCategories: row.specialized_categories || initialUser.specializedCategories,
-      minTaskReward: row.min_task_reward ?? initialUser.minTaskReward,
-      isAvailableForHire: row.is_available_for_hire !== undefined ? Boolean(row.is_available_for_hire) : initialUser.isAvailableForHire,
-      bankName: row.bank_name || initialUser.bankName,
-      bankRib: row.bank_rib || initialUser.bankRib,
-      bankAccountHolder: row.bank_account_holder || initialUser.bankAccountHolder,
-      portfolio: row.portfolio || initialUser.portfolio,
-      certifications: row.certifications || initialUser.certifications,
-      notifyWhatsapp: row.notify_whatsapp !== undefined ? Boolean(row.notify_whatsapp) : initialUser.notifyWhatsapp,
-      notifyEmail: row.notify_email !== undefined ? Boolean(row.notify_email) : initialUser.notifyEmail,
+      headline: row.headline || '',
+      bio: row.bio || '',
+      city: row.city || 'Casablanca',
+      phone: row.phone || '',
+      whatsappEnabled: row.whatsapp_enabled !== undefined ? Boolean(row.whatsapp_enabled) : true,
+      cin: row.cin || '',
+      cinVerified: Boolean(row.cin_verified ?? false),
+      languages: row.languages || [],
+      skills: row.skills || [],
+      specializedCategories: row.specialized_categories || [],
+      minTaskReward: row.min_task_reward ? Number(row.min_task_reward) : 30,
+      isAvailableForHire: row.is_available_for_hire !== undefined ? Boolean(row.is_available_for_hire) : true,
+      bankName: row.bank_name || 'CIH Bank',
+      bankRib: row.bank_rib || '',
+      bankAccountHolder: row.bank_account_holder || '',
+      portfolio: row.portfolio || [],
+      certifications: row.certifications || [],
+      notifyWhatsapp: row.notify_whatsapp !== undefined ? Boolean(row.notify_whatsapp) : true,
+      notifyEmail: row.notify_email !== undefined ? Boolean(row.notify_email) : true,
     };
   };
 
-  // Fetch or create profile for authenticated user
-  const fetchProfile = useCallback(async (userId: string, email: string): Promise<UserProfile> => {
+  // Fetch profile for authenticated user from Supabase API
+  const fetchProfile = useCallback(async (userId: string, email: string): Promise<UserProfile | null> => {
     try {
-      const { data, error } = await supabase
+      const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.profile) {
+          setProfile(data.profile);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(data.profile));
+          } catch { }
+          return data.profile;
+        }
+      }
+
+      // Direct Supabase query fallback if API route failed
+      const { data: dbData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (data && !error) {
-        const mapped = mapDbProfile(data, email);
+      if (dbData) {
+        const mapped = mapDbProfile(dbData, email);
         setProfile(mapped);
         try {
           localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(mapped));
@@ -140,75 +117,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return mapped;
       }
 
-      // If profile record does not exist yet, build fallback and insert it
-      const fallback: UserProfile = {
-        id: userId,
-        email: email,
-        fullName: email.split('@')[0],
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
-        activeRole: 'CUSTOMER',
-        balanceAvailable: 0,
-        balanceEscrow: 0,
-        isAdmin: false,
-        createdAt: new Date().toISOString(),
-        performerTier: 'level_1',
-        performerXp: 0,
-        performerRating: 5.0,
-        performerReviewsCount: 0,
-        performerCompletedTasks: 0,
-        passedQualification: false,
-        customerRating: 5.0,
-        customerTotalSpent: 0,
-        customerTasksPosted: 0,
-      };
-
-      await (supabase as any).from('profiles').insert({
-        id: userId,
-        email,
-        full_name: fallback.fullName,
-        avatar_url: fallback.avatarUrl,
-        active_role: fallback.activeRole,
-        balance_available: fallback.balanceAvailable,
-        balance_escrow: fallback.balanceEscrow,
-        passed_qualification: false,
-      });
-
-      setProfile(fallback);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(fallback));
-      } catch { }
-      return fallback;
+      return null;
     } catch (err) {
-      console.warn('Profile fetch exception:', err);
-      // Return cached or basic fallback
+      console.error('Profile fetch exception:', err);
       const cached = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         setProfile(parsed);
         return parsed;
       }
-      const basic: UserProfile = {
-        id: userId,
-        email,
-        fullName: email.split('@')[0],
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
-        activeRole: 'CUSTOMER',
-        balanceAvailable: 0,
-        balanceEscrow: 0,
-        isAdmin: false,
-        createdAt: new Date().toISOString(),
-        performerTier: 'level_1',
-        performerXp: 0,
-        performerRating: 5.0,
-        performerReviewsCount: 0,
-        performerCompletedTasks: 0,
-        passedQualification: false,
-        customerRating: 5.0,
-        customerTotalSpent: 0,
-        customerTasksPosted: 0,
-      };
-      setProfile(basic);
-      return basic;
+      return null;
     }
   }, []);
 
@@ -220,7 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initial Auth Check and Auth State Listener
   useEffect(() => {
-    // Attempt fast read from localStorage
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
       if (cached) {
@@ -228,9 +145,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch { }
 
-    const isDemoActive = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_DEMO_KEY) === 'true';
-
-    // Check active session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
         setSession(currentSession);
@@ -238,14 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchProfile(currentSession.user.id, currentSession.user.email || '').finally(() => {
           setLoading(false);
         });
-      } else if (isDemoActive) {
-        const cachedProfileStr = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY) : null;
-        const userProfile = cachedProfileStr ? JSON.parse(cachedProfileStr) : initialUser;
-        const { mockUser, mockSession } = createDemoUserAndSession(userProfile);
-        setUser(mockUser);
-        setSession(mockSession);
-        setProfile(userProfile);
-        setLoading(false);
       } else {
         setSession(null);
         setUser(null);
@@ -256,14 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       }
     }).catch(() => {
-      if (isDemoActive) {
-        const cachedProfileStr = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY) : null;
-        const userProfile = cachedProfileStr ? JSON.parse(cachedProfileStr) : initialUser;
-        const { mockUser, mockSession } = createDemoUserAndSession(userProfile);
-        setUser(mockUser);
-        setSession(mockSession);
-        setProfile(userProfile);
-      }
       setLoading(false);
     });
 
@@ -271,12 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (newSession?.user) {
         setSession(newSession);
         setUser(newSession.user);
-        try {
-          localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
-        } catch { }
         await fetchProfile(newSession.user.id, newSession.user.email || '');
-      } else if (localStorage.getItem(LOCAL_STORAGE_DEMO_KEY) === 'true') {
-        // Keep demo session active
       } else {
         setSession(null);
         setUser(null);
@@ -293,57 +186,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [fetchProfile]);
 
-  // Demo Login helper
+  // Demo / Fast Login with seeded user account
   const signInDemo = async () => {
-    try {
-      // 1. Try real Supabase auth if configured and reachable
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'aero@example.com',
-          password: 'password123',
-        });
-
-        if (!error && data.user && data.session) {
-          setUser(data.user);
-          setSession(data.session);
-          try {
-            localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
-          } catch { }
-          await fetchProfile(data.user.id, data.user.email || 'aero@example.com');
-          if (postAuthCallback) {
-            postAuthCallback();
-            setPostAuthCallback(null);
-          }
-          setIsAuthModalOpen(false);
-          return { success: true };
-        }
-      } catch {
-        // Continue to offline demo user fallback
-      }
-
-      // 2. Offline / Demo Fallback Mode
-      const cachedProfileStr = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY) : null;
-      const userProfile = cachedProfileStr ? JSON.parse(cachedProfileStr) : initialUser;
-      const { mockUser, mockSession } = createDemoUserAndSession(userProfile);
-
-      setUser(mockUser);
-      setSession(mockSession);
-      setProfile(userProfile);
-
-      try {
-        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, 'true');
-        localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(userProfile));
-      } catch { }
-
-      if (postAuthCallback) {
-        postAuthCallback();
-        setPostAuthCallback(null);
-      }
-      setIsAuthModalOpen(false);
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || 'Erreur lors de la connexion démo' };
-    }
+    return await signIn('aero@example.com', 'password123');
   };
 
   // Sign In with email & password
@@ -356,22 +201,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        // If it is the demo account, fallback gracefully
-        if (trimmedEmail.toLowerCase() === 'aero@example.com') {
-          return await signInDemo();
-        }
         return { success: false, error: error.message };
       }
 
       if (data.user) {
-        try {
-          localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
-        } catch { }
         setUser(data.user);
         setSession(data.session);
         await fetchProfile(data.user.id, data.user.email || trimmedEmail);
 
-        // Execute pending callback if any
         if (postAuthCallback) {
           postAuthCallback();
           setPostAuthCallback(null);
@@ -381,9 +218,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { success: true };
     } catch (err: any) {
-      if (trimmedEmail.toLowerCase() === 'aero@example.com') {
-        return await signInDemo();
-      }
       return { success: false, error: err.message || 'Erreur lors de la connexion' };
     }
   };
@@ -391,7 +225,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign Up with email, password, full name, and role
   const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'CUSTOMER') => {
     try {
-      // 1. Call server API route which creates pre-confirmed user
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -403,9 +236,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: resData.error || 'Erreur lors de la création du compte' };
       }
 
-      // 2. Immediately sign in to establish client session
-      const signInRes = await signIn(email, password);
-      return signInRes;
+      // Automatically sign in
+      return await signIn(email, password);
     } catch (err: any) {
       return { success: false, error: err.message || 'Erreur lors de l’inscription' };
     }
@@ -416,65 +248,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.warn('Sign out error:', err);
+      console.error('Sign out error:', err);
     } finally {
       setUser(null);
       setSession(null);
       setProfile(null);
       try {
         localStorage.removeItem(LOCAL_STORAGE_PROFILE_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
       } catch { }
     }
   };
 
   // Update profile
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    const baseProfile = profile || initialUser;
-    const newProfile = { ...baseProfile, ...updates };
+    if (!profile && !user) return;
+    const targetId = user?.id || profile?.id;
+    if (!targetId) return;
+
+    const newProfile = { ...(profile || {}), ...updates } as UserProfile;
     setProfile(newProfile);
     try {
       localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(newProfile));
     } catch { }
 
-    if (user && !user.id.startsWith('usr_me_')) {
-      try {
-        const dbUpdates: any = {};
-        if (updates.fullName !== undefined) dbUpdates.full_name = updates.fullName;
-        if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
-        if (updates.activeRole !== undefined) dbUpdates.active_role = updates.activeRole;
-        if (updates.balanceAvailable !== undefined) dbUpdates.balance_available = updates.balanceAvailable;
-        if (updates.balanceEscrow !== undefined) dbUpdates.balance_escrow = updates.balanceEscrow;
-        if (updates.passedQualification !== undefined) dbUpdates.passed_qualification = updates.passedQualification;
-        if (updates.customerTasksPosted !== undefined) dbUpdates.customer_tasks_posted = updates.customerTasksPosted;
-        if (updates.customerTotalSpent !== undefined) dbUpdates.customer_total_spent = updates.customerTotalSpent;
-        if (updates.performerCompletedTasks !== undefined) dbUpdates.performer_completed_tasks = updates.performerCompletedTasks;
-        if (updates.headline !== undefined) dbUpdates.headline = updates.headline;
-        if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
-        if (updates.city !== undefined) dbUpdates.city = updates.city;
-        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
-        if (updates.whatsappEnabled !== undefined) dbUpdates.whatsapp_enabled = updates.whatsappEnabled;
-        if (updates.cin !== undefined) dbUpdates.cin = updates.cin;
-        if (updates.cinVerified !== undefined) dbUpdates.cin_verified = updates.cinVerified;
-        if (updates.languages !== undefined) dbUpdates.languages = updates.languages;
-        if (updates.skills !== undefined) dbUpdates.skills = updates.skills;
-        if (updates.specializedCategories !== undefined) dbUpdates.specialized_categories = updates.specializedCategories;
-        if (updates.minTaskReward !== undefined) dbUpdates.min_task_reward = updates.minTaskReward;
-        if (updates.isAvailableForHire !== undefined) dbUpdates.is_available_for_hire = updates.isAvailableForHire;
-        if (updates.bankName !== undefined) dbUpdates.bank_name = updates.bankName;
-        if (updates.bankRib !== undefined) dbUpdates.bank_rib = updates.bankRib;
-        if (updates.bankAccountHolder !== undefined) dbUpdates.bank_account_holder = updates.bankAccountHolder;
-        if (updates.portfolio !== undefined) dbUpdates.portfolio = updates.portfolio;
-        if (updates.certifications !== undefined) dbUpdates.certifications = updates.certifications;
-        if (updates.notifyWhatsapp !== undefined) dbUpdates.notify_whatsapp = updates.notifyWhatsapp;
-        if (updates.notifyEmail !== undefined) dbUpdates.notify_email = updates.notifyEmail;
-
-        if (Object.keys(dbUpdates).length > 0) {
-          await (supabase as any).from('profiles').update(dbUpdates).eq('id', user.id);
-        }
-      } catch (err) {
-        console.warn('Failed to update profile in DB:', err);
-      }
+    try {
+      await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetId, ...updates }),
+      });
+    } catch (err) {
+      console.error('Failed to update profile via API:', err);
     }
   };
 

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { UserProfile, UserPortfolioItem, UserLanguage, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { initialUser, initialReviews } from '@/lib/mockData';
 import {
   FiUser,
   FiAward,
@@ -108,8 +107,67 @@ export const ProfilePageContent: React.FC = () => {
   const searchParams = useSearchParams();
   const { isAuthenticated, profile, updateProfile, toggleRole, openAuthModal } = useAuth();
 
-  const user: UserProfile = profile || initialUser;
+  const defaultUserProfile: UserProfile = {
+    id: 'guest',
+    email: 'contact@taches.ma',
+    fullName: 'Utilisateur Tâches.ma',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
+    activeRole: 'PERFORMER',
+    balanceAvailable: 0,
+    balanceEscrow: 0,
+    isAdmin: false,
+    performerTier: 'level_1',
+    performerXp: 0,
+    performerRating: 5.0,
+    performerReviewsCount: 0,
+    performerCompletedTasks: 0,
+    passedQualification: false,
+    customerRating: 5.0,
+    customerTotalSpent: 0,
+    customerTasksPosted: 0,
+    headline: 'Prestataire indépendant certifié',
+    bio: '',
+    city: 'Casablanca',
+    phone: '',
+    whatsappEnabled: true,
+    cin: '',
+    cinVerified: false,
+    languages: [],
+    skills: [],
+    specializedCategories: ['development', 'design', 'assistance', 'copywriting'],
+    minTaskReward: 30,
+    isAvailableForHire: true,
+    bankName: 'CIH Bank',
+    bankRib: '',
+    bankAccountHolder: '',
+    portfolio: [],
+    certifications: [],
+    notifyWhatsapp: true,
+    notifyEmail: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  const user: UserProfile = profile || defaultUserProfile;
   const isCustomer = user.activeRole === 'CUSTOMER';
+
+  // Dynamic reviews state
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (user.id && user.id !== 'guest') {
+      setIsLoadingReviews(true);
+      fetch(`/api/reviews?userId=${encodeURIComponent(user.id)}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && Array.isArray(d.reviews)) {
+            setReviews(d.reviews);
+          }
+        })
+        .catch(err => console.error('Error fetching reviews:', err))
+        .finally(() => setIsLoadingReviews(false));
+    }
+  }, [user.id]);
 
   // Active Tab from URL query or default to 'overview'
   const activeTabQuery = searchParams.get('tab') || 'overview';
@@ -141,33 +199,29 @@ export const ProfilePageContent: React.FC = () => {
   const [headline, setHeadline] = useState<string>(user.headline || 'Prestataire indépendant certifié');
   const [bio, setBio] = useState<string>(user.bio || '');
   const [city, setCity] = useState<string>(user.city || 'Casablanca');
-  const [phone, setPhone] = useState<string>(user.phone || '+212 6 00 00 00 00');
+  const [phone, setPhone] = useState<string>(user.phone || '');
   const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(user.whatsappEnabled ?? true);
-  const [cin, setCin] = useState<string>(user.cin || 'BK123456');
+  const [cin, setCin] = useState<string>(user.cin || '');
   const [isAvailableForHire, setIsAvailableForHire] = useState<boolean>(user.isAvailableForHire ?? true);
   const [minTaskReward, setMinTaskReward] = useState<number>(user.minTaskReward || 30);
   const [specializedCategories, setSpecializedCategories] = useState<string[]>(
     user.specializedCategories || ['development', 'design', 'assistance', 'copywriting']
   );
   const [skills, setSkills] = useState<string[]>(
-    user.skills || ['YouCan Shop', 'Next.js & React', 'Canva Pro', 'Traduction Arabe-Français', 'Saisie de données Excel']
+    user.skills || []
   );
   const [newSkillInput, setNewSkillInput] = useState<string>('');
 
   // Languages State
   const [languages, setLanguages] = useState<UserLanguage[]>(
-    user.languages || [
-      { language: 'Français', level: 'native' },
-      { language: 'Arabe (Darija & Standard)', level: 'native' },
-      { language: 'Anglais', level: 'fluent' },
-    ]
+    user.languages || []
   );
   const [newLangName, setNewLangName] = useState<string>('');
   const [newLangLevel, setNewLangLevel] = useState<'native' | 'fluent' | 'intermediate'>('fluent');
 
   // Banking State
   const [bankName, setBankName] = useState<string>(user.bankName || 'CIH Bank');
-  const [bankRib, setBankRib] = useState<string>(user.bankRib || '230 780 4567890123456789 45');
+  const [bankRib, setBankRib] = useState<string>(user.bankRib || '');
   const [bankAccountHolder, setBankAccountHolder] = useState<string>(user.bankAccountHolder || user.fullName || '');
 
   // Notifications State
@@ -175,7 +229,7 @@ export const ProfilePageContent: React.FC = () => {
   const [notifyEmail, setNotifyEmail] = useState<boolean>(user.notifyEmail ?? true);
 
   // Portfolio State
-  const [portfolio, setPortfolio] = useState<UserPortfolioItem[]>(user.portfolio || initialUser.portfolio || []);
+  const [portfolio, setPortfolio] = useState<UserPortfolioItem[]>(user.portfolio || []);
   const [isAddPortfolioModalOpen, setIsAddPortfolioModalOpen] = useState<boolean>(false);
   const [newPortTitle, setNewPortTitle] = useState<string>('');
   const [newPortDesc, setNewPortDesc] = useState<string>('');
@@ -198,24 +252,20 @@ export const ProfilePageContent: React.FC = () => {
       setHeadline(user.headline || 'Prestataire indépendant certifié');
       setBio(user.bio || '');
       setCity(user.city || 'Casablanca');
-      setPhone(user.phone || '+212 6 00 00 00 00');
+      setPhone(user.phone || '');
       setWhatsappEnabled(user.whatsappEnabled ?? true);
-      setCin(user.cin || 'BK123456');
+      setCin(user.cin || '');
       setIsAvailableForHire(user.isAvailableForHire ?? true);
       setMinTaskReward(user.minTaskReward || 30);
       setSpecializedCategories(user.specializedCategories || ['development', 'design', 'assistance', 'copywriting']);
-      setSkills(user.skills || ['YouCan Shop', 'Next.js & React', 'Canva Pro', 'Traduction Arabe-Français', 'Saisie de données Excel']);
-      setLanguages(user.languages || [
-        { language: 'Français', level: 'native' },
-        { language: 'Arabe (Darija & Standard)', level: 'native' },
-        { language: 'Anglais', level: 'fluent' },
-      ]);
+      setSkills(user.skills || []);
+      setLanguages(user.languages || []);
       setBankName(user.bankName || 'CIH Bank');
-      setBankRib(user.bankRib || '230 780 4567890123456789 45');
+      setBankRib(user.bankRib || '');
       setBankAccountHolder(user.bankAccountHolder || user.fullName || '');
       setNotifyWhatsapp(user.notifyWhatsapp ?? true);
       setNotifyEmail(user.notifyEmail ?? true);
-      setPortfolio(user.portfolio || initialUser.portfolio || []);
+      setPortfolio(user.portfolio || []);
       setWithdrawAmountDH(Math.round(user.balanceAvailable * 10));
     }
   }, [user]);
@@ -706,26 +756,32 @@ export const ProfilePageContent: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {initialReviews.slice(0, 2).map((rev) => (
-                  <div key={rev.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <img src={rev.authorAvatar} alt={rev.authorName} className="h-7 w-7 rounded-full object-cover" />
-                        <span className="text-xs font-extrabold text-slate-900">{rev.authorName}</span>
+                {reviews.length > 0 ? (
+                  reviews.slice(0, 2).map((rev: any) => (
+                    <div key={rev.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <img src={rev.author_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'} alt={rev.author_name} className="h-7 w-7 rounded-full object-cover" />
+                          <span className="text-xs font-extrabold text-slate-900">{rev.author_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-amber-600 text-xs font-extrabold">
+                          <FiStar className="fill-amber-400 text-amber-500 text-[11px]" />
+                          <span>{Number(rev.rating).toFixed(1)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-amber-600 text-xs font-extrabold">
-                        <FiStar className="fill-amber-400 text-amber-500 text-[11px]" />
-                        <span>{rev.rating.toFixed(1)}</span>
+                      <p className="text-xs text-slate-600 leading-relaxed italic">
+                        « {rev.comment} »
+                      </p>
+                      <div className="text-[11px] text-slate-400 font-semibold pt-1 border-t border-slate-200">
+                        {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : 'Récemment'}
                       </div>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed italic">
-                      « {rev.comment} »
-                    </p>
-                    <div className="text-[11px] text-slate-400 font-semibold pt-1 border-t border-slate-200">
-                      Tâche : {rev.taskTitle} • {rev.createdAt}
-                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                    Aucun avis pour le moment. Vos avis apparaîtront ici après la validation de vos premières missions.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -1249,39 +1305,51 @@ export const ProfilePageContent: React.FC = () => {
 
             {/* List of Reviews */}
             <div className="space-y-3">
-              {initialReviews.map((rev) => (
-                <div key={rev.id} className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={rev.authorAvatar}
-                        alt={rev.authorName}
-                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
-                      />
-                      <div>
-                        <div className="font-extrabold text-xs sm:text-sm text-slate-900">
-                          {rev.authorName}
+              {reviews.length > 0 ? (
+                reviews.map((rev: any) => (
+                  <div key={rev.id} className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={rev.author_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
+                          alt={rev.author_name}
+                          className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                        />
+                        <div>
+                          <div className="font-extrabold text-xs sm:text-sm text-slate-900">
+                            {rev.author_name}
+                          </div>
+                          <div className="text-[11px] font-semibold text-slate-400">
+                            Client vérifié
+                          </div>
                         </div>
-                        <div className="text-[11px] font-semibold text-slate-400">
-                          Mission : <span className="text-slate-700 font-bold">{rev.taskTitle}</span> ({rev.rewardDH} DH)
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="flex items-center gap-1 text-amber-500 font-extrabold text-xs">
+                          <FiStar className="fill-amber-400 text-amber-400 text-xs" />
+                          <span>{Number(rev.rating).toFixed(1)}</span>
                         </div>
+                        <span className="text-[10px] text-slate-400">
+                          {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : 'Récemment'}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1 text-amber-500 font-extrabold text-xs">
-                        <FiStar className="fill-amber-400 text-amber-400 text-xs" />
-                        <span>{rev.rating.toFixed(1)}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">{rev.createdAt}</span>
-                    </div>
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      « {rev.comment} »
+                    </p>
                   </div>
-
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    « {rev.comment} »
+                ))
+              ) : (
+                <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                  <div className="text-2xl">⭐</div>
+                  <div className="text-sm font-extrabold text-slate-900">Aucun avis pour le moment</div>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    Réalisez des tâches pour des clients sur Tâches.ma pour collecter des avis vérifiés et bâtir votre réputation.
                   </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

@@ -65,15 +65,32 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [filterUrgent, setFilterUrgent] = useState(false);
+  const [customerScope, setCustomerScope] = useState<'my_orders' | 'all'>('my_orders');
 
   const categories = ['all', 'development', 'design', 'assistance', 'copywriting', 'marketing', 'micro'] as const;
 
-  // Group tasks according to Work-zilla logic
+  // Group tasks according to role and view scope
   const { newTasks, openTasks, historyTasks } = useMemo(() => {
     if (isCustomer) {
+      if (customerScope === 'all') {
+        return {
+          newTasks: tasks.filter((t) => t.status === 'OPEN'),
+          openTasks: tasks.filter(
+            (t) =>
+              t.status === 'IN_PROGRESS' ||
+              t.status === 'UNDER_REVIEW' ||
+              t.status === 'REVISION_REQUESTED' ||
+              t.status === 'ARBITRATION'
+          ),
+          historyTasks: tasks.filter(
+            (t) => t.status === 'COMPLETED' || t.status === 'CANCELLED'
+          ),
+        };
+      }
+
       const myCreated = tasks.filter(
         (t) =>
-          t.clientId === myId ||
+          (myId && t.clientId === myId) ||
           t.clientName.includes('Vous') ||
           t.clientName.includes('You') ||
           (!myId && t.status === 'OPEN')
@@ -93,24 +110,30 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
         ),
       };
     } else {
-      // Performer Mode
+      // Performer (Freelancer) Mode:
+      // - New tasks: ALL open tasks on the platform ready for applicants
+      // - Open tasks: tasks assigned to this performer in execution / review
+      // - History: tasks completed or cancelled for this performer
+      const myAssigned = tasks.filter(
+        (t) =>
+          (myId ? t.assignedToId === myId || t.assignedToName?.includes('Vous') : true)
+      );
+
       return {
         newTasks: tasks.filter((t) => t.status === 'OPEN'),
-        openTasks: tasks.filter(
+        openTasks: myAssigned.filter(
           (t) =>
-            (t.assignedToId === myId || t.status === 'IN_PROGRESS' || t.status === 'UNDER_REVIEW') &&
-            t.status !== 'COMPLETED' &&
-            t.status !== 'CANCELLED' &&
-            t.status !== 'OPEN'
+            t.status === 'IN_PROGRESS' ||
+            t.status === 'UNDER_REVIEW' ||
+            t.status === 'REVISION_REQUESTED' ||
+            t.status === 'ARBITRATION'
         ),
-        historyTasks: tasks.filter(
-          (t) =>
-            (t.assignedToId === myId || t.status === 'COMPLETED') &&
-            (t.status === 'COMPLETED' || t.status === 'CANCELLED')
+        historyTasks: myAssigned.filter(
+          (t) => t.status === 'COMPLETED' || t.status === 'CANCELLED'
         ),
       };
     }
-  }, [tasks, isCustomer, myId]);
+  }, [tasks, isCustomer, myId, customerScope]);
 
   // Current tab active list
   const currentList = useMemo(() => {
@@ -152,7 +175,50 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
   return (
     <div className="space-y-6">
       {/* 1. WORK-ZILLA HIGH DENSITY TOP TAB SWITCHER */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-3">
+        {/* Role Context Bar & Customer Scope Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-extrabold text-[11px] ${
+              isCustomer ? 'bg-indigo-50 text-indigo-900 border border-indigo-200' : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+            }`}>
+              <span>{isCustomer ? '💼 Vue Client / Donneur d’ordre' : '⚡ Vue Freelance / Prestataire'}</span>
+            </span>
+            <span className="text-slate-400 hidden sm:inline">•</span>
+            <span className="text-slate-500 text-[11px] hidden sm:inline">
+              {isCustomer ? 'Gérez vos commandes ou parcourez les missions' : 'Postulez aux missions et suivez vos livrables'}
+            </span>
+          </div>
+
+          {/* Customer Scope Pill Toggle */}
+          {isCustomer && (
+            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCustomerScope('my_orders')}
+                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                  customerScope === 'my_orders'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Mes commandes
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomerScope('all')}
+                className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                  customerScope === 'all'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Explorer le marché ({tasks.filter(t => t.status === 'OPEN').length})
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Main 3 Work-zilla Tabs */}
@@ -167,7 +233,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
               }`}
             >
               <span>🔴</span>
-              <span>{isCustomer ? 'Nouvelles commandes' : 'Nouvelles missions'}</span>
+              <span>{isCustomer && customerScope === 'my_orders' ? 'Nouvelles commandes' : 'Nouvelles missions'}</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] font-black ${
                   activeTab === 'new'
@@ -411,8 +477,8 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
                         </button>
                       )}
 
-                      {/* Customer Action: Cancel open task */}
-                      {isCustomer && task.status === 'OPEN' && onCancelTask && (
+                      {/* Customer Action: Cancel open task if owner */}
+                      {isCustomer && (task.clientId === myId || task.clientName.includes('Vous') || task.clientName.includes('You')) && task.status === 'OPEN' && onCancelTask && (
                         <button
                           type="button"
                           onClick={() => {
@@ -427,14 +493,26 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
                       )}
 
                       {/* Worker Action: Submit deliverable */}
-                      {!isCustomer && task.status === 'IN_PROGRESS' && onOpenProofDrawer && (
+                      {!isCustomer && (task.assignedToId === myId || !myId) && (task.status === 'IN_PROGRESS' || task.status === 'REVISION_REQUESTED') && onOpenProofDrawer && (
                         <button
                           type="button"
                           onClick={() => onOpenProofDrawer(task)}
                           className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
                         >
                           <FiUploadCloud className="text-xs" />
-                          <span>Envoyer le travail</span>
+                          <span>{task.status === 'REVISION_REQUESTED' ? 'Renvoyer la correction' : 'Envoyer le travail'}</span>
+                        </button>
+                      )}
+
+                      {/* Worker Action: Quick Apply to open task */}
+                      {!isCustomer && task.status === 'OPEN' && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectTask(task)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-3 py-1 text-[11px] font-extrabold shadow-2xs transition cursor-pointer"
+                        >
+                          <FiZap className="text-xs text-amber-300" />
+                          <span>Postuler</span>
                         </button>
                       )}
 
@@ -480,6 +558,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
                 key={task.id}
                 task={task}
                 userRole={user?.activeRole}
+                userId={user?.id}
                 onSelectTask={onSelectTask}
               />
             ))}

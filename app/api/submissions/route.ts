@@ -53,26 +53,51 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { taskId, performerId, reportText, proofUrls } = body;
-    const supabase = getAdminClient();
 
-    if (taskId && taskId.includes('-') && performerId && performerId.includes('-')) {
-      await supabase
-        .from('submissions')
-        .insert({
-          task_id: taskId,
-          performer_id: performerId,
-          report_text: reportText,
-          proof_urls: proofUrls || [],
-        });
-
-      await supabase
-        .from('tasks')
-        .update({ status: 'UNDER_REVIEW' })
-        .eq('id', taskId);
+    if (!taskId || !performerId || !reportText) {
+      return NextResponse.json(
+        { success: false, error: 'Champs requis manquants (taskId, performerId, reportText)' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true, submission: body });
+    const supabase = getAdminClient();
+
+    const { data: submission, error: subError } = await supabase
+      .from('submissions')
+      .insert({
+        task_id: taskId,
+        performer_id: performerId,
+        report_text: reportText.trim(),
+        proof_urls: proofUrls || [],
+      })
+      .select()
+      .single();
+
+    if (subError) {
+      console.error('Submission insert error:', subError);
+      return NextResponse.json({ success: false, error: subError.message }, { status: 400 });
+    }
+
+    // Update task status to UNDER_REVIEW
+    await supabase
+      .from('tasks')
+      .update({ status: 'UNDER_REVIEW' })
+      .eq('id', taskId);
+
+    return NextResponse.json({
+      success: true,
+      submission: {
+        id: submission.id,
+        taskId: submission.task_id,
+        performerId: submission.performer_id,
+        reportText: submission.report_text,
+        proofUrls: submission.proof_urls,
+        submittedAt: submission.submitted_at,
+      },
+    });
   } catch (err: any) {
+    console.error('Submissions POST error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

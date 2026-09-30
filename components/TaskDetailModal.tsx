@@ -751,50 +751,78 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           {!isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
             <div>
               {appliedSuccess ? (
-                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-in fade-in">
                   <FiCheck className="text-lg text-emerald-600 shrink-0" />
                   <span>Votre proposition a été transmise au donneur d’ordre. Vous recevrez une alerte dès sélection.</span>
                 </div>
               ) : (
-                <form onSubmit={handleApplySubmit} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-800">
-                      Votre proposition pour le client :
-                    </label>
-                    <span className="text-[11px] text-slate-500 font-semibold">
-                      Gain net : <strong className="text-emerald-700">{netDH} DH</strong> (~{netEur} €)
-                    </span>
+                <div className="space-y-3">
+                  {/* 1-Click Instant Apply Banner */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-linear-to-r from-emerald-500/10 to-brand-500/10 border border-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">⚡</span>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Candidature Instantanée</div>
+                        <div className="text-[11px] text-slate-500">Postulez immédiatement avec votre profil vérifié</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultPitch = `⚡ Disponible immédiatement avec profil vérifié. Travail conforme et rapide garanti pour ${task.title}.`;
+                        if (isAuthenticated) {
+                          onApply(task.id, defaultPitch);
+                          setAppliedSuccess(true);
+                        } else {
+                          openAuthModal('login', 'Connectez-vous pour postuler en 1 clic');
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xs transition cursor-pointer active:scale-95 whitespace-nowrap"
+                    >
+                      ⚡ Postuler en 1 clic
+                    </button>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {quickPitches.map((qp, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setPitch(qp)}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-left transition cursor-pointer"
-                      >
-                        {qp}
-                      </button>
-                    ))}
-                  </div>
+                  <form onSubmit={handleApplySubmit} className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-800">
+                        Ou rédigez un message personnalisé :
+                      </label>
+                      <span className="text-[11px] text-slate-500 font-semibold">
+                        Gain net : <strong className="text-emerald-700">{netDH} DH</strong> (~{netEur} €)
+                      </span>
+                    </div>
 
-                  <textarea
-                    rows={2}
-                    value={pitch}
-                    onChange={(e) => setPitch(e.target.value)}
-                    placeholder="Expliquez en 1 ou 2 phrases votre méthode..."
-                    className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none transition focus:border-brand-700"
-                  />
+                    <div className="flex flex-wrap gap-1.5">
+                      {quickPitches.map((qp, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setPitch(qp)}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-left transition cursor-pointer"
+                        >
+                          {qp}
+                        </button>
+                      ))}
+                    </div>
 
-                  <button
-                    type="submit"
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs sm:text-sm font-bold text-white shadow-md transition-all cursor-pointer active:scale-98"
-                  >
-                    <FiSend className={isRTL ? 'rotate-180' : ''} />
-                    <span>Postuler pour {rewardDH} DH</span>
-                  </button>
-                </form>
+                    <textarea
+                      rows={2}
+                      value={pitch}
+                      onChange={(e) => setPitch(e.target.value)}
+                      placeholder="Expliquez en 1 ou 2 phrases votre méthode..."
+                      className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none transition focus:border-brand-700"
+                    />
+
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 py-3 text-xs sm:text-sm font-bold text-white shadow-md transition-all cursor-pointer active:scale-98"
+                    >
+                      <FiSend className={isRTL ? 'rotate-180' : ''} />
+                      <span>Envoyer ma proposition personnalisée ({rewardDH} DH)</span>
+                    </button>
+                  </form>
+                </div>
               )}
             </div>
           )}

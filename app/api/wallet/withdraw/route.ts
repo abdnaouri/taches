@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       payoutDetails = {},
     } = body;
 
-    if (!userId || !amountDH || amountDH <= 0) {
+    if (!userId || !amountDH || Number(amountDH) <= 0) {
       return NextResponse.json(
         { success: false, error: 'Paramètres de retrait invalides ou montant manquant.' },
         { status: 400 }
@@ -34,29 +34,20 @@ export async function POST(req: NextRequest) {
     const supabase = getAdminClient();
 
     // 1. Fetch user profile to verify current balance
-    let currentBalanceEur = 0;
-    let userProfile = null;
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, balance_available, full_name, email')
+      .eq('id', userId)
+      .single();
 
-    if (userId.includes('-')) {
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id, balance_available, full_name, email')
-        .eq('id', userId)
-        .single();
-
-      if (profileErr || !profile) {
-        return NextResponse.json(
-          { success: false, error: 'Profil utilisateur introuvable.' },
-          { status: 404 }
-        );
-      }
-      userProfile = profile;
-      currentBalanceEur = Number(profile.balance_available || 0);
-    } else {
-      // Mock / fallback user balance
-      currentBalanceEur = 285.5;
+    if (profileErr || !profile) {
+      return NextResponse.json(
+        { success: false, error: 'Profil utilisateur introuvable.' },
+        { status: 404 }
+      );
     }
 
+    const currentBalanceEur = Number(profile.balance_available || 0);
     const availableDH = Math.round(currentBalanceEur * 10);
 
     // 2. Calculate fee and validation
@@ -85,7 +76,7 @@ export async function POST(req: NextRequest) {
       destinationSummary = `RIB: ...${rib.slice(-8)}`;
     } else if (payoutMethod === 'CASHPLUS') {
       methodLabel = 'Mise à disposition Cash Plus / Wafacash';
-      destinationSummary = `Bénéficiaire: ${payoutDetails.fullName || userProfile?.full_name || ''} (CIN: ${payoutDetails.cin || ''})`;
+      destinationSummary = `Bénéficiaire: ${payoutDetails.fullName || profile.full_name || ''} (CIN: ${payoutDetails.cin || ''})`;
     } else if (payoutMethod === 'BINANCE_PAY') {
       methodLabel = 'Virement Crypto Instantané (Binance Pay)';
       destinationSummary = `Binance Pay ID: ${payoutDetails.binancePayId || ''}`;
@@ -96,77 +87,50 @@ export async function POST(req: NextRequest) {
 
     const txDescription = `Retrait ${methodLabel} - Net: ${feeCalculation.netAmountDH} DH (Frais: ${feeCalculation.feeDH} DH) ${destinationSummary ? `• ${destinationSummary}` : ''}`;
 
-    // 4. If Supabase profile exists, execute balance deduction and transaction record
-    if (userId.includes('-')) {
-      const newAvailableEur = Math.max(0, currentBalanceEur - feeCalculation.requestedAmountEur);
+    // 4. Deduct balance from profile
+    const newAvailableEur = Math.max(0, currentBalanceEur - feeCalculation.requestedAmountEur);
 
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update({ balance_available: newAvailableEur })
-        .eq('id', userId);
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ balance_available: newAvailableEur })
+      .eq('id', userId);
 
-      if (updateErr) {
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de la mise à jour du solde.' },
-          { status: 500 }
-        );
-      }
-
-      const { data: txData, error: txErr } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: userId,
-          type: 'WITHDRAWAL',
-          amount: -feeCalculation.requestedAmountEur,
-          currency: 'EUR',
-          description: txDescription,
-          status: 'PENDING',
-        })
-        .select()
-        .single();
-
-      if (txErr) {
-        console.error('Error inserting transaction:', txErr);
-      }
-
-      return NextResponse.json({
-        success: true,
-        transaction: txData || {
-          id: `tx_${Date.now()}`,
-          userId,
-          type: 'WITHDRAWAL',
-          amount: -feeCalculation.requestedAmountEur,
-          currency: 'EUR',
-          description: txDescription,
-          status: 'PENDING',
-          createdAt: new Date().toISOString(),
-        },
-        feeCalculation,
-        estimatedDeliveryTime: speedTier === 'EXPRESS' ? 'Moins de 2 heures' : 'Sous 24 heures ouvrées',
-        status: 'PENDING',
-      });
+    if (updateErr) {
+      return NextResponse.json(
+        { success: false, error: 'Erreur lors de la mise à jour du solde.' },
+        { status: 500 }
+      );
     }
 
-    // Fallback response
-    return NextResponse.json({
-      success: true,
-      transaction: {
-        id: `tx_${Date.now()}`,
-        userId,
+    // 5. Insert withdrawal transaction
+    const { data: txData, error: txErr } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
         type: 'WITHDRAWAL',
         amount: -feeCalculation.requestedAmountEur,
         currency: 'EUR',
         description: txDescription,
         status: 'PENDING',
-        createdAt: new Date().toISOString(),
-      },
+      })
+      .select()
+      .single();
+
+    if (txErr) {
+      console.error('Error inserting withdrawal transaction:', txErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      transaction: txData,
       feeCalculation,
       estimatedDeliveryTime: speedTier === 'EXPRESS' ? 'Moins de 2 heures' : 'Sous 24 heures ouvrées',
       status: 'PENDING',
     });
   } catch (err: any) {
+    console.error('Withdrawal POST error:', err);
     return NextResponse.json(
-      { success: false, error: err.message || 'Erreur serveur interne lors du retrait.' },
+      { success: false, error: err.message || 'Erreur serveur lors du retrait.' },
       { status: 500 }
     );
   }

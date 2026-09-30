@@ -20,12 +20,11 @@ export async function POST(req: NextRequest) {
       userId,
       amountDH,
       depositMethod = 'CARD',
-      paymentDetails = {},
     } = body;
 
     if (!userId || !amountDH || Number(amountDH) <= 0) {
       return NextResponse.json(
-        { success: false, error: 'Montant de recharge invalide.' },
+        { success: false, error: 'Montant de recharge invalide ou utilisateur manquant.' },
         { status: 400 }
       );
     }
@@ -44,70 +43,60 @@ export async function POST(req: NextRequest) {
 
     const txDescription = `Recharge de compte (${amountDH} DH / ${amountEur} €) via ${methodLabel}`;
 
-    if (userId.includes('-')) {
-      // 1. Fetch current profile
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id, balance_available')
-        .eq('id', userId)
-        .single();
+    // 1. Fetch current profile
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, balance_available')
+      .eq('id', userId)
+      .single();
 
-      if (!profileErr && profile) {
-        const newBalance = Number(profile.balance_available || 0) + amountEur;
-        await supabase
-          .from('profiles')
-          .update({ balance_available: newBalance })
-          .eq('id', userId);
-      }
-
-      // 2. Insert transaction
-      const { data: txData, error: txErr } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: userId,
-          type: 'DEPOSIT',
-          amount: amountEur,
-          currency: 'EUR',
-          description: txDescription,
-          status: 'COMPLETED',
-        })
-        .select()
-        .single();
-
-      return NextResponse.json({
-        success: true,
-        transaction: txData || {
-          id: `tx_${Date.now()}`,
-          userId,
-          type: 'DEPOSIT',
-          amount: amountEur,
-          currency: 'EUR',
-          description: txDescription,
-          status: 'COMPLETED',
-          createdAt: new Date().toISOString(),
-        },
-        creditedAmountDH: Number(amountDH),
-        creditedAmountEur: amountEur,
-      });
+    if (profileErr || !profile) {
+      return NextResponse.json(
+        { success: false, error: 'Profil utilisateur introuvable dans la base de données.' },
+        { status: 404 }
+      );
     }
 
-    // Fallback response for demo
-    return NextResponse.json({
-      success: true,
-      transaction: {
-        id: `tx_${Date.now()}`,
-        userId,
+    const newBalance = Number(profile.balance_available || 0) + amountEur;
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ balance_available: newBalance })
+      .eq('id', userId);
+
+    if (updateErr) {
+      return NextResponse.json(
+        { success: false, error: updateErr.message },
+        { status: 500 }
+      );
+    }
+
+    // 2. Insert transaction into ledger
+    const { data: txData, error: txErr } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
         type: 'DEPOSIT',
         amount: amountEur,
         currency: 'EUR',
         description: txDescription,
         status: 'COMPLETED',
-        createdAt: new Date().toISOString(),
-      },
+      })
+      .select()
+      .single();
+
+    if (txErr) {
+      console.error('Error recording deposit transaction:', txErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      transaction: txData,
       creditedAmountDH: Number(amountDH),
       creditedAmountEur: amountEur,
+      newBalanceAvailableEur: newBalance,
     });
   } catch (err: any) {
+    console.error('Deposit POST error:', err);
     return NextResponse.json(
       { success: false, error: err.message || 'Erreur lors du dépôt.' },
       { status: 500 }

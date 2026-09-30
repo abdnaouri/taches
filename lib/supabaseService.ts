@@ -5,6 +5,7 @@ export interface TasksApiResponse {
   source: string;
   tasks: Task[];
   message?: string;
+  error?: string;
 }
 
 export interface UploadApiResponse {
@@ -15,30 +16,51 @@ export interface UploadApiResponse {
 }
 
 /**
- * Fetch tasks dynamically from Supabase API route
+ * Fetch tasks dynamically from real Supabase API route
  */
-export async function fetchDynamicTasks(): Promise<TasksApiResponse> {
+export async function fetchDynamicTasks(filters?: { category?: string; status?: string; clientId?: string }): Promise<TasksApiResponse> {
   try {
-    const res = await fetch('/api/tasks');
+    const params = new URLSearchParams();
+    if (filters?.category) params.set('category', filters.category);
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.clientId) params.set('clientId', filters.clientId);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`/api/tasks${query}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Tasks fetch failed with HTTP ${res.status}`);
     }
     return await res.json();
   } catch (err: any) {
-    console.warn('Could not fetch dynamic tasks from Supabase:', err.message);
+    console.error('Could not fetch tasks from API:', err.message);
     return {
       isDbReady: false,
-      source: 'offline_fallback',
+      source: 'error',
       tasks: [],
-      message: err.message,
+      error: err.message,
     };
+  }
+}
+
+/**
+ * Fetch single task by ID dynamically
+ */
+export async function fetchDynamicTaskById(taskId: string): Promise<Task | null> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.task || null;
+  } catch (err: any) {
+    console.error('Failed to fetch task by ID:', err);
+    return null;
   }
 }
 
 /**
  * Create a new task dynamically in Supabase
  */
-export async function createDynamicTask(task: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'>): Promise<{ success: boolean; task: Task }> {
+export async function createDynamicTask(task: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'>): Promise<{ success: boolean; task?: Task; error?: string }> {
   try {
     const res = await fetch('/api/tasks', {
       method: 'POST',
@@ -51,12 +73,7 @@ export async function createDynamicTask(task: Omit<Task, 'id' | 'applicantsCount
     console.error('Failed to create task in Supabase:', err);
     return {
       success: false,
-      task: {
-        ...task,
-        id: `tsk_${Date.now()}`,
-        applicantsCount: 0,
-        createdAt: 'À l’instant',
-      },
+      error: err.message,
     };
   }
 }
@@ -73,7 +90,7 @@ export async function updateDynamicTask(taskId: string, updates: Partial<Task>):
     });
     return res.ok;
   } catch (err: any) {
-    console.warn('Failed to update task in Supabase:', err.message);
+    console.error('Failed to update task in Supabase:', err.message);
     return false;
   }
 }
@@ -95,7 +112,7 @@ export async function submitDynamicProof(
     });
     return res.ok;
   } catch (err: any) {
-    console.warn('Failed to submit proof in Supabase:', err.message);
+    console.error('Failed to submit proof in Supabase:', err.message);
     return false;
   }
 }
@@ -132,14 +149,15 @@ export async function uploadDynamicProofFile(file: File): Promise<UploadApiRespo
 /**
  * Fetch wallet transactions from Supabase
  */
-export async function fetchDynamicTransactions(): Promise<WalletTransaction[]> {
+export async function fetchDynamicTransactions(userId?: string): Promise<WalletTransaction[]> {
   try {
-    const res = await fetch('/api/wallet');
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const res = await fetch(`/api/wallet${query}`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
     return data.transactions || [];
   } catch (err: any) {
-    console.warn('Failed to fetch transactions from Supabase:', err.message);
+    console.error('Failed to fetch transactions from Supabase:', err.message);
     return [];
   }
 }
@@ -155,7 +173,7 @@ export async function recordDynamicTransaction(tx: Omit<WalletTransaction, 'id' 
       body: JSON.stringify(tx),
     });
   } catch (err: any) {
-    console.warn('Failed to record transaction in Supabase:', err.message);
+    console.error('Failed to record transaction in Supabase:', err.message);
   }
 }
 
@@ -209,12 +227,12 @@ export async function executeDynamicWithdrawal(payload: {
  */
 export async function fetchDynamicProfile(userId: string): Promise<any> {
   try {
-    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+    if (!res.ok) return null;
     const data = await res.json();
-    return data.profile;
+    return data.profile || null;
   } catch (err: any) {
-    console.warn('Failed to fetch profile from API:', err.message);
+    console.error('Failed to fetch profile from API:', err.message);
     return null;
   }
 }
@@ -231,9 +249,7 @@ export async function updateDynamicProfile(userId: string, updates: any): Promis
     });
     return res.ok;
   } catch (err: any) {
-    console.warn('Failed to update profile via API:', err.message);
+    console.error('Failed to update profile via API:', err.message);
     return false;
   }
 }
-
-
