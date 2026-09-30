@@ -11,7 +11,9 @@ import {
   FiCheckCircle,
   FiZap,
   FiArrowRight,
-  FiArrowLeft
+  FiArrowLeft,
+  FiMessageSquare,
+  FiUser
 } from 'react-icons/fi';
 
 interface TaskRowProps {
@@ -20,6 +22,7 @@ interface TaskRowProps {
   isMyTaskView?: boolean;
   onSelectTask: (task: Task) => void;
   onActionClick?: (task: Task) => void;
+  onOpenChat?: (task: Task) => void;
 }
 
 export const TaskRow: React.FC<TaskRowProps> = ({
@@ -28,6 +31,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   isMyTaskView = false,
   onSelectTask,
   onActionClick,
+  onOpenChat,
 }) => {
   const { t, isRTL, getCategoryLabel } = useLanguage();
   const rewardDH = Math.round(task.reward * 10);
@@ -39,7 +43,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
       case 'IN_PROGRESS':
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[11px] font-extrabold">
-            <FiClock className="animate-spin text-[10px]" /> En cours
+            <FiClock className="animate-spin text-[10px]" /> En cours {task.assignedToName ? `(${task.assignedToName})` : ''}
           </span>
         );
       case 'UNDER_REVIEW':
@@ -48,17 +52,35 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <FiCheckCircle className="text-[10px]" /> À vérifier
           </span>
         );
+      case 'REVISION_REQUESTED':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 text-rose-900 border border-rose-300 px-2 py-0.5 text-[11px] font-extrabold">
+            ⚠️ Retouche demandée
+          </span>
+        );
+      case 'ARBITRATION':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-orange-100 text-orange-900 border border-orange-300 px-2 py-0.5 text-[11px] font-extrabold">
+            ⚖️ Arbitrage
+          </span>
+        );
       case 'COMPLETED':
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 text-[11px] font-extrabold">
             <FiCheckCircle className="text-[10px]" /> Terminée
           </span>
         );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-600 border border-slate-300 px-2 py-0.5 text-[11px] font-bold">
+            Annulée
+          </span>
+        );
       case 'OPEN':
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 text-[11px] font-bold">
-            Ouverte ({task.applicantsCount} offre{task.applicantsCount > 1 ? 's' : ''})
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 text-brand-900 border border-brand-200 px-2 py-0.5 text-[11px] font-bold">
+            <FiUser className="text-[10px]" /> {task.applicantsCount} offre{task.applicantsCount > 1 ? 's' : ''}
           </span>
         );
     }
@@ -119,7 +141,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
       </div>
 
       {/* Right: Price & Quick Action */}
-      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
         {/* Price Tag */}
         <div className="text-left sm:text-right">
           <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
@@ -138,22 +160,39 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           </div>
         </div>
 
-        {/* Action Button */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onActionClick) {
-              onActionClick(task);
-            } else {
-              onSelectTask(task);
-            }
-          }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-2 text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-        >
-          <span>{isMyTaskView ? 'Gérer' : 'Détails'}</span>
-          {isRTL ? <FiArrowLeft className="text-xs" /> : <FiArrowRight className="text-xs" />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Quick Chat Shortcut */}
+          {onOpenChat && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenChat(task);
+              }}
+              title="Discuter en direct"
+              className="p-2 rounded-lg bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-800 border border-slate-200 transition cursor-pointer"
+            >
+              <FiMessageSquare className="text-xs" />
+            </button>
+          )}
+
+          {/* Action Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onActionClick) {
+                onActionClick(task);
+              } else {
+                onSelectTask(task);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-2 text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            <span>{isMyTaskView ? 'Gérer' : 'Détails'}</span>
+            {isRTL ? <FiArrowLeft className="text-xs" /> : <FiArrowRight className="text-xs" />}
+          </button>
+        </div>
       </div>
     </div>
   );

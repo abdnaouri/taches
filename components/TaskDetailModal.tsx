@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Task, UserProfile, TaskBid, TaskMessage } from '@/types/database';
+import { Task, UserProfile, TaskBid, TaskMessage, TaskProofSubmission, TaskReview } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
@@ -20,7 +20,10 @@ import {
   FiStar,
   FiAlertTriangle,
   FiRepeat,
-  FiLoader
+  FiLoader,
+  FiTrash2,
+  FiExternalLink,
+  FiFileText
 } from 'react-icons/fi';
 
 interface TaskDetailModalProps {
@@ -32,6 +35,8 @@ interface TaskDetailModalProps {
   onApproveWork: (taskId: string, review?: { rating: number; comment: string }) => void;
   onAssignPerformer?: (taskId: string, performerId: string, performerName: string) => void;
   onRequestRevision?: (taskId: string, feedback: string) => void;
+  onCancelTask?: (taskId: string) => void;
+  onRequestArbitration?: (taskId: string, reason: string) => void;
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
@@ -43,11 +48,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   onApproveWork,
   onAssignPerformer,
   onRequestRevision,
+  onCancelTask,
+  onRequestArbitration,
 }) => {
   const { t, isRTL, locale, getCategoryLabel } = useLanguage();
   const { isAuthenticated, openAuthModal } = useAuth();
 
-  const [activeModalTab, setActiveModalTab] = useState<'details' | 'chat' | 'bids'>('details');
+  const [activeModalTab, setActiveModalTab] = useState<'details' | 'chat' | 'bids' | 'submission'>('details');
   const [pitch, setPitch] = useState('');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -63,6 +70,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
+  // Deliverables / Submissions
+  const [submission, setSubmission] = useState<TaskProofSubmission | null>(null);
+
+  // Reviews for this task
+  const [taskReviews, setTaskReviews] = useState<TaskReview[]>([]);
+
   // Review & Approval State
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [ratingScore, setRatingScore] = useState<number>(5);
@@ -71,6 +84,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   // Revision Request State
   const [isRevisionInputOpen, setIsRevisionInputOpen] = useState(false);
   const [revisionFeedback, setRevisionFeedback] = useState('');
+
+  // Arbitration State
+  const [isArbitrationInputOpen, setIsArbitrationInputOpen] = useState(false);
+  const [arbitrationReason, setArbitrationReason] = useState('');
 
   // Fast 1-click pitch templates
   const quickPitches = [
@@ -115,13 +132,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     if (task?.id) {
       setIsLoadingBids(true);
       fetch(`/api/bids?taskId=${task.id}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success && data.bids) {
             setBids(data.bids);
           }
         })
-        .catch(err => console.warn('Failed to fetch bids:', err))
+        .catch((err) => console.warn('Failed to fetch bids:', err))
         .finally(() => setIsLoadingBids(false));
     }
   }, [task?.id]);
@@ -130,15 +147,43 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   useEffect(() => {
     if (task?.id) {
       fetch(`/api/messages?taskId=${task.id}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success && data.messages) {
             setMessages(data.messages);
           }
         })
-        .catch(err => console.warn('Failed to fetch task messages:', err));
+        .catch((err) => console.warn('Failed to fetch task messages:', err));
     }
   }, [task?.id]);
+
+  // 4. Fetch Submissions if under review or completed
+  useEffect(() => {
+    if (task?.id && (task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED')) {
+      fetch(`/api/submissions?taskId=${task.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.submission) {
+            setSubmission(data.submission);
+          }
+        })
+        .catch((err) => console.warn('Failed to fetch submission:', err));
+    }
+  }, [task?.id, task?.status]);
+
+  // 5. Fetch Reviews for this task
+  useEffect(() => {
+    if (task?.id && task.status === 'COMPLETED') {
+      fetch(`/api/reviews?taskId=${task.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.reviews) {
+            setTaskReviews(data.reviews);
+          }
+        })
+        .catch((err) => console.warn('Failed to fetch reviews:', err));
+    }
+  }, [task?.id, task?.status]);
 
   useEffect(() => {
     if (activeModalTab === 'chat') {
@@ -150,7 +195,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   const isCustomer = user?.activeRole === 'CUSTOMER';
   const isAssignedToMe = user ? task.assignedToId === user.id : false;
-  const isMyPostedTask = user ? (task.clientId === user.id || task.clientName.includes('Vous') || task.clientName.includes('You')) : false;
+  const isMyPostedTask = user
+    ? task.clientId === user.id || task.clientName.includes('Vous') || task.clientName.includes('You')
+    : false;
 
   const rewardDH = Math.round(task.reward * 10);
   const rewardEur = Math.round(task.reward);
@@ -192,7 +239,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
       const data = await res.json();
       if (data.success && data.message) {
-        setMessages(prev => [...prev, data.message]);
+        setMessages((prev) => [...prev, data.message]);
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -216,6 +263,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     onClose();
   };
 
+  const handleSendArbitration = () => {
+    if (!arbitrationReason.trim()) return;
+    if (onRequestArbitration) {
+      onRequestArbitration(task.id, arbitrationReason.trim());
+    }
+    setIsArbitrationInputOpen(false);
+    onClose();
+  };
+
   return (
     <div
       onClick={(e) => {
@@ -224,7 +280,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
     >
       <div className="relative w-full max-w-2xl rounded-3xl bg-white p-5 sm:p-7 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto my-auto animate-in zoom-in-95 duration-150">
-        
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -240,9 +295,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         <div className="flex flex-wrap items-center gap-2 mb-3 pr-10">
           <span className="rounded-xl bg-slate-900 text-white px-3.5 py-1 text-xs font-black shadow-2xs">
             {task.taskMode === 'multi' && task.unitPriceDH ? (
-              <span>{task.unitPriceDH} DH/personne <span className="text-[10px] text-slate-300 font-normal">({rewardDH} DH total)</span></span>
+              <span>
+                {task.unitPriceDH} DH/personne <span className="text-[10px] text-slate-300 font-normal">({rewardDH} DH total)</span>
+              </span>
             ) : (
-              <span>{rewardDH} DH <span className="text-[10px] text-slate-300 font-normal">(~{rewardEur} €)</span></span>
+              <span>
+                {rewardDH} DH <span className="text-[10px] text-slate-300 font-normal">(~{rewardEur} €)</span>
+              </span>
             )}
           </span>
 
@@ -263,6 +322,23 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
             <FiClock /> Délai : {task.timeLimitHours}h
           </span>
+
+          {/* Status Badge */}
+          <span
+            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-black ${
+              task.status === 'IN_PROGRESS'
+                ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                : task.status === 'UNDER_REVIEW'
+                ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                : task.status === 'REVISION_REQUESTED'
+                ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                : task.status === 'COMPLETED'
+                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                : 'bg-slate-100 text-slate-700 border border-slate-200'
+            }`}
+          >
+            {task.status}
+          </span>
         </div>
 
         {/* Task Title */}
@@ -271,11 +347,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         </h2>
 
         {/* Modal Navigation Tabs */}
-        <div className="mt-4 flex border-b border-slate-200 gap-4 text-xs font-bold">
+        <div className="mt-4 flex border-b border-slate-200 gap-4 text-xs font-bold overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveModalTab('details')}
-            className={`pb-2.5 transition border-b-2 cursor-pointer ${
+            className={`pb-2.5 transition border-b-2 whitespace-nowrap cursor-pointer ${
               activeModalTab === 'details'
                 ? 'border-brand-700 text-brand-700'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -288,7 +364,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveModalTab('chat')}
-              className={`pb-2.5 transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
+              className={`pb-2.5 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 activeModalTab === 'chat'
                   ? 'border-brand-700 text-brand-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -303,7 +379,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveModalTab('bids')}
-              className={`pb-2.5 transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
+              className={`pb-2.5 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 activeModalTab === 'bids'
                   ? 'border-brand-700 text-brand-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -311,6 +387,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             >
               <FiUser />
               <span>Candidatures reçues ({bids.length})</span>
+            </button>
+          )}
+
+          {(task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED') && (
+            <button
+              type="button"
+              onClick={() => setActiveModalTab('submission')}
+              className={`pb-2.5 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                activeModalTab === 'submission'
+                  ? 'border-brand-700 text-brand-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <FiFileText />
+              <span>Livrables remis</span>
             </button>
           )}
         </div>
@@ -351,7 +442,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               </div>
             )}
 
-            {/* Client Details */}
+            {/* Client & Assigned Performer Details */}
             <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 border border-slate-200">
               <div className="flex items-center gap-3">
                 <img
@@ -373,6 +464,33 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Assigned Performer Banner if assigned */}
+            {task.assignedToName && (
+              <div className="rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                    {task.assignedToName.charAt(0)}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-emerald-950 block">
+                      Prestataire assigné : {task.assignedToName}
+                    </span>
+                    <span className="text-[11px] text-emerald-800">
+                      Mission en cours d’exécution sous garantie séquestre
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('chat')}
+                  className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <FiMessageSquare />
+                  <span>Chat</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -468,7 +586,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     « {bid.pitch} »
                   </p>
 
-                  <div className="flex justify-end pt-1">
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModalTab('chat');
+                      }}
+                      className="text-xs text-brand-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <FiMessageSquare /> Poser une question
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -488,10 +616,64 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         )}
 
+        {/* TAB 4: DELIVERABLES / SUBMISSIONS */}
+        {activeModalTab === 'submission' && (
+          <div className="mt-4 space-y-4">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                Rapport d'exécution remis
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-800 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200">
+                {submission?.reportText || 'Livrable final transmis par le prestataire.'}
+              </p>
+
+              {submission?.proofUrls && submission.proofUrls.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <h5 className="text-[11px] font-bold text-slate-700">Fichiers et liens joints :</h5>
+                  <div className="grid grid-cols-2 gap-2">
+                    {submission.proofUrls.map((url, idx) => (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-brand-700 hover:bg-brand-50 transition truncate"
+                      >
+                        <FiLink className="shrink-0" />
+                        <span className="truncate">Preuve {idx + 1}</span>
+                        <FiExternalLink className="text-[10px] shrink-0 ml-auto" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Show reviews if completed */}
+            {taskReviews.length > 0 && (
+              <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200 space-y-2">
+                <h4 className="text-xs font-extrabold text-emerald-950 flex items-center gap-1.5">
+                  <FiStar className="text-amber-500 fill-amber-400" />
+                  Avis et évaluation enregistrés :
+                </h4>
+                {taskReviews.map((rev) => (
+                  <div key={rev.id} className="text-xs text-emerald-900 bg-white p-3 rounded-xl border border-emerald-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-extrabold">{rev.authorName}</span>
+                      <span className="font-bold text-amber-600">★ {rev.rating}/5</span>
+                    </div>
+                    <p className="italic">« {rev.comment} »</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Panel Based on Role and State */}
         <div className="mt-6 pt-5 border-t border-slate-200">
           
-          {/* Scenario 1: Performer viewing active assigned task */}
+          {/* Performer viewing active assigned task */}
           {isAssignedToMe && task.status === 'IN_PROGRESS' && (
             <div className="rounded-2xl bg-amber-50 p-5 border border-amber-200">
               <div className="flex items-center justify-between mb-3">
@@ -499,9 +681,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   <FiClock className={`${isTimeExpired ? 'text-rose-600' : 'animate-spin'} text-base`} />
                   <span>{isTimeExpired ? 'Délai imparti écoulé' : 'Mission en cours d’exécution'}</span>
                 </div>
-                <div className={`font-mono text-sm font-extrabold px-3 py-1 rounded-lg ${
-                  isTimeExpired ? 'bg-rose-200 text-rose-950' : 'bg-amber-200 text-amber-950'
-                }`}>
+                <div
+                  className={`font-mono text-sm font-extrabold px-3 py-1 rounded-lg ${
+                    isTimeExpired ? 'bg-rose-200 text-rose-950' : 'bg-amber-200 text-amber-950'
+                  }`}
+                >
                   {timeLeft || `${task.timeLimitHours}h restantes`}
                 </div>
               </div>
@@ -518,7 +702,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </div>
           )}
 
-          {/* Scenario 2: Performer viewing open task to apply */}
+          {/* Performer viewing open task to apply */}
           {!isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
             <div>
               {appliedSuccess ? (
@@ -570,7 +754,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </div>
           )}
 
-          {/* Scenario 3: Customer viewing their task in review */}
+          {/* Customer viewing their task in review */}
           {(isCustomer || isMyPostedTask) && task.status === 'UNDER_REVIEW' && (
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
               <div className="text-xs">
@@ -578,7 +762,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   Travail livré par le prestataire
                 </span>
                 <p className="text-slate-600">
-                  Vérifiez les livrables dans l'onglet Détails. Si tout est conforme, validez le paiement ou demandez une révision.
+                  Vérifiez les livrables dans l'onglet Livrables. Si tout est conforme, validez le paiement ou demandez une révision.
                 </p>
               </div>
 
@@ -602,9 +786,35 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSendRevision}
-                      className="rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-1.5 text-xs font-bold text-white transition"
+                      className="rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-1.5 text-xs font-bold text-white transition cursor-pointer"
                     >
                       Envoyer la demande de retouche
+                    </button>
+                  </div>
+                </div>
+              ) : isArbitrationInputOpen ? (
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                  <textarea
+                    rows={2}
+                    value={arbitrationReason}
+                    onChange={(e) => setArbitrationReason(e.target.value)}
+                    placeholder="Motif du litige (ex: travail non conforme au cahier des charges)..."
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-brand-700"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsArbitrationInputOpen(false)}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendArbitration}
+                      className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-1.5 text-xs font-bold text-white transition cursor-pointer"
+                    >
+                      Transmettre aux arbitres Daman
                     </button>
                   </div>
                 </div>
@@ -622,10 +832,37 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     onClick={() => setIsRevisionInputOpen(true)}
                     className="flex items-center justify-center gap-1 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 text-xs font-bold transition cursor-pointer"
                   >
-                    <FiRepeat /> Demander une retouche
+                    <FiRepeat /> Demander retouche
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsArbitrationInputOpen(true)}
+                    className="flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2.5 text-xs font-bold transition cursor-pointer"
+                  >
+                    ⚖️ Arbitrage
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Customer Option to Cancel Open Task */}
+          {isMyPostedTask && task.status === 'OPEN' && (
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Voulez-vous annuler cette commande ? Le montant bloqué sous séquestre sera restitué immédiatement à votre solde disponible.')) {
+                    if (onCancelTask) {
+                      onCancelTask(task.id);
+                      onClose();
+                    }
+                  }
+                }}
+                className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <FiTrash2 /> Annuler la commande et récupérer les {Math.round(task.totalBudget * 10)} DH
+              </button>
             </div>
           )}
 
@@ -633,7 +870,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
         {/* REVIEW & RATING MODAL */}
         {isReviewModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-100">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
               <h3 className="text-base font-extrabold text-slate-900">
                 Évaluer le travail de {task.assignedToName || 'Prestataire'}

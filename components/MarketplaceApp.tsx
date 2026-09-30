@@ -35,6 +35,8 @@ import { TaskExamplesPage } from '@/components/TaskExamplesPage';
 import { TaskExample } from '@/lib/taskExamplesData';
 import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
 import { ProfilePageContent } from '@/components/ProfilePageContent';
+import { FloatingMessengerWidget } from '@/components/FloatingMessengerWidget';
+import { WorkzillaTaskTabs, WorkzillaTab } from '@/components/WorkzillaTaskTabs';
 import {
   WorkzillaHero,
   WorkzillaProofBar,
@@ -59,7 +61,8 @@ import {
   FiLock,
   FiUser,
   FiList,
-  FiGrid
+  FiGrid,
+  FiMessageSquare
 } from 'react-icons/fi';
 
 interface MarketplaceAppProps {
@@ -93,6 +96,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const [transactions, setTransactions] = useState<WalletTransaction[]>(initialTransactions);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
+  // Floating Chat Widget State
+  const [isChatWidgetOpen, setIsChatWidgetOpen] = useState<boolean>(false);
+  const [chatActiveTaskId, setChatActiveTaskId] = useState<string | null>(null);
 
   // Work-zilla Pre-filled Task Input State
   const [prefillTaskTitle, setPrefillTaskTitle] = useState<string>('');
@@ -109,7 +115,8 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   };
 
   // View & Filter State
-  const activeTab = (searchParams.get('tab') as 'examples' | 'live' | 'explore' | 'my-tasks') || 'examples';
+  const activeTab = (searchParams.get('tab') as 'examples' | 'live' | 'explore' | 'my-tasks' | 'new' | 'open' | 'history') || 'examples';
+  const [workzillaSubTab, setWorkzillaSubTab] = useState<WorkzillaTab>('new');
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [myTasksStatusFilter, setMyTasksStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'under_review' | 'completed'>('all');
   const [filterUrgent, setFilterUrgent] = useState<boolean>(false);
@@ -156,6 +163,13 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     }
   }, [searchParams, locale, router]);
 
+  // If ?wallet=true query param is present and not on wallet page, redirect smoothly to dedicated page
+  useEffect(() => {
+    if (isWalletOpen && viewMode !== 'wallet') {
+      router.push(`/${locale}/wallet`);
+    }
+  }, [isWalletOpen, viewMode, locale, router]);
+
   // Feedback Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -180,15 +194,17 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // Direct Post from Hero
   const handleDirectHeroPost = (title: string) => {
-    if (title.trim()) {
-      router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title.trim())}`);
-    } else {
-      router.push(`/${locale}/tasks/new`);
-    }
+    router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title)}`);
   };
 
   const handleOpenCreateTask = () => {
     router.push(`/${locale}/tasks/new`);
+  };
+
+  // Open Chat for specific task
+  const handleOpenChatForTask = (task: Task) => {
+    setChatActiveTaskId(task.id);
+    setIsChatWidgetOpen(true);
   };
 
   // Navigate to task details modal route: /:locale/task/:slug
@@ -261,7 +277,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     // Optimistic UI Update
     setTasks(prev => [newTask, ...prev]);
 
-    // Check if customer has enough available balance, deduct or mark as escrow deposit
+    // Deduct escrow balance
     await updateProfile({
       customerTasksPosted: (profile.customerTasksPosted || 0) + 1,
       balanceEscrow: (profile.balanceEscrow || 0) + newTaskData.totalBudget,
@@ -359,6 +375,79 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       assignedToName: performerName,
       assignedAt,
     });
+  };
+
+  const handleCancelTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated: Task = {
+      ...task,
+      status: 'CANCELLED',
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+
+    // Refund escrow amount back to available balance
+    if (profile) {
+      await updateProfile({
+        balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - task.totalBudget),
+        balanceAvailable: (profile.balanceAvailable || 0) + task.totalBudget,
+      });
+
+      const refundTx: WalletTransaction = {
+        id: `tx_${Date.now()}`,
+        userId: profile.id,
+        type: 'REFUND',
+        amount: task.totalBudget,
+        currency: 'EUR',
+        description: `Remboursement séquestre commande annulée #${taskId.slice(0, 8)} (${Math.round(task.totalBudget * 10)} DH)`,
+        createdAt: t('justNow'),
+        status: 'COMPLETED',
+      };
+      setTransactions(prev => [refundTx, ...prev]);
+
+      await recordDynamicTransaction({
+        userId: profile.id,
+        type: 'REFUND',
+        amount: task.totalBudget,
+        currency: 'EUR',
+        description: refundTx.description,
+        status: 'COMPLETED',
+      });
+    }
+
+    showToast(`Commande annulée : ${Math.round(task.totalBudget * 10)} DH restitués à votre solde disponible.`);
+    await updateDynamicTask(taskId, { status: 'CANCELLED' });
+  };
+
+  const handleRequestArbitration = async (taskId: string, reason: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated: Task = {
+      ...task,
+      status: 'ARBITRATION',
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+    showToast('Demande d’arbitrage transmise aux modérateurs Tâches.ma.');
+
+    await updateDynamicTask(taskId, { status: 'ARBITRATION' });
+
+    if (profile) {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Utilisateur',
+          senderAvatar: profile.avatarUrl || '',
+          content: `⚖️ Litige ouvert en arbitrage. Motif : ${reason}`,
+        }),
+      });
+    }
   };
 
   const handleRequestRevision = async (taskId: string, feedback: string) => {
@@ -565,86 +654,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     return tasks.map(t => getLocalizedTask(t, locale));
   }, [tasks, locale]);
 
-  // My Tasks list helper
-  const myTasksList = useMemo(() => {
-    if (!isAuthenticated || !profile) return [];
-    if (profile.activeRole === 'CUSTOMER') {
-      return localizedTasks.filter(
-        (t) =>
-          t.clientId === profile.id ||
-          t.clientName.includes('Vous') ||
-          t.clientName.includes('You')
-      );
-    }
-    return localizedTasks.filter(
-      (t) =>
-        t.assignedToId === profile.id ||
-        t.status === 'IN_PROGRESS' ||
-        t.status === 'UNDER_REVIEW'
-    );
-  }, [localizedTasks, isAuthenticated, profile]);
-
-  const myTasksCounts = useMemo(() => {
-    return {
-      all: myTasksList.length,
-      open: myTasksList.filter((t) => t.status === 'OPEN').length,
-      in_progress: myTasksList.filter((t) => t.status === 'IN_PROGRESS').length,
-      under_review: myTasksList.filter((t) => t.status === 'UNDER_REVIEW').length,
-      completed: myTasksList.filter((t) => t.status === 'COMPLETED').length,
-    };
-  }, [myTasksList]);
-
-  // Filtered Task List
-  const filteredTasks = useMemo(() => {
-    let list = localizedTasks;
-
-    // Filter by Active Tab
-    if (activeTab === 'my-tasks') {
-      list = myTasksList;
-
-      // Filter by My-Tasks Status Sub-tab
-      if (myTasksStatusFilter === 'open') {
-        list = list.filter((t) => t.status === 'OPEN');
-      } else if (myTasksStatusFilter === 'in_progress') {
-        list = list.filter((t) => t.status === 'IN_PROGRESS');
-      } else if (myTasksStatusFilter === 'under_review') {
-        list = list.filter((t) => t.status === 'UNDER_REVIEW');
-      } else if (myTasksStatusFilter === 'completed') {
-        list = list.filter((t) => t.status === 'COMPLETED');
-      }
-    }
-
-    // Filter by Category
-    if (selectedCategory !== 'all') {
-      list = list.filter((t) => t.category === selectedCategory);
-    }
-
-    // Filter by Urgency (< 6h)
-    if (filterUrgent) {
-      list = list.filter((t) => t.timeLimitHours <= 6);
-    }
-
-    // Filter by Search Query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q)
-      );
-    }
-
-    return list;
-  }, [
-    localizedTasks,
-    activeTab,
-    myTasksList,
-    myTasksStatusFilter,
-    selectedCategory,
-    filterUrgent,
-    searchQuery,
-  ]);
-
   // Current active modal task objects
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null;
@@ -702,373 +711,100 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             router.push(`/${locale}/tasks?tab=my-tasks`);
           }
         }}
-        activeTab={activeTab}
+        activeTab={activeTab === 'my-tasks' ? 'my-tasks' : activeTab === 'live' ? 'live' : 'explore'}
         setActiveTab={(tab) => {
           if (tab === 'my-tasks' && !isAuthenticated) {
             openAuthModal('login', 'Connectez-vous pour voir vos missions');
             return;
           }
           if (viewMode === 'tasks') {
-            updateQuery({ tab: tab === 'explore' ? null : 'my-tasks' });
+            updateQuery({ tab: tab === 'explore' ? null : tab });
           } else {
-            router.push(`/${locale}/tasks${tab === 'my-tasks' ? '?tab=my-tasks' : ''}`);
+            router.push(`/${locale}/tasks${tab === 'my-tasks' ? '?tab=my-tasks' : tab === 'live' ? '?tab=live' : ''}`);
           }
         }}
       />
 
-
-      {viewMode === 'tasks' ? (
-        /* DEDICATED ALL TASKS CATALOG / EXAMPLES PAGE */
-        activeTab === 'examples' || activeTab === 'explore' ? (
-          <main className="flex-1">
-            {/* Top View Selector Bar */}
-            <div className="bg-white border-b border-slate-200 py-3">
-              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
-                  <button
-                    onClick={() => updateQuery({ tab: 'examples' })}
-                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer bg-white text-brand-700 shadow-xs"
-                  >
-                    ⚡ {locale === 'ar' ? 'أمثلة المهام المنجزة' : locale === 'ru' ? 'Примеры заданий' : locale === 'en' ? 'Task Examples' : 'Exemples de missions'}
-                  </button>
-                  <button
-                    onClick={() => updateQuery({ tab: 'live' })}
-                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
-                  >
-                    🔴 {locale === 'ar' ? `مهام مفتوحة (${tasks.length})` : locale === 'ru' ? `Открытые (${tasks.length})` : locale === 'en' ? `Live Tasks (${tasks.length})` : `Missions en direct (${tasks.length})`}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        openAuthModal('login', 'Connectez-vous pour voir vos missions');
-                        return;
-                      }
-                      updateQuery({ tab: 'my-tasks' });
-                    }}
-                    className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
-                  >
-                    👤 {user.activeRole === 'CUSTOMER' ? t('navMyOrders') : t('navMyMissions')}
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleOpenCreateTask}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
-                  >
-                    <FiPlus className="text-sm" />
-                    <span>{t('btnPostTask')}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Task Examples Component (Work-zilla Style) */}
-            <TaskExamplesPage
-              onCopyTask={handleCopyTaskExample}
-              onPostNewTask={handleOpenCreateTask}
-            />
-          </main>
-        ) : (
-          <main className="flex-1 py-8 sm:py-12 bg-slate-50/60">
-            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-
-              {/* Breadcrumb Navigation */}
-              <nav className="flex items-center gap-2 text-xs text-slate-500 mb-6">
+      {viewMode === 'profile' ? (
+        /* DEDICATED WORKER / CUSTOMER PROFILE PAGE */
+        <ProfilePageContent />
+      ) : viewMode === 'tasks' ? (
+        /* DEDICATED ALL TASKS CATALOG / WORK-ZILLA TABS VIEW */
+        <main className="flex-1 py-6 sm:py-10 bg-slate-50">
+          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
+            
+            {/* Top Navigation Mode Pills */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
                 <button
-                  onClick={() => router.push(`/${locale}`)}
-                  className="hover:text-brand-700 transition-colors font-medium cursor-pointer"
+                  type="button"
+                  onClick={() => updateQuery({ tab: 'examples' })}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'examples' ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Accueil
+                  ⚡ Exemples de missions
                 </button>
-                <span>/</span>
-                <span className="font-bold text-slate-900">
-                  {activeTab === 'live'
-                    ? 'Missions ouvertes en direct'
-                    : user.activeRole === 'CUSTOMER'
-                      ? t('navMyOrders')
-                      : t('navMyMissions')}
-                </span>
-              </nav>
-
-              {/* Dedicated Catalog Banner */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                  <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 border border-brand-200/80 px-3 py-1 text-xs font-bold text-brand-700 mb-2.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{activeTab === 'live' ? 'Missions en direct' : t('navExplore')}</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                      {activeTab === 'live'
-                        ? t('tasksAvailable', { count: filteredTasks.length })
-                        : user.activeRole === 'CUSTOMER'
-                          ? t('tasksMyOrders', { count: filteredTasks.length })
-                          : t('tasksMyMissions', { count: filteredTasks.length })}
-                    </h1>
-                    <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                      Parcourez et postulez aux micro-services rémunérés en Dirhams (MAD) avec paiement 100% garanti sous séquestre (Daman).
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 shrink-0">
-                    {/* Tab Selector */}
-                    <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
-                      <button
-                        onClick={() => updateQuery({ tab: 'examples' })}
-                        className="px-3.5 py-1.5 rounded-lg transition-all cursor-pointer text-slate-600 hover:text-slate-900"
-                      >
-                        ⚡ Exemples
-                      </button>
-                      <button
-                        onClick={() => updateQuery({ tab: 'live' })}
-                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'live'
-                            ? 'bg-white text-brand-700 shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                      >
-                        🔴 En direct
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!isAuthenticated) {
-                            openAuthModal('login', 'Connectez-vous pour voir vos missions');
-                            return;
-                          }
-                          updateQuery({ tab: 'my-tasks' });
-                        }}
-                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'my-tasks'
-                            ? 'bg-white text-brand-700 shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                      >
-                        {user.activeRole === 'CUSTOMER' ? t('navMyOrders') : t('navMyMissions')}
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={loadSupabaseData}
-                      disabled={isSyncing}
-                      title="Synchroniser avec Supabase"
-                      className="flex items-center gap-1.5 rounded-xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer shadow-2xs"
-                    >
-                      <FiRefreshCw className={`text-xs ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
-                      <span>Sync</span>
-                    </button>
-                  </div>
-                </div>
-
-              {/* Category Filter Pills */}
-              <div className="mt-6 pt-6 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {categories.map((cat) => {
-                  const isSelected = selectedCategory === cat;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition whitespace-nowrap cursor-pointer ${isSelected
-                          ? 'bg-brand-700 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
-                        }`}
-                    >
-                      {getCategoryLabel(cat)}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Sub-status filter when in My-Tasks */}
-              {activeTab === 'my-tasks' && isAuthenticated && (
-                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {[
-                    { id: 'all', label: `Toutes (${myTasksCounts.all})` },
-                    { id: 'open', label: `En attente (${myTasksCounts.open})` },
-                    { id: 'in_progress', label: `En cours (${myTasksCounts.in_progress})` },
-                    { id: 'under_review', label: `À vérifier (${myTasksCounts.under_review})` },
-                    { id: 'completed', label: `Terminées (${myTasksCounts.completed})` },
-                  ].map((st) => (
-                    <button
-                      key={st.id}
-                      onClick={() => setMyTasksStatusFilter(st.id as any)}
-                      className={`rounded-lg px-3 py-1 text-xs font-extrabold transition whitespace-nowrap cursor-pointer ${
-                        myTasksStatusFilter === st.id
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
-                      }`}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Filters, Search & Layout View Controls */}
-            <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
-                <FiSearch className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-3.5 text-slate-400 text-sm`} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('searchPlaceholder')}
-                  className={`w-full rounded-xl border border-slate-300 bg-white py-2.5 ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'
-                    } text-xs text-slate-900 outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700 shadow-2xs`}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className={`absolute ${isRTL ? 'left-3.5' : 'right-3.5'} top-3 text-[10px] text-slate-400 hover:text-slate-800 font-bold`}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* View Switcher: List vs Grid */}
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setViewLayout('list')}
-                    title="Vue liste compacte"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      viewLayout === 'list'
-                        ? 'bg-white text-brand-800 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <FiList />
-                    <span>Liste</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewLayout('grid')}
-                    title="Vue cartes"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      viewLayout === 'grid'
-                        ? 'bg-white text-brand-800 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <FiGrid />
-                    <span>Cartes</span>
-                  </button>
-                </div>
-
                 <button
-                  onClick={() => setFilterUrgent(!filterUrgent)}
-                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold border transition cursor-pointer ${filterUrgent
-                      ? 'border-amber-400 bg-amber-50 text-amber-900'
-                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
+                  type="button"
+                  onClick={() => updateQuery({ tab: 'live' })}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'live' || activeTab === 'explore' || activeTab === 'new' || activeTab === 'open' || activeTab === 'history'
+                      ? 'bg-white text-brand-800 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  <FiClock className={filterUrgent ? 'text-amber-600' : 'text-slate-400'} />
-                  <span>{t('filterUrgent')}</span>
+                  🔴 Tableau de bord Work-zilla
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenCreateTask}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
+                >
+                  <FiPlus className="text-sm font-black" />
+                  <span>Publier une mission</span>
                 </button>
 
-                {(filterUrgent || searchQuery || selectedCategory !== 'all' || myTasksStatusFilter !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setFilterUrgent(false);
-                      setSearchQuery('');
-                      setSelectedCategory('all');
-                      setMyTasksStatusFilter('all');
-                    }}
-                    className="rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-300 transition cursor-pointer shadow-2xs"
-                  >
-                    {t('filterReset')}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={loadSupabaseData}
+                  disabled={isSyncing}
+                  className="p-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                  title="Synchroniser"
+                >
+                  <FiRefreshCw className={`text-xs ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+                </button>
               </div>
             </div>
 
-            {/* Task Content: Compact List (Default Work-zilla) or Grid */}
-            <div>
-              {filteredTasks.length === 0 ? (
-                activeTab === 'my-tasks' && !isAuthenticated ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 text-xl mb-3">
-                      <FiLock />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900">Connectez-vous pour accéder à vos tâches</h3>
-                    <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
-                      Connectez-vous à votre compte pour suivre vos commandes publiées ou vos missions en cours.
-                    </p>
-                    <div className="mt-4 flex items-center justify-center gap-3">
-                      <button
-                        onClick={() => openAuthModal('login', 'Connectez-vous pour voir vos tâches')}
-                        className="rounded-xl bg-brand-700 hover:bg-brand-800 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition cursor-pointer"
-                      >
-                        Se connecter
-                      </button>
-                      <button
-                        onClick={() => openAuthModal('signup', 'Créez un compte pour voir vos tâches')}
-                        className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-700 transition cursor-pointer"
-                      >
-                        Créer un compte
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs">
-                    <FiShield className="mx-auto text-3xl text-slate-400 mb-2" />
-                    <h3 className="text-base font-bold text-slate-900">{t('noTasksFound')}</h3>
-                    <p className="mt-1 text-xs text-slate-600">
-                      {t('noTasksDesc')}
-                    </p>
-                    <div className="mt-4 flex items-center justify-center gap-3">
-                      <button
-                        onClick={() => {
-                          setFilterUrgent(false);
-                          setSearchQuery('');
-                          setSelectedCategory('all');
-                          setMyTasksStatusFilter('all');
-                        }}
-                        className="rounded-xl bg-slate-100 hover:bg-slate-200 px-4 py-2 text-xs font-bold text-slate-800 transition cursor-pointer"
-                      >
-                        {t('filterReset')}
-                      </button>
-                      <button
-                        onClick={handleOpenCreateTask}
-                        className="rounded-xl bg-brand-700 hover:bg-brand-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition cursor-pointer"
-                      >
-                        {t('btnPostTask')}
-                      </button>
-                    </div>
-                  </div>
-                )
-              ) : viewLayout === 'list' ? (
-                <div className="space-y-2.5">
-                  {filteredTasks.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      userRole={user.activeRole}
-                      isMyTaskView={activeTab === 'my-tasks'}
-                      onSelectTask={handleOpenTask}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                  {filteredTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      userRole={user.activeRole}
-                      onSelectTask={handleOpenTask}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
+            {/* TAB CONTENT */}
+            {activeTab === 'examples' ? (
+              <TaskExamplesPage
+                onCopyTask={handleCopyTaskExample}
+                onPostNewTask={handleOpenCreateTask}
+              />
+            ) : (
+              <WorkzillaTaskTabs
+                tasks={localizedTasks}
+                user={user}
+                activeTab={workzillaSubTab}
+                onTabChange={(st) => setWorkzillaSubTab(st)}
+                onSelectTask={handleOpenTask}
+                onOpenCreateTask={handleOpenCreateTask}
+                onOpenChatForTask={handleOpenChatForTask}
+                onOpenProofDrawer={(task) => updateQuery({ proof: task.id })}
+                onApproveTask={(task) => handleApproveWork(task.id)}
+                onRequestRevision={(task) => handleRequestRevision(task.id, 'Veuillez effectuer les corrections demandées.')}
+                onCancelTask={(task) => handleCancelTask(task.id)}
+              />
+            )}
           </div>
         </main>
-        )
       ) : viewMode === 'wallet' ? (
-        /* DEDICATED PROPER WALLET & ESCROW PAGE */
+        /* DEDICATED WALLET & ESCROW PAGE */
         !isAuthenticated ? (
           <div className="flex-1 flex items-center justify-center p-8 bg-slate-50 min-h-[60vh]">
             <div className="max-w-md w-full rounded-2xl bg-white border border-slate-200 p-8 text-center shadow-xs">
@@ -1103,11 +839,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             onWithdraw={handleWithdraw}
           />
         )
-      ) : viewMode === 'profile' ? (
-        /* DEDICATED WORKER & USER PROFILE MANAGEMENT HUB */
-        <main className="flex-1">
-          <ProfilePageContent />
-        </main>
       ) : viewMode === 'concepts' ? (
         /* DEDICATED CONCEPTS & ARCHITECTURE EXPLAINER PAGE */
         <ConceptExplainerPage />
@@ -1128,17 +859,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           {/* 3. Universal Categories Grid */}
           <WorkzillaCategoryGrid
             onSelectCategory={(catKey) => {
-              setPrefillTaskCategory(catKey);
-              if (!isAuthenticated) {
-                openAuthModal('login', 'Connectez-vous pour publier une tâche', () => {
-                  updateQuery({ create: 'true' });
-                });
-                return;
-              }
-              if (profile?.activeRole !== 'CUSTOMER') {
-                toggleRole('CUSTOMER');
-              }
-              updateQuery({ create: 'true' });
+              router.push(`/${locale}/tasks/new?category=${encodeURIComponent(catKey)}`);
             }}
           />
 
@@ -1147,7 +868,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             onPostTask={handleOpenCreateTask}
           />
 
-          {/* 5. Live Marketplace Feed (Compact High-Density List) */}
+          {/* 5. Live Marketplace Feed (Compact High-Density List with Chat Access) */}
           <section id="marketplace-feed" className="py-14 sm:py-20 bg-white border-t border-slate-200">
             <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
 
@@ -1156,10 +877,10 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                 <div>
                   <p className="section-kicker">Missions en direct</p>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-                    Dernières tâches publiées
+                    Dernières tâches publiées au Maroc
                   </h2>
                   <p className="mt-1.5 text-xs sm:text-sm text-slate-600">
-                    Consultez les dernières micro-tâches ou accédez au catalogue complet.
+                    Consultez les dernières micro-tâches ou accédez au tableau de bord complet avec messagerie intégrée.
                   </p>
                 </div>
 
@@ -1167,7 +888,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                   onClick={() => router.push(`/${locale}/tasks`)}
                   className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-brand-700 hover:text-brand-800 hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
                 >
-                  <span>{t('navExplore')}</span>
+                  <span>Voir le catalogue ({tasks.length})</span>
                   {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
                 </button>
               </div>
@@ -1180,6 +901,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                     task={task}
                     userRole={user.activeRole}
                     onSelectTask={handleOpenTask}
+                    onOpenChat={handleOpenChatForTask}
                   />
                 ))}
               </div>
@@ -1208,10 +930,20 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       )}
 
       {/* Multi-Age Help Center with WhatsApp Support & FAQ */}
-      {viewMode !== 'wallet' && <WorkzillaHelpCenter />}
+      {viewMode !== 'wallet' && viewMode !== 'profile' && <WorkzillaHelpCenter />}
 
       {/* Functional Moroccan Footer */}
       <WorkzillaFooter />
+
+      {/* GLOBAL FLOATING WORKZILLA MESSENGER DOCK WIDGET */}
+      <FloatingMessengerWidget
+        currentUser={profile}
+        tasks={tasks}
+        activeTaskId={chatActiveTaskId}
+        isOpen={isChatWidgetOpen}
+        onToggle={() => setIsChatWidgetOpen(!isChatWidgetOpen)}
+        onOpenTaskDetails={handleOpenTask}
+      />
 
       {/* Modals with URL Route Synchronization */}
       <TaskDetailModal
@@ -1226,25 +958,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         onApproveWork={handleApproveWork}
         onAssignPerformer={handleAssignPerformer}
         onRequestRevision={handleRequestRevision}
+        onCancelTask={handleCancelTask}
+        onRequestArbitration={handleRequestArbitration}
       />
-
-      {isAuthenticated && (
-        <CreateTaskModal
-          isOpen={isCreateModalOpen}
-          onClose={() => {
-            updateQuery({ create: null });
-            setPrefillTaskTitle('');
-            setPrefillTaskDesc('');
-            setPrefillTaskBudget(undefined);
-            setPrefillTaskCategory(undefined);
-          }}
-          onCreateTask={handleCreateTask}
-          initialTitle={prefillTaskTitle}
-          initialDescription={prefillTaskDesc}
-          initialRewardDH={prefillTaskBudget}
-          initialCategoryKey={prefillTaskCategory}
-        />
-      )}
 
       <ProofSubmissionDrawer
         task={proofTask}
@@ -1252,18 +968,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         onSubmitProof={handleSubmitProof}
       />
 
-      {/* Backwards-compatibility fallback modal if opened via embedded modal query */}
-      {viewMode !== 'wallet' && (
-        <WalletModal
-          isOpen={isWalletOpen}
-          onClose={() => updateQuery({ wallet: null })}
-          user={user}
-          transactions={transactions}
-          onDeposit={handleDeposit}
-          onWithdraw={handleWithdraw}
-        />
-      )}
-
+      {/* Qualification Modal */}
       <QualificationModal
         isOpen={isQualificationOpen}
         onClose={() => updateQuery({ test: null })}
@@ -1273,7 +978,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
           }
           showToast(t('toastQualificationPassed'));
         }}
-
       />
     </div>
   );
