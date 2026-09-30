@@ -579,6 +579,227 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     }
   };
 
+  const handleProposePartialSettlement = async (
+    taskId: string,
+    percentage: number,
+    reason: string,
+    rating: number,
+    reviewComment: string
+  ) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const amountDH = Math.round(task.reward * 10 * (percentage / 100));
+
+    const proposal = {
+      percentage,
+      amountDH,
+      reason,
+      proposedBy: 'CUSTOMER' as const,
+      rating,
+      reviewComment,
+      status: 'PENDING' as const,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated: Task = {
+      ...task,
+      settlementProposal: proposal,
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+    showToast(`Proposition de règlement à ${percentage}% (${amountDH} DH) transmise au freelance.`);
+
+    await updateDynamicTask(taskId, {
+      settlementProposal: proposal,
+    } as any);
+
+    if (profile) {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Client',
+          senderAvatar: profile.avatarUrl || '',
+          content: `🤝 Proposition d'accord amiable : Règlement partiel de ${percentage}% (${amountDH} DH). Motif : « ${reason} »`,
+        }),
+      });
+    }
+  };
+
+  const handleAcceptPartialSettlement = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || !task.settlementProposal) return;
+
+    const proposal = task.settlementProposal;
+    const percentage = proposal.percentage;
+    const totalGrossEur = task.reward;
+    const performerGrossEur = Number((totalGrossEur * (percentage / 100)).toFixed(2));
+    const clientRefundEur = Number((totalGrossEur - performerGrossEur).toFixed(2));
+    
+    const commissionRate = PLATFORM_PERFORMER_COMMISSION_RATE; // 15%
+    const commissionEur = Number((performerGrossEur * commissionRate).toFixed(2));
+    const performerNetEur = Number((performerGrossEur - commissionEur).toFixed(2));
+
+    const performerGrossDH = Math.round(performerGrossEur * 10);
+    const performerNetDH = Math.round(performerNetEur * 10);
+    const clientRefundDH = Math.round(clientRefundEur * 10);
+    const commissionDH = Math.round(commissionEur * 10);
+
+    const updatedProposal = {
+      ...proposal,
+      status: 'ACCEPTED' as const,
+    };
+
+    const updated: Task = {
+      ...task,
+      status: 'COMPLETED',
+      completedAt: new Date().toISOString(),
+      settlementProposal: updatedProposal,
+      finalPayoutPercentage: percentage,
+      finalPerformerAmountDH: performerGrossDH,
+      finalClientRefundDH: clientRefundDH,
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+
+    // Update balances
+    if (isAuthenticated && profile) {
+      if (profile.activeRole === 'CUSTOMER') {
+        await updateProfile({
+          balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - task.totalBudget),
+          balanceAvailable: (profile.balanceAvailable || 0) + clientRefundEur,
+          customerTotalSpent: (profile.customerTotalSpent || 0) + (task.totalBudget - clientRefundEur),
+        });
+      } else {
+        await updateProfile({
+          balanceAvailable: (profile.balanceAvailable || 0) + performerNetEur,
+          performerCompletedTasks: (profile.performerCompletedTasks || 0) + 1,
+        });
+      }
+    }
+
+    showToast(`Accord amiable validé : ${performerNetDH} DH encaissés, ${clientRefundDH} DH remboursés au client.`);
+
+    // Persist in Supabase
+    await updateDynamicTask(taskId, {
+      status: 'COMPLETED',
+      completedAt: updated.completedAt,
+      settlementProposal: updatedProposal,
+      finalPayoutPercentage: percentage,
+      finalPerformerAmountDH: performerGrossDH,
+      finalClientRefundDH: clientRefundDH,
+    } as any);
+
+    // Record Escrow release for Performer portion
+    await recordDynamicTransaction({
+      userId: task.assignedToId || profile?.id || user.id,
+      type: 'ESCROW_RELEASE',
+      amount: performerGrossEur,
+      currency: 'EUR',
+      description: `Règlement partiel (${percentage}%) mission #${taskId.slice(0, 8)} (${performerGrossDH} DH)`,
+      status: 'COMPLETED',
+    });
+
+    // Record Commission for Performer portion
+    if (commissionEur > 0) {
+      await recordDynamicTransaction({
+        userId: task.assignedToId || profile?.id || user.id,
+        type: 'COMMISSION',
+        amount: -commissionEur,
+        currency: 'EUR',
+        description: `Commission Tâches.ma (15%) sur règlement partiel • -${commissionDH} DH`,
+        status: 'COMPLETED',
+      });
+    }
+
+    // Record Refund for Customer portion
+    if (clientRefundEur > 0) {
+      await recordDynamicTransaction({
+        userId: task.clientId || profile?.id || user.id,
+        type: 'REFUND',
+        amount: clientRefundEur,
+        currency: 'EUR',
+        description: `Remboursement partiel suite à accord (${100 - percentage}%) mission #${taskId.slice(0, 8)} (+${clientRefundDH} DH)`,
+        status: 'COMPLETED',
+      });
+    }
+
+    // Save review if client provided one in proposal
+    if (proposal.rating && task.assignedToId) {
+      try {
+        await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId,
+            authorId: task.clientId || profile?.id,
+            authorName: task.clientName || 'Client',
+            targetUserId: task.assignedToId,
+            rating: proposal.rating,
+            comment: proposal.reviewComment || 'Règlement partiel accepté d’un commun accord.',
+          }),
+        });
+      } catch (err) {
+        console.warn('Failed to save settlement review:', err);
+      }
+    }
+
+    // Announce in chat
+    if (profile) {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Utilisateur',
+          senderAvatar: profile.avatarUrl || '',
+          content: `✅ Accord mutuel finalisé : ${percentage}% (${performerGrossDH} DH) versés au prestataire, ${clientRefundDH} DH restitués au client. Mission terminée.`,
+        }),
+      });
+    }
+  };
+
+  const handleRejectPartialSettlement = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedProposal = task.settlementProposal
+      ? { ...task.settlementProposal, status: 'REJECTED' as const }
+      : undefined;
+
+    const updated: Task = {
+      ...task,
+      status: 'ARBITRATION',
+      settlementProposal: updatedProposal,
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+    showToast('Proposition refusée. Dossier transmis aux arbitres Tâches.ma.');
+
+    await updateDynamicTask(taskId, {
+      status: 'ARBITRATION',
+      settlementProposal: updatedProposal,
+    } as any);
+
+    if (profile) {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Prestataire',
+          senderAvatar: profile.avatarUrl || '',
+          content: `❌ Proposition de règlement partiel refusée. Escalade automatique vers l'arbitrage pour décision du modérateur.`,
+        }),
+      });
+    }
+  };
+
   const handleDeposit = async (amountDH: number) => {
     if (!isAuthenticated || !profile) {
       openAuthModal('login', 'Connectez-vous pour effectuer un dépôt');
@@ -960,6 +1181,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         onRequestRevision={handleRequestRevision}
         onCancelTask={handleCancelTask}
         onRequestArbitration={handleRequestArbitration}
+        onProposePartialSettlement={handleProposePartialSettlement}
+        onAcceptPartialSettlement={handleAcceptPartialSettlement}
+        onRejectPartialSettlement={handleRejectPartialSettlement}
       />
 
       <ProofSubmissionDrawer

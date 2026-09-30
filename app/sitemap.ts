@@ -19,6 +19,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/ar/concepts',
     '/fr/wallet',
     '/ar/wallet',
+    '/fr/daman',
+    '/ar/daman',
+    '/fr/terms',
+    '/ar/terms',
+    '/fr/privacy',
+    '/ar/privacy',
   ];
 
   const staticEntries: MetadataRoute.Sitemap = staticPaths.map((path) => ({

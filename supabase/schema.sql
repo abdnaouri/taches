@@ -1,5 +1,5 @@
 -- ====================================================================
--- SUPABASE SCHEMA FOR TÂCHES (WORK-ZILLA + UNU HYBRID)
+-- SUPABASE SCHEMA FOR TÂCHES.MA (WORK-ZILLA + UNU HYBRID)
 -- IDEMPOTENT & READY FOR EXECUTION IN SUPABASE SQL EDITOR
 -- ====================================================================
 
@@ -44,7 +44,7 @@ create table if not exists public.profiles (
   balance_escrow numeric(12, 2) default 0.00 check (balance_escrow >= 0),
   is_admin boolean default false,
   
-  -- Performer fields
+  -- Performer stats & badges
   performer_tier performer_tier default 'level_1',
   performer_xp integer default 0,
   performer_rating numeric(3, 2) default 5.00,
@@ -57,8 +57,56 @@ create table if not exists public.profiles (
   customer_total_spent numeric(12, 2) default 0.00,
   customer_tasks_posted integer default 0,
 
+  -- Extended Professional Profile
+  headline text,
+  bio text,
+  city text default 'Casablanca',
+  phone text,
+  whatsapp_enabled boolean default true,
+  cin text,
+  cin_verified boolean default false,
+  languages jsonb default '[]'::jsonb,
+  skills text[] default '{}',
+  specialized_categories text[] default '{}',
+  min_task_reward numeric(10, 2) default 30.00,
+  is_available_for_hire boolean default true,
+
+  -- Moroccan Bank Payout Details
+  bank_name text default 'CIH Bank',
+  bank_rib text,
+  bank_account_holder text,
+
+  -- Portfolio & Certifications
+  portfolio jsonb default '[]'::jsonb,
+  certifications jsonb default '[]'::jsonb,
+
+  -- Notification Preferences
+  notify_whatsapp boolean default true,
+  notify_email boolean default true,
+
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Idempotent column additions for existing profiles table
+alter table public.profiles add column if not exists headline text;
+alter table public.profiles add column if not exists bio text;
+alter table public.profiles add column if not exists city text default 'Casablanca';
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists whatsapp_enabled boolean default true;
+alter table public.profiles add column if not exists cin text;
+alter table public.profiles add column if not exists cin_verified boolean default false;
+alter table public.profiles add column if not exists languages jsonb default '[]'::jsonb;
+alter table public.profiles add column if not exists skills text[] default '{}';
+alter table public.profiles add column if not exists specialized_categories text[] default '{}';
+alter table public.profiles add column if not exists min_task_reward numeric(10, 2) default 30.00;
+alter table public.profiles add column if not exists is_available_for_hire boolean default true;
+alter table public.profiles add column if not exists bank_name text default 'CIH Bank';
+alter table public.profiles add column if not exists bank_rib text;
+alter table public.profiles add column if not exists bank_account_holder text;
+alter table public.profiles add column if not exists portfolio jsonb default '[]'::jsonb;
+alter table public.profiles add column if not exists certifications jsonb default '[]'::jsonb;
+alter table public.profiles add column if not exists notify_whatsapp boolean default true;
+alter table public.profiles add column if not exists notify_email boolean default true;
 
 -- 4. TASKS TABLE
 create table if not exists public.tasks (
@@ -75,6 +123,13 @@ create table if not exists public.tasks (
   required_proofs text[] default '{}',
   applicants_count integer default 0,
 
+  -- Execution mode & multi-task support
+  task_mode text default 'single', -- 'single' | 'multi'
+  unit_price_dh numeric(10, 2),
+  target_executions_count integer default 1,
+  city text default 'Casablanca',
+  anti_spam_keyword text,
+
   -- Client metadata
   client_id uuid references public.profiles(id) on delete set null,
   client_name text default 'Client',
@@ -89,6 +144,13 @@ create table if not exists public.tasks (
   completed_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Idempotent column additions for existing tasks table
+alter table public.tasks add column if not exists task_mode text default 'single';
+alter table public.tasks add column if not exists unit_price_dh numeric(10, 2);
+alter table public.tasks add column if not exists target_executions_count integer default 1;
+alter table public.tasks add column if not exists city text default 'Casablanca';
+alter table public.tasks add column if not exists anti_spam_keyword text;
 
 -- 5. BIDS / APPLICATIONS TABLE
 create table if not exists public.bids (
@@ -218,7 +280,123 @@ create policy "Transactions are viewable" on public.transactions for select usin
 drop policy if exists "Transactions can be inserted" on public.transactions;
 create policy "Transactions can be inserted" on public.transactions for insert with check (true);
 
--- 12. AUTH TRIGGER (Auto-create profile when user signs up)
+-- 12. ATOMIC FINANCIAL PROCEDURES (RPCs) FOR SECURE ESCROW
+-- A. Lock Escrow when Task is Created
+create or replace function public.lock_task_escrow(
+  p_user_id uuid,
+  p_task_id uuid,
+  p_amount numeric,
+  p_description text
+)
+returns jsonb as $$
+declare
+  v_current_balance numeric;
+  v_tx_id uuid;
+begin
+  select balance_available into v_current_balance
+  from public.profiles where id = p_user_id for update;
+
+  if v_current_balance < p_amount then
+    return jsonb_build_object('success', false, 'error', 'Solde insuffisant pour bloquer le séquestre');
+  end if;
+
+  update public.profiles
+  set 
+    balance_available = balance_available - p_amount,
+    balance_escrow = balance_escrow + p_amount,
+    customer_tasks_posted = customer_tasks_posted + 1
+  where id = p_user_id;
+
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (p_user_id, 'ESCROW_LOCK', p_amount, 'EUR', p_description, 'COMPLETED')
+  returning id into v_tx_id;
+
+  return jsonb_build_object('success', true, 'transaction_id', v_tx_id);
+end;
+$$ language plpgsql security definer;
+
+-- B. Release Escrow to Performer and Record Commission
+create or replace function public.release_task_escrow(
+  p_task_id uuid,
+  p_client_id uuid,
+  p_performer_id uuid,
+  p_reward numeric,
+  p_commission numeric,
+  p_total_budget numeric,
+  p_rating numeric default null,
+  p_comment text default null
+)
+returns jsonb as $$
+declare
+  v_net_reward numeric := p_reward - p_commission;
+begin
+  -- 1. Deduct customer's locked escrow
+  update public.profiles
+  set 
+    balance_escrow = greatest(0.00, balance_escrow - p_total_budget),
+    customer_total_spent = customer_total_spent + p_total_budget
+  where id = p_client_id;
+
+  -- 2. Credit performer's available balance
+  update public.profiles
+  set 
+    balance_available = balance_available + v_net_reward,
+    performer_completed_tasks = performer_completed_tasks + 1,
+    performer_xp = performer_xp + 25
+  where id = p_performer_id;
+
+  -- 3. Mark task completed
+  update public.tasks
+  set 
+    status = 'COMPLETED',
+    completed_at = timezone('utc'::text, now())
+  where id = p_task_id;
+
+  -- 4. Record ledger transactions
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (p_performer_id, 'ESCROW_RELEASE', p_reward, 'EUR', 'Gains débloqués pour mission validée #' || substring(p_task_id::text from 1 for 8), 'COMPLETED');
+
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (p_performer_id, 'COMMISSION', -p_commission, 'EUR', 'Commission de service Tâches.ma (15%)', 'COMPLETED');
+
+  -- 5. Record optional review
+  if p_rating is not null and p_comment is not null and length(trim(p_comment)) > 0 then
+    insert into public.reviews (task_id, author_id, author_name, target_user_id, rating, comment)
+    values (p_task_id, p_client_id, 'Client', p_performer_id, p_rating, p_comment)
+    on conflict (task_id, author_id) do nothing;
+  end if;
+
+  return jsonb_build_object('success', true);
+end;
+$$ language plpgsql security definer;
+
+-- C. Refund Escrow to Client when Task is Cancelled
+create or replace function public.refund_task_escrow(
+  p_task_id uuid,
+  p_client_id uuid,
+  p_amount numeric,
+  p_description text
+)
+returns jsonb as $$
+begin
+  update public.profiles
+  set 
+    balance_escrow = greatest(0.00, balance_escrow - p_amount),
+    balance_available = balance_available + p_amount
+  where id = p_client_id;
+
+  update public.tasks
+  set status = 'CANCELLED'
+  where id = p_task_id;
+
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (p_client_id, 'REFUND', p_amount, 'EUR', p_description, 'COMPLETED');
+
+  return jsonb_build_object('success', true);
+end;
+$$ language plpgsql security definer;
+
+-- 13. AUTH TRIGGER (Auto-create profile when user signs up)
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -243,8 +421,8 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- 11. SEED INITIAL DEMO PROFILE & REALISTIC TASKS
-insert into public.profiles (id, email, full_name, avatar_url, active_role, balance_available, balance_escrow)
+-- 14. SEED INITIAL DEMO PROFILE & REALISTIC TASKS
+insert into public.profiles (id, email, full_name, avatar_url, active_role, balance_available, balance_escrow, city, headline, bio)
 values (
   'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   'aero@example.com',
@@ -252,10 +430,13 @@ values (
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
   'PERFORMER',
   285.50,
-  75.00
+  75.00,
+  'Casablanca',
+  'Développeur Full-Stack & Intégrateur YouCan / Shopify',
+  'Expert en automatisation, intégration web Next.js/Tailwind et création de tunnels de vente e-commerce au Maroc.'
 ) on conflict (id) do nothing;
 
-insert into public.tasks (id, title, description, category, status, reward, platform_fee, total_budget, time_limit_hours, min_level_required, required_proofs, applicants_count, client_name, client_avatar, client_rating, client_hire_rate)
+insert into public.tasks (id, title, description, category, status, reward, platform_fee, total_budget, time_limit_hours, min_level_required, required_proofs, applicants_count, client_name, client_avatar, client_rating, client_hire_rate, city)
 values
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380101',
@@ -273,7 +454,8 @@ values
   'Studio Digital Paris',
   'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
   4.90,
-  98
+  98,
+  'Casablanca'
 ),
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380102',
@@ -291,7 +473,8 @@ values
   'Karim B. (Founder)',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
   5.00,
-  100
+  100,
+  'Rabat'
 ),
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380103',
@@ -309,7 +492,8 @@ values
   'GrowthLab Agency',
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
   4.80,
-  92
+  92,
+  'Tanger'
 ),
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380104',
@@ -327,7 +511,8 @@ values
   'ÉlectroShop Direct',
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
   4.70,
-  89
+  89,
+  'Marrakech'
 ),
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380105',
@@ -345,7 +530,8 @@ values
   'Nox Fintech',
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
   4.90,
-  95
+  95,
+  'Casablanca'
 ),
 (
   'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380106',
@@ -363,6 +549,7 @@ values
   'Mobilier & Co',
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100',
   4.85,
-  94
+  94,
+  'Agadir'
 )
 on conflict (id) do nothing;

@@ -27,6 +27,10 @@ export async function PATCH(
     if (body.assignedAt) updates.assigned_at = body.assignedAt;
     if (body.completedAt) updates.completed_at = body.completedAt;
     if (typeof body.applicantsCount === 'number') updates.applicants_count = body.applicantsCount;
+    if (body.settlementProposal) updates.settlement_proposal = body.settlementProposal;
+    if (body.finalPayoutPercentage) updates.final_payout_percentage = body.finalPayoutPercentage;
+    if (body.finalPerformerAmountDH) updates.final_performer_amount_dh = body.finalPerformerAmountDH;
+    if (body.finalClientRefundDH) updates.final_client_refund_dh = body.finalClientRefundDH;
 
     const { data, error } = await supabase
       .from('tasks')

@@ -158,6 +158,19 @@ export interface Task {
   assignedToName?: string;
   assignedAt?: string;
   completedAt?: string;
+  settlementProposal?: {
+    percentage: number;
+    amountDH: number;
+    reason: string;
+    proposedBy: 'CUSTOMER' | 'PERFORMER';
+    rating?: number;
+    reviewComment?: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    createdAt: string;
+  };
+  finalPayoutPercentage?: number;
+  finalPerformerAmountDH?: number;
+  finalClientRefundDH?: number;
   createdAt: string;
 }
 

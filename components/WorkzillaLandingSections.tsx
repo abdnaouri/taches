@@ -777,7 +777,8 @@ export const WorkzillaFooter: React.FC = () => {
               Garantie & Séquestre
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href={`/${locale}/wallet`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Daman</a></li>
+              <li><a href={`/${locale}/daman`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Daman</a></li>
+              <li><a href={`/${locale}/wallet`} className="hover:text-white transition-colors">Portefeuille & Retraits</a></li>
               <li><span>Paiement CMI & Banques Maroc</span></li>
               <li><span>Vérification CIN des prestataires</span></li>
               <li><span>Virements CIH, Attijari, BCP sous 24h</span></li>
@@ -793,9 +794,9 @@ export const WorkzillaFooter: React.FC = () => {
             © 2026 tâches.ma • Plateforme marocaine avec paiement garanti.
           </div>
           <div className="flex items-center gap-4">
-            <span className="hover:text-slate-400">Conditions Générales</span>
+            <a href={`/${locale}/terms`} className="hover:text-white transition-colors">Conditions Générales (CGU)</a>
             <span>•</span>
-            <span className="hover:text-slate-400">Protection des Données (CNDP)</span>
+            <a href={`/${locale}/privacy`} className="hover:text-white transition-colors">Protection des Données (CNDP)</a>
           </div>
         </div>
       </div>

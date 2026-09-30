@@ -23,7 +23,10 @@ import {
   FiLoader,
   FiTrash2,
   FiExternalLink,
-  FiFileText
+  FiFileText,
+  FiPercent,
+  FiCheckSquare,
+  FiSlash
 } from 'react-icons/fi';
 
 interface TaskDetailModalProps {
@@ -37,6 +40,9 @@ interface TaskDetailModalProps {
   onRequestRevision?: (taskId: string, feedback: string) => void;
   onCancelTask?: (taskId: string) => void;
   onRequestArbitration?: (taskId: string, reason: string) => void;
+  onProposePartialSettlement?: (taskId: string, percentage: number, reason: string, rating: number, reviewComment: string) => void;
+  onAcceptPartialSettlement?: (taskId: string) => void;
+  onRejectPartialSettlement?: (taskId: string) => void;
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
@@ -50,6 +56,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   onRequestRevision,
   onCancelTask,
   onRequestArbitration,
+  onProposePartialSettlement,
+  onAcceptPartialSettlement,
+  onRejectPartialSettlement,
 }) => {
   const { t, isRTL, locale, getCategoryLabel } = useLanguage();
   const { isAuthenticated, openAuthModal } = useAuth();
@@ -76,10 +85,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   // Reviews for this task
   const [taskReviews, setTaskReviews] = useState<TaskReview[]>([]);
 
-  // Review & Approval State
+  // Review & Approval State (100% Full Payment)
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [ratingScore, setRatingScore] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('Travail sérieux et rapide, je recommande !');
+
+  // Partial Settlement Allocation State (e.g. 50% split)
+  const [isPartialModalOpen, setIsPartialModalOpen] = useState(false);
+  const [partialPercentage, setPartialPercentage] = useState<number>(50);
+  const [partialReason, setPartialReason] = useState<string>('Travail partiellement conforme au cahier des charges.');
+  const [partialRating, setPartialRating] = useState<number>(3);
+  const [partialReviewComment, setPartialReviewComment] = useState<string>('Prestation partiellement satisfaisante, accord amiable trouvé.');
 
   // Revision Request State
   const [isRevisionInputOpen, setIsRevisionInputOpen] = useState(false);
@@ -270,6 +286,35 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
     setIsArbitrationInputOpen(false);
     onClose();
+  };
+
+  const handleSendPartialSettlement = () => {
+    if (!partialReason.trim()) return;
+    if (onProposePartialSettlement) {
+      onProposePartialSettlement(
+        task.id,
+        partialPercentage,
+        partialReason.trim(),
+        partialRating,
+        partialReviewComment.trim()
+      );
+    }
+    setIsPartialModalOpen(false);
+    onClose();
+  };
+
+  const handleAcceptProposal = () => {
+    if (onAcceptPartialSettlement) {
+      onAcceptPartialSettlement(task.id);
+      onClose();
+    }
+  };
+
+  const handleRejectProposal = () => {
+    if (onRejectPartialSettlement) {
+      onRejectPartialSettlement(task.id);
+      onClose();
+    }
   };
 
   return (
@@ -754,6 +799,59 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </div>
           )}
 
+          {/* Performer viewing a pending partial settlement proposal */}
+          {isAssignedToMe && task.settlementProposal && task.settlementProposal.status === 'PENDING' && (
+            <div className="rounded-2xl bg-amber-50 p-5 border-2 border-amber-300 shadow-md space-y-3 mb-4 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-950 font-black text-sm">
+                  <span className="text-xl">🤝</span>
+                  <span>Proposition d'accord amiable reçue</span>
+                </div>
+                <span className="bg-amber-200 text-amber-900 font-extrabold text-xs px-2.5 py-1 rounded-lg border border-amber-300">
+                  {task.settlementProposal.percentage}% du montant initial
+                </span>
+              </div>
+
+              <div className="bg-white p-3.5 rounded-xl border border-amber-200 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-slate-800">
+                  <span>Montant proposé à encaisser :</span>
+                  <strong className="text-emerald-700 text-sm font-black">
+                    {task.settlementProposal.amountDH} DH <span className="text-[10px] text-slate-500 font-normal">(net ~{Math.round(task.settlementProposal.amountDH * 0.85)} DH)</span>
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                  <span>Reste remboursé au client :</span>
+                  <span className="font-semibold">{Math.round(rewardDH - task.settlementProposal.amountDH)} DH</span>
+                </div>
+                <div className="pt-1 text-slate-700 italic border-t border-slate-100">
+                  « {task.settlementProposal.reason} »
+                </div>
+                {task.settlementProposal.rating && (
+                  <div className="text-[11px] text-amber-700 font-bold flex items-center gap-1">
+                    <span>Évaluation jointe : ★ {task.settlementProposal.rating}/5</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAcceptProposal}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 text-xs font-bold text-white transition shadow-sm cursor-pointer"
+                >
+                  <FiCheck /> Accepter {task.settlementProposal.percentage}% ({task.settlementProposal.amountDH} DH)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectProposal}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 px-4 py-2.5 text-xs font-bold transition cursor-pointer border border-rose-300"
+                >
+                  <FiSlash /> Refuser & Arbitrage
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Customer viewing their task in review */}
           {(isCustomer || isMyPostedTask) && task.status === 'UNDER_REVIEW' && (
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
@@ -762,7 +860,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   Travail livré par le prestataire
                 </span>
                 <p className="text-slate-600">
-                  Vérifiez les livrables dans l'onglet Livrables. Si tout est conforme, validez le paiement ou demandez une révision.
+                  Vérifiez les livrables dans l'onglet Livrables. Si tout est parfait validez le montant total, ou proposez une répartition partielle (ex: 50%) si le travail est incomplet.
                 </p>
               </div>
 
@@ -823,16 +921,23 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsReviewModalOpen(true)}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 py-2.5 text-xs font-bold text-white transition cursor-pointer shadow-sm"
+                    className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 text-xs font-bold text-white transition cursor-pointer shadow-sm"
                   >
-                    <FiCheck /> Valider & Libérer {rewardDH} DH
+                    <FiCheck /> Payer 100% ({rewardDH} DH)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPartialModalOpen(true)}
+                    className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 py-2.5 text-xs font-bold text-white transition cursor-pointer shadow-sm"
+                  >
+                    <FiPercent /> Répartition %
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsRevisionInputOpen(true)}
-                    className="flex items-center justify-center gap-1 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 text-xs font-bold transition cursor-pointer"
+                    className="flex items-center justify-center gap-1 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 px-3.5 py-2.5 text-xs font-bold transition cursor-pointer"
                   >
-                    <FiRepeat /> Demander retouche
+                    <FiRepeat /> Retouche
                   </button>
                   <button
                     type="button"
@@ -868,15 +973,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
         </div>
 
-        {/* REVIEW & RATING MODAL */}
+        {/* REVIEW & RATING MODAL (100% FULL PAYMENT) */}
         {isReviewModalOpen && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-100">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
               <h3 className="text-base font-extrabold text-slate-900">
-                Évaluer le travail de {task.assignedToName || 'Prestataire'}
+                Valider 100% & Évaluer {task.assignedToName || 'le freelance'}
               </h3>
               <p className="text-xs text-slate-600">
-                Votre avis permet de récompenser les meilleurs talents et d'ajuster leur réputation sur la plateforme.
+                Vous libérez la totalité de la rémunération (<strong>{rewardDH} DH</strong>). Laissez votre avis pour la communauté :
               </p>
 
               {/* Star Rating Selector */}
@@ -914,7 +1019,136 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   onClick={handleApproveWithReview}
                   className="flex-1 rounded-xl bg-brand-700 hover:bg-brand-800 py-2.5 text-xs font-bold text-white transition shadow-sm"
                 >
-                  Confirmer et payer
+                  Confirmer et libérer {rewardDH} DH
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PARTIAL SETTLEMENT ALLOCATION MODAL (EX: 50% SPLIT) */}
+        {isPartialModalOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-100">
+            <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+                  <FiPercent className="text-amber-600" />
+                  <span>Proposer une répartition financière partielle</span>
+                </h3>
+                <span className="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200">
+                  {partialPercentage}% ({Math.round(rewardDH * (partialPercentage / 100))} DH)
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-600">
+                Si le résultat n'est que partiellement exploitable, ajustez le pourcentage à payer au prestataire. Le reste vous sera automatiquement remboursé une fois accepté.
+              </p>
+
+              {/* Fast percentage presets */}
+              <div className="grid grid-cols-4 gap-2">
+                {[25, 50, 70, 80].map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => setPartialPercentage(pct)}
+                    className={`py-2 text-xs font-extrabold rounded-xl border transition cursor-pointer ${
+                      partialPercentage === pct
+                        ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+
+              {/* Range Slider */}
+              <div className="space-y-1 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="flex justify-between text-xs font-bold text-slate-700">
+                  <span>Ajuster : {partialPercentage}%</span>
+                  <span className="text-amber-700 font-extrabold">{Math.round(rewardDH * (partialPercentage / 100))} DH</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="90"
+                  step="5"
+                  value={partialPercentage}
+                  onChange={(e) => setPartialPercentage(Number(e.target.value))}
+                  className="w-full accent-amber-600 cursor-pointer"
+                />
+                
+                {/* Live Distribution Card */}
+                <div className="grid grid-cols-2 gap-2 pt-2 text-[11px]">
+                  <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
+                    <span className="text-slate-500 block">Freelance perçoit :</span>
+                    <strong className="text-emerald-700 font-black text-xs">
+                      {Math.round(rewardDH * (partialPercentage / 100))} DH
+                    </strong>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-blue-200">
+                    <span className="text-slate-500 block">Votre remboursement :</span>
+                    <strong className="text-blue-700 font-black text-xs">
+                      {Math.round(rewardDH * ((100 - partialPercentage) / 100))} DH
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Motive / Justification */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Motif de la déduction / Remarques :
+                </label>
+                <textarea
+                  rows={2}
+                  value={partialReason}
+                  onChange={(e) => setPartialReason(e.target.value)}
+                  placeholder="Expliquez ce qui manque ou n'est pas conforme..."
+                  className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-amber-600"
+                />
+              </div>
+
+              {/* Star Rating & Review for Partial Settlement */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Évaluation associée ({partialRating}/5) :
+                </label>
+                <div className="flex items-center gap-1.5 py-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setPartialRating(star)}
+                      className="text-2xl text-amber-400 hover:scale-110 transition cursor-pointer"
+                    >
+                      {star <= partialRating ? '★' : '☆'}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={partialReviewComment}
+                  onChange={(e) => setPartialReviewComment(e.target.value)}
+                  placeholder="Commentaire public de fin de mission..."
+                  className="w-full mt-1.5 rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-amber-600"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPartialModalOpen(false)}
+                  className="flex-1 rounded-xl border border-slate-300 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendPartialSettlement}
+                  className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-700 py-2.5 text-xs font-bold text-white transition shadow-sm cursor-pointer"
+                >
+                  Transmettre la proposition
                 </button>
               </div>
             </div>
