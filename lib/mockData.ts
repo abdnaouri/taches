@@ -420,7 +420,7 @@ export const initialTasks: Task[] = [
     subCategory: 'Traduction Arabe ⇄ Français',
     locationMode: 'online',
     taskMode: 'single',
-    status: 'IN_PROGRESS',
+    status: 'OPEN',
     reward: 15.0,
     platformFee: 1.5,
     totalBudget: 16.5,
@@ -434,9 +434,6 @@ export const initialTasks: Task[] = [
     clientHireRate: 96,
     requiredProofs: taskTranslations.tsk_104.requiredProofs.fr,
     applicantsCount: 4,
-    assignedToId: 'usr_me_1',
-    assignedToName: 'Aero Mehdi',
-    assignedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
     createdAt: 'Il y a 3h',
   },
   {

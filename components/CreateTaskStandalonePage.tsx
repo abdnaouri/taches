@@ -352,9 +352,14 @@ export const CreateTaskStandalonePage: React.FC = () => {
         await toggleRole('CUSTOMER');
       }
 
-      const cleanBudget = rewardDH;
-      const performerReward = Math.round(cleanBudget * 0.9);
-      const platformFee = Math.round(cleanBudget * 0.1);
+      const cleanBudgetDH = rewardDH;
+      const performerRewardDH = Math.round(cleanBudgetDH * 0.9);
+      const platformFeeDH = Math.round(cleanBudgetDH * 0.1);
+
+      // Platform accounting (10 MAD = 1 EUR)
+      const rewardEur = Number((performerRewardDH / 10).toFixed(2));
+      const platformFeeEur = Number((platformFeeDH / 10).toFixed(2));
+      const totalBudgetEur = Number((cleanBudgetDH / 10).toFixed(2));
 
       let fullDescription = description.trim();
       if (referenceLinks.trim()) {
@@ -364,25 +369,35 @@ export const CreateTaskStandalonePage: React.FC = () => {
         fullDescription += `\n\n🔒 Mot de passe anti-spam : ${antiSpamKeyword.trim().toUpperCase()}`;
       }
 
+      const clientName = profile?.fullName ? `${profile.fullName} (Vous)` : 'Client (Vous)';
+
       const newTaskData: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'> = {
         title: title.trim(),
         description: fullDescription,
         category: (selectedCategoryKey as any) || 'development',
+        subCategory: selectedSubcategory?.name || activeCategory.name,
+        city: locationMode === 'in_person' ? selectedCity : 'Casablanca',
+        taskMode: taskExecutionMode,
+        unitPriceDH: taskExecutionMode === 'multi' ? unitPriceDH : cleanBudgetDH,
+        targetExecutionsCount: taskExecutionMode === 'multi' ? targetExecutionsCount : 1,
         status: 'OPEN',
-        reward: performerReward,
-        platformFee: platformFee,
-        totalBudget: cleanBudget,
+        reward: rewardEur,
+        platformFee: platformFeeEur,
+        totalBudget: totalBudgetEur,
         timeLimitHours: timeLimitHours,
         minLevelRequired: 1,
         requiredProofs: deliverables,
-        clientId: profile?.id || 'usr_client',
-        clientName: profile?.fullName || 'Client Tâches.ma',
+        clientId: profile?.id || '',
+        clientName: clientName,
         clientAvatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
         clientRating: profile?.customerRating || 5.0,
         clientHireRate: 100,
       };
 
       const res = await createDynamicTask(newTaskData);
+      if (!res.success) {
+        throw new Error(res.error || 'Erreur lors de la création de la tâche');
+      }
       
       // Clear draft on successful creation
       localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -391,8 +406,8 @@ export const CreateTaskStandalonePage: React.FC = () => {
       if (profile) {
         await updateProfile({
           customerTasksPosted: (profile.customerTasksPosted || 0) + 1,
-          balanceEscrow: (profile.balanceEscrow || 0) + cleanBudget,
-          balanceAvailable: Math.max(0, (profile.balanceAvailable || 0) - cleanBudget),
+          balanceEscrow: (profile.balanceEscrow || 0) + totalBudgetEur,
+          balanceAvailable: Math.max(0, (profile.balanceAvailable || 0) - totalBudgetEur),
         });
       }
 
@@ -401,9 +416,9 @@ export const CreateTaskStandalonePage: React.FC = () => {
 
       // Redirect to newly created task
       router.push(`/${locale}/task/${slug}?created=true`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Task creation failed:', err);
-      alert('Une erreur est survenue lors de la publication. Veuillez réessayer.');
+      alert(err.message || 'Une erreur est survenue lors de la publication. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }

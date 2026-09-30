@@ -9,6 +9,7 @@ import { Locale } from '@/lib/i18n/types';
 import { getTaskSlug, extractTaskIdFromSlug } from '@/lib/slug';
 import {
   fetchDynamicTasks,
+  fetchDynamicTaskById,
   createDynamicTask,
   updateDynamicTask,
   submitDynamicProof,
@@ -289,6 +290,20 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     loadSupabaseData();
   }, []);
 
+  // Fetch individual task dynamically if navigating directly to a task slug / ID
+  useEffect(() => {
+    if (selectedTaskId && !tasks.find(t => t.id === selectedTaskId)) {
+      fetchDynamicTaskById(selectedTaskId).then((task) => {
+        if (task) {
+          setTasks((prev) => {
+            if (prev.find((t) => t.id === task.id)) return prev;
+            return [task, ...prev];
+          });
+        }
+      });
+    }
+  }, [selectedTaskId, tasks]);
+
   // Handlers for Task Lifecycle
   const handleRoleToggle = async (role: UserRole) => {
     await toggleRole(role);
@@ -338,7 +353,11 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     showToast(t('toastTaskCreated', { amount: Math.round(newTaskData.totalBudget * 10) }));
 
     // Supabase Persistence
-    await createDynamicTask(newTask);
+    const res = await createDynamicTask(newTask);
+    if (res.task) {
+      setTasks(prev => prev.map(t => t.id === newId ? res.task! : t));
+    }
+
     await recordDynamicTransaction({
       userId: profile.id,
       type: 'ESCROW_LOCK',

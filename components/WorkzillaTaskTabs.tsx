@@ -65,9 +65,17 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [filterUrgent, setFilterUrgent] = useState(false);
-  const [customerScope, setCustomerScope] = useState<'my_orders' | 'all'>('my_orders');
+  const [customerScope, setCustomerScope] = useState<'all' | 'my_orders'>('all');
 
   const categories = ['all', 'development', 'design', 'assistance', 'copywriting', 'marketing', 'micro'] as const;
+
+  // Helper to check if task was created by current user
+  const isMyTask = (t: Task) => {
+    if (myId && myId !== 'guest' && t.clientId && t.clientId === myId) return true;
+    if (user?.fullName && t.clientName && t.clientName.toLowerCase().includes(user.fullName.toLowerCase())) return true;
+    if (t.clientName?.includes('Vous') || t.clientName?.includes('You')) return true;
+    return false;
+  };
 
   // Group tasks according to role and view scope
   const { newTasks, openTasks, historyTasks } = useMemo(() => {
@@ -88,13 +96,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
         };
       }
 
-      const myCreated = tasks.filter(
-        (t) =>
-          (myId && t.clientId === myId) ||
-          t.clientName.includes('Vous') ||
-          t.clientName.includes('You') ||
-          (!myId && t.status === 'OPEN')
-      );
+      const myCreated = tasks.filter(isMyTask);
 
       return {
         newTasks: myCreated.filter((t) => t.status === 'OPEN'),
@@ -116,7 +118,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
       // - History: tasks completed or cancelled for this performer
       const myAssigned = tasks.filter(
         (t) =>
-          (myId ? t.assignedToId === myId || t.assignedToName?.includes('Vous') : true)
+          (myId && myId !== 'guest' ? t.assignedToId === myId || t.assignedToName?.includes('Vous') : true)
       );
 
       return {
@@ -133,7 +135,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
         ),
       };
     }
-  }, [tasks, isCustomer, myId, customerScope]);
+  }, [tasks, isCustomer, myId, customerScope, user?.fullName]);
 
   // Current tab active list
   const currentList = useMemo(() => {

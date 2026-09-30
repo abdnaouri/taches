@@ -66,9 +66,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [activeModalTab, setActiveModalTab] = useState<'details' | 'chat' | 'bids' | 'submission'>('details');
   const [pitch, setPitch] = useState('');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<string>('');
-  const [isTimeExpired, setIsTimeExpired] = useState(false);
-
   // Bids / Applicants State for Client
   const [bids, setBids] = useState<TaskBid[]>([]);
   const [isLoadingBids, setIsLoadingBids] = useState(false);
@@ -111,37 +108,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     '🎨 Expérience confirmée dans ce domaine avec réalisations similaires.',
     '📄 Parfaite maîtrise des consignes, livraison conforme avant le délai.',
   ];
-
-  // 1. Real Dynamic Countdown Timer
-  useEffect(() => {
-    if (!task || task.status !== 'IN_PROGRESS' || !task.assignedAt) {
-      setTimeLeft('');
-      return;
-    }
-
-    const calculateTime = () => {
-      const start = new Date(task.assignedAt!).getTime();
-      const limitMs = (task.timeLimitHours || 24) * 3600 * 1000;
-      const deadline = start + limitMs;
-      const now = Date.now();
-      const diff = deadline - now;
-
-      if (diff <= 0) {
-        setIsTimeExpired(true);
-        setTimeLeft('Délai expiré');
-      } else {
-        setIsTimeExpired(false);
-        const h = Math.floor(diff / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-      }
-    };
-
-    calculateTime();
-    const interval = setInterval(calculateTime, 1000);
-    return () => clearInterval(interval);
-  }, [task]);
 
   // 2. Fetch Bids if task is open or client is owner
   useEffect(() => {
@@ -721,21 +687,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           {/* Performer viewing active assigned task */}
           {isAssignedToMe && task.status === 'IN_PROGRESS' && (
             <div className="rounded-2xl bg-amber-50 p-5 border border-amber-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                  <FiClock className={`${isTimeExpired ? 'text-rose-600' : 'animate-spin'} text-base`} />
-                  <span>{isTimeExpired ? 'Délai imparti écoulé' : 'Mission en cours d’exécution'}</span>
-                </div>
-                <div
-                  className={`font-mono text-sm font-extrabold px-3 py-1 rounded-lg ${
-                    isTimeExpired ? 'bg-rose-200 text-rose-950' : 'bg-amber-200 text-amber-950'
-                  }`}
-                >
-                  {timeLeft || `${task.timeLimitHours}h restantes`}
-                </div>
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm mb-3">
+                <FiClock className="text-amber-700 text-base" />
+                <span>Mission en cours d’exécution</span>
               </div>
               <p className="text-xs text-amber-800 mb-4">
-                Vous êtes assigné à cette mission. Déposez vos livrables dès que le travail est prêt.
+                Vous avez été retenu pour cette mission. Déposez vos livrables dès que le travail est prêt.
               </p>
               <button
                 onClick={() => onOpenProofDrawer(task)}

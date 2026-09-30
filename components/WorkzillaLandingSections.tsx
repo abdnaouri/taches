@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import {
   FiShield,
@@ -519,99 +519,85 @@ export const WorkzillaTrustSection: React.FC = () => {
   );
 };
 
-/* Recent Completed Tasks Showcase (Work-zilla Feed) */
+/* Recent Completed / Real Tasks Showcase (Work-zilla Feed from Database) */
 export const WorkzillaCompletedFeed: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const [realTasks, setRealTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const completedTasks = [
-    {
-      title: 'Création du menu & carte des boissons pour café restaurant',
-      price: '250 DH',
-      city: 'Casablanca',
-      client: 'Karim B. (Gérant)',
-      rating: 5.0,
-      review: '« Travail impeccable livré en moins de 4 heures. Tous les fichiers sources PSD et PDF remis pour l’imprimeur. »',
-      freelancer: 'Yassine M. (Graphiste certifié)',
-    },
-    {
-      title: 'Traduction contrat de bail commercial Arabe vers Français',
-      price: '150 DH',
-      city: 'Rabat',
-      client: 'Nawal T. (Cabinet)',
-      rating: 5.0,
-      review: '« Excellente traductrice rigoureuse et ponctuelle. Respect strict de la terminologie juridique marocaine. »',
-      freelancer: 'Fatima Z. (Traductrice pro)',
-    },
-    {
-      title: 'Saisie de 180 factures et rapprochement sous Excel',
-      price: '120 DH',
-      city: 'Tanger',
-      client: 'Rachid M. (Commerçant)',
-      rating: 4.9,
-      review: '« Rapide, précis et sans aucune erreur de calcul. Très bonne communication par message sur le site. »',
-      freelancer: 'Mehdi A. (Assistant Excel)',
-    },
-    {
-      title: 'Mise en place de 35 fiches produits sur boutique YouCan Shop',
-      price: '300 DH',
-      city: 'Marrakech',
-      client: 'Souk Moderne (E-commerce)',
-      rating: 5.0,
-      review: '« Produits bien rédigés en Darija et Français avec de belles photos. Ma boutique vend déjà. »',
-      freelancer: 'Amine K. (Spécialiste YouCan)',
-    },
-  ];
+  useEffect(() => {
+    fetch('/api/tasks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.tasks && Array.isArray(data.tasks)) {
+          // Prioritize completed tasks, or real active tasks
+          const completed = data.tasks.filter((t: any) => t.status === 'COMPLETED');
+          const others = data.tasks.filter((t: any) => t.status !== 'COMPLETED');
+          const list = [...completed, ...others].slice(0, 4);
+          setRealTasks(list);
+        }
+      })
+      .catch((err) => console.warn('Completed feed error:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (!loading && realTasks.length === 0) return null;
 
   return (
     <section className="bg-white py-14 sm:py-20 border-b border-line">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="section-kicker mb-2">Exemples concrets</p>
+          <p className="section-kicker mb-2">Missions réelles</p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Dernières missions réalisées au Maroc
+            Dernières missions de la communauté au Maroc
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            Des exemples réels de micro-tâches rémunérées en Dirhams et validées par nos clients
+            Missions réelles publiées par nos membres, rémunérées en Dirhams et protégées par Daman
           </p>
         </div>
 
-        {/* 4 Cards Grid */}
+        {/* Real Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {completedTasks.map((item, idx) => (
-            <div key={idx} className="functional-card p-6 flex flex-col justify-between bg-slate-50/50">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                    <FiMapPin className="text-rose-500" />
-                    <span>{item.city}</span>
-                  </span>
-                  <div className="flex items-center gap-1.5 font-extrabold text-brand-700 bg-brand-50 border border-brand-200 px-3 py-1 rounded-full text-xs">
-                    <span>{item.price}</span>
+          {realTasks.map((task, idx) => {
+            const rewardDH = Math.round(Number(task.reward || 0) * 10);
+            return (
+              <div key={task.id || idx} className="functional-card p-6 flex flex-col justify-between bg-slate-50/50">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                      <FiMapPin className="text-rose-500" />
+                      <span>{task.city || 'Casablanca'}</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 font-extrabold text-brand-700 bg-brand-50 border border-brand-200 px-3 py-1 rounded-full text-xs">
+                      <span>{rewardDH} DH</span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                    {task.title}
+                  </h3>
+
+                  <p className="mt-3 text-xs sm:text-sm text-slate-700 line-clamp-2 leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
+                    {task.description}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-900">{task.clientName || 'Client vérifié'}</span>
+                    <span className="text-slate-500 ml-1.5">
+                      {task.status === 'COMPLETED' ? '• Mission validée' : '• Mission active'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-amber-500 font-bold">
+                    <FiStar className="fill-amber-400" />
+                    <span>{Number(task.clientRating || 5.0).toFixed(1)} / 5.0</span>
                   </div>
                 </div>
-
-                <h3 className="text-base font-bold text-slate-900 leading-snug">
-                  {item.title}
-                </h3>
-
-                <p className="mt-3 text-xs sm:text-sm text-slate-700 italic leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
-                  {item.review}
-                </p>
               </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-bold text-slate-900">{item.client}</span>
-                  <span className="text-slate-500 ml-1">a noté</span>
-                </div>
-                <div className="flex items-center gap-1 text-amber-500 font-bold">
-                  <FiStar className="fill-amber-400" />
-                  <span>{item.rating.toFixed(1)} / 5.0</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>
