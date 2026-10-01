@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
+import { Suspense } from 'react';
 import './globals.css';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { AuthProvider } from '@/lib/auth/AuthContext';
@@ -13,6 +14,8 @@ import {
   getEmploymentAgencySchema,
   getOnlineMarketplaceSchema,
 } from '@/lib/seoSchema';
+import { GTMProvider } from '@/lib/analytics/GTMProvider';
+import { AnalyticsPageTracker } from '@/lib/analytics/AnalyticsPageTracker';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const space = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' });
@@ -156,12 +159,18 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${space.variable} font-sans antialiased text-slate-900 bg-surface-soft min-h-screen`}
       >
-        <AuthProvider>
-          <LanguageProvider>
-            {children}
-            <AuthModal />
-          </LanguageProvider>
-        </AuthProvider>
+        <GTMProvider>
+          <AuthProvider>
+            <LanguageProvider>
+              {/* Automatic page_view on every route change */}
+              <Suspense fallback={null}>
+                <AnalyticsPageTracker />
+              </Suspense>
+              {children}
+              <AuthModal />
+            </LanguageProvider>
+          </AuthProvider>
+        </GTMProvider>
       </body>
     </html>
   );

@@ -12,6 +12,7 @@ import {
   FiSend,
   FiPaperclip,
   FiCheck,
+  FiCheckCircle,
   FiClock,
   FiUser,
   FiMinimize2,
@@ -21,7 +22,10 @@ import {
   FiRefreshCw,
   FiImage,
   FiLoader,
-  FiDownload
+  FiDownload,
+  FiSearch,
+  FiMic,
+  FiEye,
 } from 'react-icons/fi';
 
 interface FloatingMessengerWidgetProps {
@@ -46,13 +50,17 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const toggleOpen = externalOnToggle || (() => setInternalIsOpen(!internalIsOpen));
 
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(externalActiveTaskId || null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
+    externalActiveTaskId || null
+  );
   const [messagesByTask, setMessagesByTask] = useState<Record<string, TaskMessage[]>>({});
   const [chatInput, setChatInput] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats' | 'dialogue'>('chats');
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,8 +97,13 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
       }
     });
 
-    return relevant.length > 0 ? relevant : tasks.slice(0, 5);
-  }, [tasks, currentUser]);
+    const list = relevant.length > 0 ? relevant : tasks.slice(0, 5);
+    if (!searchFilter.trim()) return list;
+    const q = searchFilter.toLowerCase();
+    return list.filter(
+      (t) => t.title.toLowerCase().includes(q) || t.clientName.toLowerCase().includes(q)
+    );
+  }, [tasks, currentUser, searchFilter]);
 
   // Selected task object
   const selectedTask = useMemo(() => {
@@ -209,10 +222,10 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     setIsUploadingFile(false);
 
     if (uploadRes.success && uploadRes.url) {
-      // Send attachment message
       const fileUrl = uploadRes.url;
       const isMyTask = selectedTask
-        ? selectedTask.clientId === currentUser.id || selectedTask.clientName.includes('Vous')
+        ? selectedTask.clientId === currentUser.id ||
+          selectedTask.clientName.includes('Vous')
         : true;
       const receiverId = isMyTask ? selectedTask?.assignedToId : selectedTask?.clientId;
 
@@ -257,17 +270,19 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
   };
 
   // Send message handler
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, customText?: string) => {
     if (e) e.preventDefault();
-    if (!chatInput.trim() || !selectedTaskId || !currentUser) return;
+    const text = customText || chatInput;
+    if (!text.trim() || !selectedTaskId || !currentUser) return;
 
-    const content = chatInput.trim();
-    setChatInput('');
+    const content = text.trim();
+    if (!customText) setChatInput('');
     setIsSending(true);
     sounds.playMessage();
 
     const isMyTask = selectedTask
-      ? selectedTask.clientId === currentUser.id || selectedTask.clientName.includes('Vous')
+      ? selectedTask.clientId === currentUser.id ||
+        selectedTask.clientName.includes('Vous')
       : true;
 
     const receiverId = isMyTask ? selectedTask?.assignedToId : selectedTask?.clientId;
@@ -319,12 +334,13 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
     }
   };
 
-  // Canned quick replies in French & Darija
+  // Moroccan & French quick response chips
   const quickReplies = [
     '👋 Salam ! Où en est l’avancement ?',
-    '⚡ Tout avance parfaitement, livraison bientôt.',
+    '⚡ Tout avance parfaitement, livraison imminente.',
     '📎 Fichier prêt pour vérification.',
-    '👍 Parfait, c’est validé, merci !',
+    '👍 Safi, c’est validé, choukran !',
+    '💬 Disponible par WhatsApp si besoin de clarifier.',
   ];
 
   return (
@@ -337,7 +353,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
           className={`fixed bottom-5 ${
             isRTL ? 'left-5' : 'right-5'
           } z-40 flex items-center gap-2.5 rounded-full bg-slate-900 hover:bg-brand-700 text-white px-4 py-3 shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer border border-slate-700`}
-          title="Messagerie en direct Work-zilla"
+          title="Messagerie en direct Tâches.ma"
         >
           <div className="relative">
             <FiMessageSquare className="text-lg" />
@@ -360,7 +376,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
         <div
           className={`fixed bottom-4 ${
             isRTL ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
-          } z-50 flex flex-col w-[94vw] sm:w-96 md:w-[420px] h-[530px] max-h-[85vh] rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150`}
+          } z-50 flex flex-col w-[94vw] sm:w-96 md:w-[420px] h-[540px] max-h-[86vh] rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150`}
         >
           {/* Header Bar */}
           <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between shrink-0">
@@ -384,12 +400,15 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 <div>
                   <h3 className="text-xs font-black tracking-tight leading-none text-white">
                     {activeTab === 'dialogue' && selectedTask
-                      ? selectedTask.title.slice(0, 28) + (selectedTask.title.length > 28 ? '...' : '')
+                      ? selectedTask.title.slice(0, 26) +
+                        (selectedTask.title.length > 26 ? '...' : '')
                       : 'Messagerie Tâches.ma'}
                   </h3>
                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
                     {activeTab === 'dialogue' && selectedTask
-                      ? `Mission #${selectedTask.id.slice(0, 8)} • ${Math.round(selectedTask.reward * 10)} DH`
+                      ? `Mission #${selectedTask.id.slice(0, 8)} • ${Math.round(
+                          selectedTask.reward * 10
+                        )} DH`
                       : 'Discussions en direct avec vos freelances & clients'}
                   </p>
                 </div>
@@ -406,7 +425,11 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
                 title="Actualiser"
               >
-                <FiRefreshCw className={`text-xs ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
+                <FiRefreshCw
+                  className={`text-xs ${
+                    isSyncing ? 'animate-spin text-emerald-400' : ''
+                  }`}
+                />
               </button>
 
               <button
@@ -422,93 +445,113 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
 
           {/* VIEW A: LIST OF TASK CONVERSATIONS */}
           {activeTab === 'chats' && (
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 bg-slate-50/50">
-              {userTasks.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">
-                  <FiMessageSquare className="text-3xl mx-auto mb-2 text-slate-300" />
-                  <p className="font-bold text-slate-600">Aucune discussion active</p>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Dès que vous publiez ou êtes assigné à une tâche, vos échanges apparaîtront ici.
-                  </p>
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/50">
+              {/* Search Bar */}
+              <div className="p-2.5 bg-white border-b border-slate-200">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-2.5 text-slate-400 text-xs" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Rechercher une discussion..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-1.5 text-xs text-slate-900 outline-none focus:border-brand-700 transition"
+                  />
                 </div>
-              ) : (
-                userTasks.map((t) => {
-                  const msgs = messagesByTask[t.id] || [];
-                  const lastMsg = msgs[msgs.length - 1];
-                  const rewardDH = Math.round(t.reward * 10);
+              </div>
 
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => {
-                        setSelectedTaskId(t.id);
-                        setActiveTab('dialogue');
-                      }}
-                      className="p-3.5 bg-white hover:bg-amber-50/50 transition cursor-pointer flex items-center justify-between gap-3 group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative shrink-0">
-                          <img
-                            src={
-                              t.clientAvatar ||
-                              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'
-                            }
-                            alt={t.clientName}
-                            className="h-10 w-10 rounded-full object-cover border border-slate-200"
-                          />
-                          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-                        </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                {userTasks.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    <FiMessageSquare className="text-3xl mx-auto mb-2 text-slate-300" />
+                    <p className="font-bold text-slate-600">Aucune discussion trouvée</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Dès que vous publiez ou postulez à une tâche, vos échanges apparaîtront ici.
+                    </p>
+                  </div>
+                ) : (
+                  userTasks.map((t) => {
+                    const msgs = messagesByTask[t.id] || [];
+                    const lastMsg = msgs[msgs.length - 1];
+                    const rewardDH = Math.round(t.reward * 10);
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-black text-slate-900 truncate group-hover:text-brand-700">
-                              {t.title}
-                            </span>
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setSelectedTaskId(t.id);
+                          setActiveTab('dialogue');
+                        }}
+                        className="p-3.5 bg-white hover:bg-amber-50/50 transition cursor-pointer flex items-center justify-between gap-3 group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative shrink-0">
+                            <img
+                              src={
+                                t.clientAvatar ||
+                                'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'
+                              }
+                              alt={t.clientName}
+                              className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                            />
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
                           </div>
 
-                          <div className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
-                            {lastMsg ? (
-                              <span>
-                                <strong className="text-slate-700">
-                                  {lastMsg.senderId === currentUser?.id ? 'Vous: ' : `${lastMsg.senderName}: `}
-                                </strong>
-                                {lastMsg.content}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-black text-slate-900 truncate group-hover:text-brand-700">
+                                {t.title}
                               </span>
-                            ) : (
-                              <span className="text-slate-400 italic">Démarrer la discussion...</span>
-                            )}
-                          </div>
+                            </div>
 
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-sm bg-slate-100 text-slate-700">
-                              {rewardDH} DH
-                            </span>
-                            <span
-                              className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-sm ${
-                                t.status === 'IN_PROGRESS'
-                                  ? 'bg-amber-100 text-amber-900'
-                                  : t.status === 'UNDER_REVIEW'
-                                  ? 'bg-purple-100 text-purple-900'
-                                  : t.status === 'COMPLETED'
-                                  ? 'bg-emerald-100 text-emerald-900'
-                                  : 'bg-slate-100 text-slate-600'
-                              }`}
-                            >
-                              {t.status}
-                            </span>
+                            <div className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
+                              {lastMsg ? (
+                                <span>
+                                  <strong className="text-slate-700">
+                                    {lastMsg.senderId === currentUser?.id
+                                      ? 'Vous: '
+                                      : `${lastMsg.senderName}: `}
+                                  </strong>
+                                  {lastMsg.content}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">
+                                  Démarrer la discussion...
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-sm bg-slate-100 text-slate-700">
+                                {rewardDH} DH
+                              </span>
+                              <span
+                                className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-sm ${
+                                  t.status === 'IN_PROGRESS'
+                                    ? 'bg-amber-100 text-amber-900'
+                                    : t.status === 'UNDER_REVIEW'
+                                    ? 'bg-purple-100 text-purple-900'
+                                    : t.status === 'COMPLETED'
+                                    ? 'bg-emerald-100 text-emerald-900'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {t.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] text-slate-400 font-semibold block">
-                          {msgs.length > 0 ? `${msgs.length} msg` : ''}
-                        </span>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] text-slate-400 font-semibold block">
+                            {msgs.length > 0 ? `${msgs.length} msg` : ''}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
           )}
 
@@ -540,7 +583,9 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                   messagesByTask[selectedTask.id].length === 0) && (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
                     <FiMessageSquare className="text-3xl text-slate-300 mb-2" />
-                    <p className="text-xs font-bold text-slate-700">Aucun message échangé pour le moment</p>
+                    <p className="text-xs font-bold text-slate-700">
+                      Aucun message échangé pour le moment
+                    </p>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
                       Posez des questions sur le cahier des charges, partagez vos liens ou validez les étapes.
                     </p>
@@ -549,7 +594,12 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
 
                 {(messagesByTask[selectedTask.id] || []).map((m) => {
                   const isMe = m.senderId === currentUser?.id;
-                  const hasImage = m.attachmentUrl && (m.attachmentUrl.endsWith('.png') || m.attachmentUrl.endsWith('.jpg') || m.attachmentUrl.endsWith('.jpeg') || m.attachmentUrl.endsWith('.webp'));
+                  const hasImage =
+                    m.attachmentUrl &&
+                    (m.attachmentUrl.endsWith('.png') ||
+                      m.attachmentUrl.endsWith('.jpg') ||
+                      m.attachmentUrl.endsWith('.jpeg') ||
+                      m.attachmentUrl.endsWith('.webp'));
 
                   return (
                     <div
@@ -571,10 +621,18 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
 
                         {/* Inline Image attachment */}
                         {hasImage && (
-                          <div className="mt-2 rounded-xl overflow-hidden border border-white/20">
-                            <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                              <img src={m.attachmentUrl} alt="Attachment" className="max-h-40 w-full object-cover" />
-                            </a>
+                          <div
+                            onClick={() => setLightboxImageUrl(m.attachmentUrl || null)}
+                            className="mt-2 rounded-xl overflow-hidden border border-white/20 cursor-zoom-in group relative"
+                          >
+                            <img
+                              src={m.attachmentUrl}
+                              alt="Attachment"
+                              className="max-h-40 w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
+                              <FiEye className="text-base" />
+                            </div>
                           </div>
                         )}
 
@@ -592,6 +650,16 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                             <span>Télécharger le livrable</span>
                           </a>
                         )}
+
+                        {/* Timestamp & read ticks */}
+                        <div
+                          className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${
+                            isMe ? 'text-slate-400' : 'text-slate-400'
+                          }`}
+                        >
+                          <span>{m.createdAt.slice(11, 16)}</span>
+                          {isMe && <span className="text-emerald-400 font-bold">✓✓</span>}
+                        </div>
                       </div>
                     </div>
                   );
@@ -605,10 +673,8 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => {
-                      setChatInput(qr);
-                    }}
-                    className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap transition cursor-pointer"
+                    onClick={() => handleSendMessage(undefined, qr)}
+                    className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-700 font-semibold whitespace-nowrap transition cursor-pointer active:scale-95"
                   >
                     {qr}
                   </button>
@@ -636,7 +702,11 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                   className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
                   title="Joindre une image ou un document"
                 >
-                  {isUploadingFile ? <FiLoader className="animate-spin text-sm text-brand-700" /> : <FiPaperclip className="text-sm" />}
+                  {isUploadingFile ? (
+                    <FiLoader className="animate-spin text-sm text-brand-700" />
+                  ) : (
+                    <FiPaperclip className="text-sm" />
+                  )}
                 </button>
 
                 <input
@@ -650,13 +720,35 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 <button
                   type="submit"
                   disabled={isSending || !chatInput.trim()}
-                  className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
                 >
                   <FiSend className="text-xs" />
                 </button>
               </form>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImageUrl && (
+        <div
+          onClick={() => setLightboxImageUrl(null)}
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 animate-in fade-in"
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img
+              src={lightboxImageUrl}
+              alt="Attachment Full View"
+              className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl"
+            />
+            <button
+              onClick={() => setLightboxImageUrl(null)}
+              className="absolute top-2 right-2 rounded-full bg-white/90 p-2 text-slate-900 hover:bg-white shadow-lg cursor-pointer"
+            >
+              <FiX className="text-lg" />
+            </button>
+          </div>
         </div>
       )}
     </>

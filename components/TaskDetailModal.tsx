@@ -28,8 +28,11 @@ import {
   FiFileText,
   FiPercent,
   FiCheckSquare,
-  FiSlash
+  FiSlash,
+  FiShare2,
+  FiCopy
 } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -103,6 +106,25 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   // Arbitration State
   const [isArbitrationInputOpen, setIsArbitrationInputOpen] = useState(false);
   const [arbitrationReason, setArbitrationReason] = useState('');
+  const [copiedTaskLink, setCopiedTaskLink] = useState(false);
+
+  const handleShareWhatsApp = () => {
+    if (!task) return;
+    const taskUrl = typeof window !== 'undefined' ? `${window.location.origin}/${locale}/tasks?task=${task.id}` : '';
+    const text = encodeURIComponent(
+      `Salam ! Découvrez cette mission sur tâches.ma :\n*${task.title}*\n💰 Budget : ${Math.round(task.reward * 10)} DH\n🔗 ${taskUrl}`
+    );
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const handleCopyTaskLink = () => {
+    if (!task) return;
+    const taskUrl = typeof window !== 'undefined' ? `${window.location.origin}/${locale}/tasks?task=${task.id}` : '';
+    navigator.clipboard.writeText(taskUrl);
+    setCopiedTaskLink(true);
+    sounds.playSuccess();
+    setTimeout(() => setCopiedTaskLink(false), 2500);
+  };
 
   // Fast 1-click pitch templates
   const quickPitches = [
@@ -449,13 +471,64 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </span>
         </div>
 
-        {/* Task Title */}
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
-          {task.title}
-        </h2>
+        {/* Task Title & Action Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug flex-1">
+            {task.title}
+          </h2>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+              title="Partager sur WhatsApp"
+            >
+              <FaWhatsapp className="text-sm" />
+              <span>WhatsApp</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyTaskLink}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 text-xs font-bold transition cursor-pointer active:scale-95"
+              title="Copier le lien"
+            >
+              {copiedTaskLink ? (
+                <>
+                  <FiCheck className="text-emerald-600" />
+                  <span className="text-emerald-700">Lien copié !</span>
+                </>
+              ) : (
+                <>
+                  <FiCopy className="text-xs" />
+                  <span>Copier lien</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Visual Progress Stepper */}
+        <div className="mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+          <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold">
+            <div className={`p-1 rounded-lg ${task.status === 'OPEN' ? 'bg-brand-100 text-brand-900 font-extrabold' : 'text-slate-500'}`}>
+              1. Ouverte
+            </div>
+            <div className={`p-1 rounded-lg ${task.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-900 font-extrabold' : task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' ? 'text-emerald-700 font-bold' : 'text-slate-400'}`}>
+              2. En cours
+            </div>
+            <div className={`p-1 rounded-lg ${task.status === 'UNDER_REVIEW' || task.status === 'REVISION_REQUESTED' ? 'bg-purple-100 text-purple-900 font-extrabold' : task.status === 'COMPLETED' ? 'text-emerald-700 font-bold' : 'text-slate-400'}`}>
+              3. Livrable remis
+            </div>
+            <div className={`p-1 rounded-lg ${task.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-900 font-black' : 'text-slate-400'}`}>
+              4. Payée & Validée
+            </div>
+          </div>
+        </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="mt-4 flex border-b border-slate-200 gap-4 text-xs font-bold overflow-x-auto scrollbar-none">
+        <div className="mt-2 flex border-b border-slate-200 gap-4 text-xs font-bold overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveModalTab('details')}

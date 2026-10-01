@@ -51,6 +51,7 @@ import {
   WorkzillaFooter
 } from '@/components/WorkzillaLandingSections';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAnalytics } from '@/lib/analytics';
 
 import {
   FiSearch,
@@ -65,7 +66,12 @@ import {
   FiUser,
   FiList,
   FiGrid,
-  FiMessageSquare
+  FiMessageSquare,
+  FiDollarSign,
+  FiAward,
+  FiCheckCircle,
+  FiZap,
+  FiLayout
 } from 'react-icons/fi';
 
 interface MarketplaceAppProps {
@@ -86,6 +92,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     updateProfile,
     toggleRole,
   } = useAuth();
+  const { track } = useAnalytics();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -116,6 +123,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const user: UserProfile = profile || defaultGuestUser;
   const isCustomer = user.activeRole === 'CUSTOMER';
 
+  // Toggle between personalized dashboard (default for logged-in users) and public presentation
+  const [homeViewPreference, setHomeViewPreference] = useState<'dashboard' | 'landing'>('dashboard');
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(true);
@@ -132,6 +142,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // Copy Task Example handler
   const handleCopyTaskExample = (example: TaskExample) => {
+    track.ctaClick('copy_task_example', example.category, 'task_examples', 'card');
     const title = example.title[locale] || example.title.fr;
     const description = example.description[locale] || example.description.fr;
     const budget = example.priceDH;
@@ -243,21 +254,25 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
   // Direct Post from Hero
   const handleDirectHeroPost = (title: string) => {
+    track.ctaClick('hero_direct_post', 'Hero Direct Post', 'hero', 'button');
     router.push(`/${locale}/tasks/new?title=${encodeURIComponent(title)}`);
   };
 
   const handleOpenCreateTask = () => {
+    track.ctaClick('open_create_task', 'Create Task CTA', 'header/nav', 'button');
     router.push(`/${locale}/tasks/new`);
   };
 
   // Open Chat for specific task
   const handleOpenChatForTask = (task: Task) => {
+    track.chatOpened('task_detail', task.id);
     setChatActiveTaskId(task.id);
     setIsChatWidgetOpen(true);
   };
 
   // Navigate to task details modal route: /:locale/task/:slug
   const handleOpenTask = (task: Task) => {
+    track.viewTask(task);
     const slug = getTaskSlug(task);
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     router.push(`/${locale}/task/${slug}${query}`, { scroll: false });
@@ -284,6 +299,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       const res = await fetchDynamicTasks();
       if (res.tasks && Array.isArray(res.tasks)) {
         setTasks(res.tasks);
+        track.viewTaskList(res.tasks, 'marketplace_feed', 'Marketplace Main Feed');
       }
       const txs = await fetchDynamicTransactions(profile?.id);
       if (Array.isArray(txs)) {
@@ -340,6 +356,18 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     // Optimistic UI Update
     setTasks(prev => [newTask, ...prev]);
 
+    // GA4 & GTM tracking: Task Posted (Escrow purchase equivalent)
+    track.taskPosted({
+      id: newId,
+      title: newTaskData.title,
+      category: newTaskData.category,
+      totalBudget: newTaskData.totalBudget,
+      reward: newTaskData.reward,
+      isUrgent: Boolean((newTaskData as any).isUrgent),
+      city: newTaskData.city,
+      attachments: newTaskData.requiredProofs,
+    });
+
     // Deduct escrow balance
     await updateProfile({
       customerTasksPosted: (profile.customerTasksPosted || 0) + 1,
@@ -393,6 +421,18 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       return;
     }
 
+    // GA4 & GTM tracking: Bid submitted
+    track.bidSubmitted(
+      {
+        id: task.id,
+        title: task.title,
+        category: task.category,
+        reward: task.reward,
+        totalBudget: task.totalBudget,
+      },
+      pitch
+    );
+
     // Increment applicants count
     const updated: Task = {
       ...task,
@@ -443,11 +483,34 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       assignedToName: performerName,
       assignedAt,
     });
+
+    // Send automatic kickoff message in chat
+    if (profile) {
+      try {
+        const authHeaders = await getAuthHeaders(true);
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            taskId,
+            senderId: profile.id,
+            senderName: profile.fullName || 'Client',
+            senderAvatar: profile.avatarUrl || '',
+            content: `🤝 Mission attribuée à ${performerName}. Le budget (${Math.round(task.reward * 10)} DH) est consigné sous séquestre Daman. Vous pouvez échanger consignes et fichiers ici.`,
+          }),
+        });
+      } catch (err) {
+        console.warn('Failed to send assignment message:', err);
+      }
+    }
   };
 
   const handleCancelTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
+
+    // GA4 & GTM tracking: Task Cancelled
+    track.taskCancelled(taskId, task.totalBudget, task.status, task.category);
 
     const updated: Task = {
       ...task,
@@ -493,6 +556,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    // GA4 & GTM tracking: Arbitration Requested
+    track.arbitrationRequested(taskId, reason, task.category);
+
     const updated: Task = {
       ...task,
       status: 'ARBITRATION',
@@ -522,6 +588,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const handleRequestRevision = async (taskId: string, feedback: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
+
+    // GA4 & GTM tracking: Revision Requested
+    track.revisionRequested(taskId, feedback);
 
     const updated: Task = {
       ...task,
@@ -554,6 +623,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    // GA4 & GTM tracking: Proof Submitted
+    track.proofSubmitted(taskId, task.category || 'micro', proofUrls.length, reportText.length);
+
     const updated: Task = {
       ...task,
       status: 'UNDER_REVIEW',
@@ -570,6 +642,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const handleApproveWork = async (taskId: string, review?: { rating: number; comment: string }) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
+
+    // GA4 & GTM tracking: Task Approved (Escrow Release)
+    track.taskApproved(task, review?.rating);
 
     const updated: Task = {
       ...task,
@@ -662,6 +737,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
 
     const amountDH = Math.round(task.reward * 10 * (percentage / 100));
 
+    // GA4 & GTM tracking: Settlement Proposed
+    track.settlementProposed(taskId, percentage, amountDH);
+
     const proposal = {
       percentage,
       amountDH,
@@ -719,6 +797,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const performerNetDH = Math.round(performerNetEur * 10);
     const clientRefundDH = Math.round(clientRefundEur * 10);
     const commissionDH = Math.round(commissionEur * 10);
+
+    // GA4 & GTM tracking: Settlement Accepted
+    track.settlementAccepted(taskId, percentage, performerNetDH, clientRefundDH);
 
     const updatedProposal = {
       ...proposal,
@@ -1142,90 +1223,285 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         /* DEDICATED CONCEPTS & ARCHITECTURE EXPLAINER PAGE */
         <ConceptExplainerPage />
       ) : (
-        /* HOME PAGE VIEW - AUTHENTIC WORKZILLA EXPERIENCE */
-        <>
-          {/* 1. Work-zilla Direct Task Action Stage */}
-          <WorkzillaHero
-            onDirectPost={handleDirectHeroPost}
-            onExploreFeed={() => {
-              router.push(`/${locale}/tasks`);
-            }}
-          />
+        /* HOME PAGE VIEW: CONNECTED DASHBOARD FOR AUTHENTICATED USERS, LANDING FOR GUESTS */
+        isAuthenticated && homeViewPreference === 'dashboard' ? (
+          <main className="flex-1 py-6 sm:py-10 bg-slate-50">
+            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
 
-          {/* 2. Key Metrics Proof Bar */}
-          <WorkzillaProofBar />
+              {/* CONNECTED USER WELCOME & CONTROL HUB */}
+              <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs">
+                <div className="absolute top-0 right-0 -mt-8 -mr-8 h-48 w-48 rounded-full bg-brand-50 blur-3xl opacity-60 pointer-events-none" />
 
-          {/* 3. Universal Categories Grid */}
-          <WorkzillaCategoryGrid
-            onSelectCategory={(catKey) => {
-              router.push(`/${locale}/tasks/new?category=${encodeURIComponent(catKey)}`);
-            }}
-          />
+                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5">
+                  {/* User Identity & Active Role */}
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
+                      alt={user.fullName || 'User'}
+                      className="h-14 w-14 rounded-2xl object-cover border-2 border-brand-700 shadow-xs"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                          Bonjour, {user.fullName || 'Utilisateur'} 👋
+                        </h1>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                          isCustomer
+                            ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                            : 'bg-brand-50 border border-brand-200 text-brand-800'
+                        }`}>
+                          <FiUser className="text-xs" />
+                          {isCustomer ? 'Client (Donneur d’ordre)' : 'Freelance (Exécutant)'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        {isCustomer
+                          ? 'Gérez vos commandes, validez les livrables et suivez vos séquestres Daman.'
+                          : 'Postulez aux missions ouvertes, soumettez vos preuves et encaissez vos gains.'}
+                      </p>
+                    </div>
+                  </div>
 
-          {/* 4. Simple 3-Step Process (Work-zilla Model) */}
-          <WorkzillaHowItWorks
-            onPostTask={handleOpenCreateTask}
-          />
+                  {/* Actions & Role Switcher */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRole = isCustomer ? 'PERFORMER' : 'CUSTOMER';
+                        toggleRole(newRole);
+                        showToast(newRole === 'CUSTOMER' ? 'Basculé en mode Donneur d’ordre (Client)' : 'Basculé en mode Prestataire Freelance');
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition cursor-pointer"
+                      title="Changer de rôle"
+                    >
+                      <FiRefreshCw className="text-xs text-slate-500" />
+                      <span>{isCustomer ? 'Basculer en Freelance' : 'Basculer en Client'}</span>
+                    </button>
 
-          {/* 5. Live Marketplace Feed (Compact High-Density List with Chat Access) */}
-          <section id="marketplace-feed" className="py-14 sm:py-20 bg-white border-t border-slate-200">
-            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+                    <button
+                      type="button"
+                      onClick={() => setHomeViewPreference('landing')}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition cursor-pointer"
+                      title="Afficher la présentation du site"
+                    >
+                      <FiLayout className="text-xs text-slate-500" />
+                      <span>Vue Présentation</span>
+                    </button>
 
-              {/* Header Title for Task Feed */}
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-                <div>
-                  <p className="section-kicker">Missions en direct</p>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-                    Dernières tâches publiées au Maroc
-                  </h2>
-                  <p className="mt-1.5 text-xs sm:text-sm text-slate-600">
-                    Consultez les dernières micro-tâches ou accédez au tableau de bord complet avec messagerie intégrée.
-                  </p>
+                    {isCustomer ? (
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateTask}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
+                      >
+                        <FiPlus className="text-sm font-black" />
+                        <span>Publier une mission</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/${locale}/tasks`)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
+                      >
+                        <FiSearch className="text-sm font-black" />
+                        <span>Missions ouvertes</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => router.push(`/${locale}/tasks`)}
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-brand-700 hover:text-brand-800 hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
-                >
-                  <span>Voir le catalogue ({tasks.length})</span>
-                  {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
-                </button>
+                {/* 4 LIVE FINANCIAL & MISSION KPIS */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-100">
+                  <div
+                    onClick={() => router.push(`/${locale}/wallet`)}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-brand-600 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold mb-1">
+                      <span>Solde Disponible</span>
+                      <FiDollarSign className="text-brand-600 text-sm group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="text-xl font-black text-slate-900">
+                      {Math.round((user.balanceAvailable || 0) * 10)} DH
+                    </div>
+                    <p className="text-[10px] text-brand-700 font-semibold mt-0.5 group-hover:underline">
+                      Gérer portefeuille →
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => router.push(`/${locale}/wallet`)}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-amber-500 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold mb-1">
+                      <span>Séquestre Daman</span>
+                      <FiLock className="text-amber-600 text-sm group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="text-xl font-black text-amber-700">
+                      {Math.round((user.balanceEscrow || 0) * 10)} DH
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      Garantie bloquée
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setWorkzillaSubTab('open')}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-slate-400 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold mb-1">
+                      <span>Missions en cours</span>
+                      <FiClock className="text-slate-600 text-sm group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="text-xl font-black text-slate-900">
+                      {tasks.filter(t => t.status === 'IN_PROGRESS' || t.status === 'UNDER_REVIEW' || t.status === 'REVISION_REQUESTED').length}
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      En cours d’exécution
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setWorkzillaSubTab('history')}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-emerald-500 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold mb-1">
+                      <span>Missions validées</span>
+                      <FiCheckCircle className="text-emerald-600 text-sm group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="text-xl font-black text-emerald-700">
+                      {tasks.filter(t => t.status === 'COMPLETED').length}
+                    </div>
+                    <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                      Fonds débloqués
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* Compact Task List (Work-zilla style) */}
-              <div className="space-y-2.5">
-                {localizedTasks.slice(0, 8).map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    userRole={user.activeRole}
-                    onSelectTask={handleOpenTask}
-                    onOpenChat={handleOpenChatForTask}
-                  />
-                ))}
-              </div>
-
-              {/* View All Tasks CTA Button */}
-              <div className="mt-10 text-center">
-                <button
-                  onClick={() => router.push(`/${locale}/tasks`)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-6 py-3.5 text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-98 cursor-pointer"
-                >
-                  <FiSearch className="text-base" />
-                  <span>Voir toutes les tâches ({localizedTasks.length} disponibles)</span>
-                  {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
-                </button>
-              </div>
-
+              {/* LIVE WORKSPACE TASK TABS */}
+              <WorkzillaTaskTabs
+                tasks={localizedTasks}
+                user={user}
+                activeTab={workzillaSubTab}
+                onTabChange={(st) => {
+                  setWorkzillaSubTab(st);
+                  updateQuery({ tab: st });
+                }}
+                onSelectTask={handleOpenTask}
+                onOpenCreateTask={handleOpenCreateTask}
+                onOpenChatForTask={handleOpenChatForTask}
+                onOpenProofDrawer={(task) => updateQuery({ proof: task.id })}
+                onApproveTask={(task) => handleApproveWork(task.id)}
+                onRequestRevision={(task) => handleRequestRevision(task.id, 'Veuillez effectuer les corrections demandées.')}
+                onCancelTask={(task) => handleCancelTask(task.id)}
+              />
             </div>
-          </section>
+          </main>
+        ) : (
+          /* GUEST LANDING VIEW OR CONNECTED USER CHOOSING LANDING PRESENTATION */
+          <>
+            {/* Authenticated user top banner when viewing landing */}
+            {isAuthenticated && (
+              <div className="bg-brand-50 border-b border-brand-100 py-2.5 px-4 text-center">
+                <div className="mx-auto max-w-6xl flex items-center justify-between text-xs">
+                  <span className="text-brand-900 font-semibold">
+                    👤 Vous êtes connecté en tant que <strong>{user.fullName}</strong>.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHomeViewPreference('dashboard')}
+                    className="inline-flex items-center gap-1.5 font-bold text-brand-700 hover:text-brand-800 bg-white border border-brand-200 px-3 py-1 rounded-lg hover:bg-brand-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <span>📊 Revenir à mon Tableau de bord</span>
+                    {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {/* 6. Escrow & Guarantee (Daman) */}
-          <WorkzillaTrustSection />
+            {/* 1. Work-zilla Direct Task Action Stage */}
+            <WorkzillaHero
+              onDirectPost={handleDirectHeroPost}
+              onExploreFeed={() => {
+                router.push(`/${locale}/tasks`);
+              }}
+            />
 
-          {/* 7. Real Completed Tasks Feed */}
-          <WorkzillaCompletedFeed />
-        </>
+            {/* 2. Key Metrics Proof Bar */}
+            <WorkzillaProofBar />
+
+            {/* 3. Universal Categories Grid */}
+            <WorkzillaCategoryGrid
+              onSelectCategory={(catKey) => {
+                router.push(`/${locale}/tasks/new?category=${encodeURIComponent(catKey)}`);
+              }}
+            />
+
+            {/* 4. Simple 3-Step Process (Work-zilla Model) */}
+            <WorkzillaHowItWorks
+              onPostTask={handleOpenCreateTask}
+            />
+
+            {/* 5. Live Marketplace Feed (Compact High-Density List with Chat Access) */}
+            <section id="marketplace-feed" className="py-14 sm:py-20 bg-white border-t border-slate-200">
+              <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+
+                {/* Header Title for Task Feed */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+                  <div>
+                    <p className="section-kicker">Missions en direct</p>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+                      Dernières tâches publiées au Maroc
+                    </h2>
+                    <p className="mt-1.5 text-xs sm:text-sm text-slate-600">
+                      Consultez les dernières micro-tâches ou accédez au tableau de bord complet avec messagerie intégrée.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => router.push(`/${locale}/tasks`)}
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-brand-700 hover:text-brand-800 hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
+                  >
+                    <span>Voir le catalogue ({tasks.length})</span>
+                    {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
+                  </button>
+                </div>
+
+                {/* Compact Task List (Work-zilla style) */}
+                <div className="space-y-2.5">
+                  {localizedTasks.slice(0, 8).map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      userRole={user.activeRole}
+                      onSelectTask={handleOpenTask}
+                      onOpenChat={handleOpenChatForTask}
+                    />
+                  ))}
+                </div>
+
+                {/* View All Tasks CTA Button */}
+                <div className="mt-10 text-center">
+                  <button
+                    onClick={() => router.push(`/${locale}/tasks`)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-6 py-3.5 text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-98 cursor-pointer"
+                  >
+                    <FiSearch className="text-base" />
+                    <span>Voir toutes les tâches ({localizedTasks.length} disponibles)</span>
+                    {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
+                  </button>
+                </div>
+
+              </div>
+            </section>
+
+            {/* 6. Escrow & Guarantee (Daman) */}
+            <WorkzillaTrustSection />
+
+            {/* 7. Real Completed Tasks Feed */}
+            <WorkzillaCompletedFeed />
+          </>
+        )
       )}
 
       {/* Multi-Age Help Center with WhatsApp Support & FAQ */}

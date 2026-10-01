@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAnalytics } from '@/lib/analytics';
 import { Header } from '@/components/Header';
 import { WorkzillaFooter } from '@/components/WorkzillaLandingSections';
 import {
@@ -22,6 +23,7 @@ export default function SimulatedCheckoutPage() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
   const { profile, updateProfile } = useAuth();
+  const { track } = useAnalytics();
 
   const orderCode = searchParams.get('orderCode') || `ORD-${Date.now()}`;
   const amountEur = parseFloat(searchParams.get('amount') || '50');
@@ -30,6 +32,11 @@ export default function SimulatedCheckoutPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+
+  // Track checkout initiation on mount
+  useEffect(() => {
+    track.walletDepositInitiated(amountDH, amountEur, 'viva_smart_checkout');
+  }, [amountDH, amountEur]);
 
   const handleSimulateSuccess = async () => {
     setIsProcessing(true);
@@ -49,6 +56,9 @@ export default function SimulatedCheckoutPage() {
           }),
         });
       }
+
+      // GA4 & GTM tracking: Wallet deposit completed (purchase event)
+      track.walletDepositCompleted(orderCode, amountDH, amountEur, 'viva_smart_checkout');
 
       setIsCompleted(true);
       setTimeout(() => {

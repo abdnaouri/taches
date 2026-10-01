@@ -6,6 +6,7 @@ import { UserProfile, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAnalytics } from '@/lib/analytics';
 import {
   FiBriefcase,
   FiCheckCircle,
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab: customSetActiveTab,
 }) => {
   const { isAuthenticated, profile, openAuthModal, signOut, toggleRole } = useAuth();
+  const { track } = useAnalytics();
   const currentUser = isAuthenticated && profile ? profile : (isAuthenticated ? user : null);
   const isUserLoggedIn = isAuthenticated && Boolean(currentUser);
 

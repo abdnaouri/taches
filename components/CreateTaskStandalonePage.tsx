@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Task } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAnalytics } from '@/lib/analytics';
 import { Header } from '@/components/Header';
 import { AuthModal } from '@/components/AuthModal';
 import { getTaskSlug } from '@/lib/slug';
@@ -55,6 +56,7 @@ const DRAFT_STORAGE_KEY = 'taches_task_draft_v2';
 export const CreateTaskStandalonePage: React.FC = () => {
   const { t, isRTL, locale } = useLanguage();
   const { isAuthenticated, profile, openAuthModal, toggleRole, updateProfile } = useAuth();
+  const { track } = useAnalytics();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -401,6 +403,20 @@ export const CreateTaskStandalonePage: React.FC = () => {
       if (!res.success) {
         throw new Error(res.error || 'Erreur lors de la création de la tâche');
       }
+
+      const createdTask = res.task || { ...newTaskData, id: `tsk_${Date.now()}` };
+
+      // GA4 & GTM tracking: Task Posted
+      track.taskPosted({
+        id: createdTask.id,
+        title: createdTask.title,
+        category: createdTask.category,
+        totalBudget: createdTask.totalBudget,
+        reward: createdTask.reward,
+        isUrgent: Boolean((createdTask as any).isUrgent),
+        city: createdTask.city,
+        attachments: createdTask.requiredProofs,
+      });
       
       // Clear draft on successful creation
       localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -414,7 +430,6 @@ export const CreateTaskStandalonePage: React.FC = () => {
         });
       }
 
-      const createdTask = res.task || { ...newTaskData, id: `tsk_${Date.now()}` };
       const slug = getTaskSlug(createdTask as Task);
 
       // Redirect to newly created task

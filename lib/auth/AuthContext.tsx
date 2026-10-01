@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { UserProfile, UserRole } from '@/types/database';
+import { trackLogin, trackSignUp, clearUserProperties, setUserProperties, trackRoleSwitch } from '@/lib/analytics/dataLayer';
 
 interface AuthContextType {
   user: User | null;
@@ -228,7 +229,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-        await fetchProfile(data.user.id, data.user.email || trimmedEmail);
+        const p = await fetchProfile(data.user.id, data.user.email || trimmedEmail);
+
+        // GA4 / GTM tracking
+        trackLogin('email', data.user.id, p?.activeRole || 'CUSTOMER');
+        if (p) {
+          setUserProperties({
+            user_id: data.user.id,
+            user_role: p.activeRole,
+            performer_tier: p.performerTier,
+            kyc_status: p.kycStatus,
+            city: p.city,
+          });
+        }
 
         if (postAuthCallback) {
           postAuthCallback();
@@ -257,6 +270,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: resData.error || 'Erreur lors de la création du compte' };
       }
 
+      // GA4 / GTM tracking
+      trackSignUp('email', role);
+
       // Automatically sign in
       return await signIn(email, password);
     } catch (err: any) {
@@ -267,6 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign Out
   const signOut = async () => {
     try {
+      clearUserProperties();
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Sign out error:', err);
@@ -307,6 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Toggle user role
   const toggleRole = async (role: UserRole) => {
+    trackRoleSwitch(role);
     await updateProfile({ activeRole: role });
   };
 

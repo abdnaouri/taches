@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { UserRole } from '@/types/database';
 import {
   FiX,
   FiMail,
   FiLock,
   FiUser,
+  FiPhone,
   FiArrowRight,
   FiCheckCircle,
   FiAlertCircle,
@@ -15,8 +17,11 @@ import {
   FiShield,
   FiEye,
   FiEyeOff,
-  FiZap
+  FiZap,
+  FiKey,
+  FiCheck,
 } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -30,37 +35,66 @@ export const AuthModal: React.FC = () => {
     openAuthModal,
   } = useAuth();
 
-  const [mode, setMode] = useState<'login' | 'signup'>(authModalMode);
+  const { t, locale, isRTL } = useLanguage();
+
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(authModalMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('CUSTOMER');
   const [showPassword, setShowPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Sync mode with context state when opening
-  React.useEffect(() => {
+  useEffect(() => {
     setMode(authModalMode);
     setError(null);
+    setSuccessMessage(null);
   }, [authModalMode, isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
+  // Password strength calculation
+  const getPasswordStrength = (pass: string): { label: string; color: string; score: number } => {
+    if (!pass) return { label: '', color: 'bg-slate-200', score: 0 };
+    let score = 0;
+    if (pass.length >= 6) score += 1;
+    if (pass.length >= 8) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass) || /[A-Z]/.test(pass)) score += 1;
+
+    if (score <= 1) return { label: 'Faible', color: 'bg-rose-500', score: 25 };
+    if (score <= 2) return { label: 'Moyen', color: 'bg-amber-500', score: 50 };
+    if (score <= 3) return { label: 'Bon', color: 'bg-blue-500', score: 75 };
+    return { label: 'Excellent', color: 'bg-emerald-500', score: 100 };
+  };
+
+  const strength = getPasswordStrength(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
       if (mode === 'login') {
         const res = await signIn(email, password);
         if (!res.success) {
-          setError(res.error || 'Identifiants invalides. Veuillez réessayer.');
+          setError(res.error || 'Identifiants invalides. Veuillez vérifier votre e-mail et mot de passe.');
         }
-      } else {
+      } else if (mode === 'signup') {
         if (!fullName.trim()) {
           setError('Veuillez renseigner votre nom complet.');
+          setLoading(false);
+          return;
+        }
+        if (!agreeTerms) {
+          setError('Veuillez accepter les conditions d’utilisation de tâches.ma.');
           setLoading(false);
           return;
         }
@@ -68,6 +102,10 @@ export const AuthModal: React.FC = () => {
         if (!res.success) {
           setError(res.error || 'Impossible de créer le compte. Veuillez réessayer.');
         }
+      } else if (mode === 'forgot') {
+        // Password reset email dispatch simulation
+        await new Promise((r) => setTimeout(r, 1000));
+        setSuccessMessage(`Un lien de réinitialisation sécurisé a été envoyé à ${email}.`);
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur inattendue est survenue.');
@@ -76,7 +114,7 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (demoRole: UserRole = 'CUSTOMER') => {
     setError(null);
     setLoading(true);
     try {
@@ -99,7 +137,6 @@ export const AuthModal: React.FC = () => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
     >
       <div className="relative w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 my-auto animate-in zoom-in-95 duration-150">
-        
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
@@ -115,12 +152,18 @@ export const AuthModal: React.FC = () => {
             T
           </div>
           <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {mode === 'login' ? 'Connexion à votre compte' : 'Créer un compte'}
+            {mode === 'login'
+              ? 'Connexion à votre compte'
+              : mode === 'signup'
+              ? 'Créer un compte'
+              : 'Réinitialiser le mot de passe'}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
             {mode === 'login'
               ? 'Accédez à votre espace tâches et votre portefeuille Daman'
-              : 'Rejoignez la communauté de micro-services n°1 au Maroc'}
+              : mode === 'signup'
+              ? 'Rejoignez la communauté de micro-services n°1 au Maroc'
+              : 'Entrez votre email pour recevoir les instructions de récupération'}
           </p>
         </div>
 
@@ -129,6 +172,14 @@ export const AuthModal: React.FC = () => {
           <div className="mb-4 flex items-center gap-2.5 rounded-xl bg-brand-50 border border-brand-200/80 p-3 text-xs text-brand-900 font-semibold">
             <FiShield className="text-brand-700 text-base shrink-0" />
             <span>{authPromptMessage}</span>
+          </div>
+        )}
+
+        {/* Success Alert */}
+        {successMessage && (
+          <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+            <FiCheckCircle className="text-emerald-600 text-base shrink-0 mt-0.5" />
+            <span className="font-medium leading-relaxed">{successMessage}</span>
           </div>
         )}
 
@@ -141,36 +192,40 @@ export const AuthModal: React.FC = () => {
         )}
 
         {/* Mode Switch Tabs */}
-        <div className="flex rounded-xl bg-slate-100 p-1 mb-5 border border-slate-200">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('login');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              mode === 'login'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Se connecter
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signup');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              mode === 'signup'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Créer un compte
-          </button>
-        </div>
+        {mode !== 'forgot' && (
+          <div className="flex rounded-xl bg-slate-100 p-1 mb-5 border border-slate-200">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                mode === 'login'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Se connecter
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                mode === 'signup'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Créer un compte
+            </button>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -210,65 +265,138 @@ export const AuthModal: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Mot de passe
-            </label>
-            <div className="relative">
-              <FiLock className="absolute left-3.5 top-3.5 text-slate-400 text-sm" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Au moins 6 caractères"
-                className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-10 py-2.5 text-xs text-slate-900 outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition"
-              >
-                {showPassword ? <FiEyeOff className="text-sm" /> : <FiEye className="text-sm" />}
-              </button>
-            </div>
-          </div>
-
-          {mode === 'signup' && (
+          {mode !== 'forgot' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Vous souhaitez principalement
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Mot de passe
+                </label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot');
+                      setError(null);
+                      setSuccessMessage(null);
+                    }}
+                    className="text-[11px] font-semibold text-brand-700 hover:underline cursor-pointer"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <FiLock className="absolute left-3.5 top-3.5 text-slate-400 text-sm" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Au moins 6 caractères"
+                  className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-10 py-2.5 text-xs text-slate-900 outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700"
+                />
                 <button
                   type="button"
-                  onClick={() => setRole('CUSTOMER')}
-                  className={`flex flex-col items-center p-3 rounded-xl border text-center transition cursor-pointer ${
-                    role === 'CUSTOMER'
-                      ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition"
                 >
-                  <FiBriefcase className={`text-base mb-1 ${role === 'CUSTOMER' ? 'text-brand-700' : 'text-slate-400'}`} />
-                  <span className="text-xs font-bold">Publier des tâches</span>
-                  <span className="text-[10px] text-slate-500">Mode Client</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('PERFORMER')}
-                  className={`flex flex-col items-center p-3 rounded-xl border text-center transition cursor-pointer ${
-                    role === 'PERFORMER'
-                      ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <FiCheckCircle className={`text-base mb-1 ${role === 'PERFORMER' ? 'text-brand-700' : 'text-slate-400'}`} />
-                  <span className="text-xs font-bold">Réaliser des missions</span>
-                  <span className="text-[10px] text-slate-500">Mode Prestataire</span>
+                  {showPassword ? <FiEyeOff className="text-sm" /> : <FiEye className="text-sm" />}
                 </button>
               </div>
+
+              {/* Password strength visual meter on signup */}
+              {mode === 'signup' && password.length > 0 && (
+                <div className="mt-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                    <span>Sécurité du mot de passe</span>
+                    <span className="font-bold text-slate-700">{strength.label}</span>
+                  </div>
+                  <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${strength.color} transition-all duration-300`}
+                      style={{ width: `${strength.score}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+
+          {mode === 'signup' && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Numéro WhatsApp (Optionnel pour alertes instantanées)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-500">
+                    +212
+                  </span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="6 12 34 56 78"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-14 pr-3.5 py-2.5 text-xs text-slate-900 outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Vous souhaitez principalement
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRole('CUSTOMER')}
+                    className={`flex flex-col items-center p-3 rounded-xl border text-center transition cursor-pointer ${
+                      role === 'CUSTOMER'
+                        ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <FiBriefcase
+                      className={`text-base mb-1 ${
+                        role === 'CUSTOMER' ? 'text-brand-700' : 'text-slate-400'
+                      }`}
+                    />
+                    <span className="text-xs font-bold">Publier des tâches</span>
+                    <span className="text-[10px] text-slate-500">Mode Client</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('PERFORMER')}
+                    className={`flex flex-col items-center p-3 rounded-xl border text-center transition cursor-pointer ${
+                      role === 'PERFORMER'
+                        ? 'border-brand-700 bg-brand-50 text-brand-900 ring-2 ring-brand-700/20'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <FiCheckCircle
+                      className={`text-base mb-1 ${
+                        role === 'PERFORMER' ? 'text-brand-700' : 'text-slate-400'
+                      }`}
+                    />
+                    <span className="text-xs font-bold">Réaliser des missions</span>
+                    <span className="text-[10px] text-slate-500">Mode Prestataire</span>
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-brand-700 focus:ring-brand-700"
+                />
+                <span className="text-[11px] text-slate-600 leading-snug">
+                  J'accepte les conditions d'utilisation et le protocole de séquestre Daman de tâches.ma.
+                </span>
+              </label>
+            </>
           )}
 
           {/* Submit Button */}
@@ -281,18 +409,38 @@ export const AuthModal: React.FC = () => {
               <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             ) : (
               <>
-                <span>{mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</span>
+                <span>
+                  {mode === 'login'
+                    ? 'Se connecter'
+                    : mode === 'signup'
+                    ? 'Créer mon compte'
+                    : 'Envoyer le lien'}
+                </span>
                 <FiArrowRight className="text-sm" />
               </>
             )}
           </button>
+
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className="w-full text-center py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition"
+            >
+              Retour à la connexion
+            </button>
+          )}
         </form>
 
         {/* Demo Fast Login Option */}
         <div className="mt-5 pt-4 border-t border-slate-100">
           <button
             type="button"
-            onClick={handleDemoLogin}
+            onClick={() => handleDemoLogin('CUSTOMER')}
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 py-2.5 px-3 text-xs font-bold transition cursor-pointer"
           >
