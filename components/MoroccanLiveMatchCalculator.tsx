@@ -134,13 +134,13 @@ const TASK_PRESETS: TaskPreset[] = [
     },
   },
   {
-    id: 'youcan_products',
+    id: 'shopify_products',
     categoryKey: 'development',
     icon: '🛍️',
     label: {
-      fr: 'Ajout de fiches produits YouCan / Shopify',
-      ar: 'إدخال وتنسيق منتجات على متجر يوكان أو شوبيفاي',
-      en: 'Product uploads to YouCan Shop / Shopify',
+      fr: 'Ajout de fiches produits Shopify / E-commerce',
+      ar: 'إدخال وتنسيق منتجات على متجر شوبيفاي أو ووكومرس',
+      en: 'Product listings for Shopify / E-commerce',
     },
     unitLabel: {
       fr: 'fiches produits complètes',

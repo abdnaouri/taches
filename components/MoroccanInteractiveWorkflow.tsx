@@ -180,17 +180,17 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
       fr: [
         'Protection 100% bilatérale client et prestataire',
         'Remboursement intégral garanti en cas de non-livraison',
-        'Paiement viré directement vers les banques marocaines (CIH, Attijari, Cash Plus)',
+        'Paiement viré directement via Remitly ou Binance Pay (USDT)',
       ],
       ar: [
         'حماية مالية كاملة ومتبادلة للطرفين',
         'استرجاع كامل لأموالك في حال عدم الالتزام بالشروط',
-        'تحويل سريع للأرباح نحو البنوك المغربية أو كاش بلوس',
+        'تحويل سريع للأرباح عبر Remitly أو Binance Pay',
       ],
       en: [
         '100% bilateral protection for both client and freelancer',
         'Full refund guarantee if work is not delivered as specified',
-        'Direct payout to Moroccan bank accounts or Cash Plus',
+        'Direct payout via Remitly or Binance Pay (USDT)',
       ],
     },
     visualPreview: {

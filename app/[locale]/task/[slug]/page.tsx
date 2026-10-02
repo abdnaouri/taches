@@ -1,6 +1,6 @@
 export const runtime = 'edge';
 
-import { MarketplaceApp } from '@/components/MarketplaceApp';
+import { TaskWorkspacePage } from '@/components/TaskWorkspacePage';
 import { Locale } from '@/lib/i18n/types';
 
 export default function TaskSlugPage({
@@ -11,6 +11,6 @@ export default function TaskSlugPage({
   const locale = (params.locale as Locale) || 'fr';
   const slug = params.slug;
 
-  return <MarketplaceApp forcedLocale={locale} initialSlug={slug} viewMode="tasks" />;
+  return <TaskWorkspacePage slug={slug} forcedLocale={locale} />;
 }
 

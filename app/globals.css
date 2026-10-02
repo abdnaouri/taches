@@ -66,7 +66,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 
-/* Work-zilla functional cards */
+/* Tâches.ma functional cards */
 .functional-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -80,7 +80,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
-/* Work-zilla Hero Instant Task Action Box */
+/* Tâches.ma Hero Instant Task Action Box */
 .hero-task-box {
   background: #ffffff;
   border: 2px solid #1d4ed8;

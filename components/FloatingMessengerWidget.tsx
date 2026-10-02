@@ -160,7 +160,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'task_messages',
+          table: 'messages',
           filter: `task_id=eq.${selectedTaskId}`,
         },
         (payload) => {

@@ -613,3 +613,276 @@ values
   'Agadir'
 )
 on conflict (id) do nothing;
+
+-- ====================================================================
+-- 15. WORKZILLA & UNU ENGINE ENHANCEMENTS
+-- ====================================================================
+
+-- Idempotent column additions for profiles & tasks
+alter table public.profiles add column if not exists subscription_active_until timestamp with time zone;
+alter table public.profiles add column if not exists free_tasks_remaining integer default 3;
+
+alter table public.tasks add column if not exists executions_approved_count integer default 0;
+alter table public.tasks add column if not exists executions_reserved_count integer default 0;
+
+-- A. PERFORMER SUBSCRIPTIONS TABLE (Workzilla Paid Access Model)
+create table if not exists public.performer_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  plan_type text not null, -- '1_MONTH', '3_MONTHS', '1_YEAR'
+  amount_paid_dh numeric(10, 2) not null,
+  starts_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  expires_at timestamp with time zone not null,
+  status text default 'ACTIVE',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.performer_subscriptions enable row level security;
+
+drop policy if exists "Users view own subscriptions" on public.performer_subscriptions;
+create policy "Users view own subscriptions" on public.performer_subscriptions
+  for select using (auth.uid() = user_id or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));
+
+-- B. TASK EXECUTIONS TABLE (UNU Crowd Campaign Multi-Task Slots)
+create table if not exists public.task_executions (
+  id uuid default gen_random_uuid() primary key,
+  task_id uuid references public.tasks(id) on delete cascade not null,
+  performer_id uuid references public.profiles(id) on delete cascade not null,
+  status text not null default 'RESERVED', -- 'RESERVED', 'SUBMITTED', 'APPROVED', 'REWORK_REQUESTED', 'REJECTED', 'EXPIRED'
+  reserved_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  reserved_until timestamp with time zone not null,
+  submitted_at timestamp with time zone,
+  report_text text,
+  proof_urls text[] default '{}',
+  anti_spam_entered text,
+  client_feedback text,
+  reviewed_at timestamp with time zone,
+  unit_reward_dh numeric(10, 2) not null default 0.00,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.task_executions enable row level security;
+
+drop policy if exists "Task executions viewable by participants" on public.task_executions;
+create policy "Task executions viewable by participants" on public.task_executions
+  for select using (
+    auth.uid() = performer_id or
+    exists (select 1 from public.tasks t where t.id = task_executions.task_id and t.client_id = auth.uid()) or
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true)
+  );
+
+-- C. ATOMIC RPC: PURCHASE PERFORMER SUBSCRIPTION
+create or replace function public.purchase_performer_subscription(
+  p_user_id uuid,
+  p_plan_type text,
+  p_amount_dh numeric
+)
+returns jsonb as $$
+declare
+  v_available numeric;
+  v_amount_eur numeric := p_amount_dh / 10.0;
+  v_duration interval;
+  v_expires_at timestamp with time zone;
+  v_sub_id uuid;
+begin
+  select balance_available into v_available from public.profiles where id = p_user_id for update;
+
+  if v_available < v_amount_eur then
+    return jsonb_build_object('success', false, 'error', 'Solde disponible insuffisant pour activer le pass.');
+  end if;
+
+  if p_plan_type = '1_MONTH' then
+    v_duration := interval '30 days';
+  elsif p_plan_type = '3_MONTHS' then
+    v_duration := interval '90 days';
+  elsif p_plan_type = '1_YEAR' then
+    v_duration := interval '365 days';
+  else
+    v_duration := interval '30 days';
+  end if;
+
+  v_expires_at := timezone('utc'::text, now()) + v_duration;
+
+  update public.profiles
+  set 
+    balance_available = balance_available - v_amount_eur,
+    subscription_active_until = v_expires_at
+  where id = p_user_id;
+
+  insert into public.performer_subscriptions (user_id, plan_type, amount_paid_dh, expires_at, status)
+  values (p_user_id, p_plan_type, p_amount_dh, v_expires_at, 'ACTIVE')
+  returning id into v_sub_id;
+
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (p_user_id, 'COMMISSION', -v_amount_eur, 'EUR', 'Activation Pass Prestataire Vérifié (' || p_plan_type || ')', 'COMPLETED');
+
+  return jsonb_build_object('success', true, 'subscription_id', v_sub_id, 'expires_at', v_expires_at);
+end;
+$$ language plpgsql security definer;
+
+-- D. ATOMIC RPC: RESERVE SLOT IN MULTI-EXECUTION CAMPAIGN (UNU Model)
+create or replace function public.reserve_task_slot(
+  p_task_id uuid,
+  p_performer_id uuid
+)
+returns jsonb as $$
+declare
+  v_task record;
+  v_existing record;
+  v_reserved_until timestamp with time zone;
+  v_unit_dh numeric;
+  v_execution_id uuid;
+begin
+  select * into v_task from public.tasks where id = p_task_id for update;
+
+  if not found then
+    return jsonb_build_object('success', false, 'error', 'Mission introuvable.');
+  end if;
+
+  if v_task.task_mode != 'multi' then
+    return jsonb_build_object('success', false, 'error', 'Cette mission n''est pas en mode multi-exécutions.');
+  end if;
+
+  -- Check if performer already has active or approved execution
+  select * into v_existing from public.task_executions
+  where task_id = p_task_id and performer_id = p_performer_id and status in ('RESERVED', 'SUBMITTED', 'APPROVED');
+
+  if found then
+    return jsonb_build_object('success', false, 'error', 'Vous avez déjà réservé ou complété cette mission.');
+  end if;
+
+  -- Check remaining slots
+  if coalesce(v_task.executions_approved_count, 0) + coalesce(v_task.executions_reserved_count, 0) >= coalesce(v_task.target_executions_count, 1) then
+    return jsonb_build_object('success', false, 'error', 'Toutes les places sont actuellement réservées ou complétées.');
+  end if;
+
+  v_unit_dh := coalesce(v_task.unit_price_dh, (v_task.reward * 10) / greatest(1, v_task.target_executions_count));
+  v_reserved_until := timezone('utc'::text, now()) + interval '45 minutes';
+
+  insert into public.task_executions (task_id, performer_id, status, reserved_until, unit_reward_dh)
+  values (p_task_id, p_performer_id, 'RESERVED', v_reserved_until, v_unit_dh)
+  returning id into v_execution_id;
+
+  update public.tasks
+  set executions_reserved_count = coalesce(executions_reserved_count, 0) + 1
+  where id = p_task_id;
+
+  return jsonb_build_object('success', true, 'execution_id', v_execution_id, 'reserved_until', v_reserved_until);
+end;
+$$ language plpgsql security definer;
+
+-- E. ATOMIC RPC: APPROVE MULTI-EXECUTION SLOT
+create or replace function public.approve_task_execution(
+  p_execution_id uuid,
+  p_client_id uuid
+)
+returns jsonb as $$
+declare
+  v_exec record;
+  v_task record;
+  v_unit_eur numeric;
+  v_commission_eur numeric;
+  v_net_eur numeric;
+begin
+  select * into v_exec from public.task_executions where id = p_execution_id for update;
+  if not found or v_exec.status != 'SUBMITTED' then
+    return jsonb_build_object('success', false, 'error', 'Exécution introuvable ou pas en attente de validation.');
+  end if;
+
+  select * into v_task from public.tasks where id = v_exec.task_id for update;
+  if not found or v_task.client_id != p_client_id then
+    return jsonb_build_object('success', false, 'error', 'Non autorisé à valider cette exécution.');
+  end if;
+
+  v_unit_eur := v_exec.unit_reward_dh / 10.0;
+  v_commission_eur := v_unit_eur * 0.15;
+  v_net_eur := v_unit_eur - v_commission_eur;
+
+  -- 1. Deduct customer's escrow
+  update public.profiles
+  set 
+    balance_escrow = greatest(0.00, balance_escrow - v_unit_eur),
+    customer_total_spent = customer_total_spent + v_unit_eur
+  where id = p_client_id;
+
+  -- 2. Credit performer's balance
+  update public.profiles
+  set 
+    balance_available = balance_available + v_net_eur,
+    performer_completed_tasks = performer_completed_tasks + 1,
+    performer_xp = performer_xp + 10
+  where id = v_exec.performer_id;
+
+  -- 3. Update execution status
+  update public.task_executions
+  set 
+    status = 'APPROVED',
+    reviewed_at = timezone('utc'::text, now())
+  where id = p_execution_id;
+
+  -- 4. Update task count
+  update public.tasks
+  set 
+    executions_approved_count = coalesce(executions_approved_count, 0) + 1,
+    executions_reserved_count = greatest(0, coalesce(executions_reserved_count, 0) - 1)
+  where id = v_exec.task_id;
+
+  -- 5. Ledger record
+  insert into public.transactions (user_id, type, amount, currency, description, status)
+  values (v_exec.performer_id, 'ESCROW_RELEASE', v_unit_eur, 'EUR', 'Rémunération micro-tâche #' || substring(v_exec.task_id::text from 1 for 8), 'COMPLETED');
+
+  return jsonb_build_object('success', true);
+end;
+$$ language plpgsql security definer;
+
+-- F. ATOMIC RPC: PROCESS AUTO-APPROVALS AND TASK EXPIRATIONS (Workzilla + UNU Cron Engine)
+create or replace function public.process_task_expirations()
+returns jsonb as $$
+declare
+  v_auto_approved_count integer := 0;
+  v_expired_reservations_count integer := 0;
+  v_overdue_tasks_count integer := 0;
+  r_task record;
+  r_sub record;
+  r_exec record;
+begin
+  -- 1. Auto-approve tasks under review > 72h
+  for r_sub in
+    select s.*, t.client_id, t.reward, t.platform_fee, t.total_budget
+    from public.submissions s
+    join public.tasks t on t.id = s.task_id
+    where t.status = 'UNDER_REVIEW' and s.submitted_at < (timezone('utc'::text, now()) - interval '72 hours')
+  loop
+    perform public.release_task_escrow(
+      r_sub.task_id,
+      r_sub.client_id,
+      r_sub.performer_id,
+      r_sub.reward,
+      r_sub.reward * 0.15,
+      r_sub.total_budget,
+      5.0,
+      'Validation automatique du livrable après 72h sans réclamation.'
+    );
+    v_auto_approved_count := v_auto_approved_count + 1;
+  end loop;
+
+  -- 2. Release expired crowd slot reservations > 45min
+  for r_exec in
+    select * from public.task_executions
+    where status = 'RESERVED' and reserved_until < timezone('utc'::text, now())
+  loop
+    update public.task_executions set status = 'EXPIRED' where id = r_exec.id;
+    update public.tasks
+    set executions_reserved_count = greatest(0, coalesce(executions_reserved_count, 0) - 1)
+    where id = r_exec.task_id;
+    v_expired_reservations_count := v_expired_reservations_count + 1;
+  end loop;
+
+  return jsonb_build_object(
+    'success', true,
+    'auto_approved_tasks', v_auto_approved_count,
+    'expired_slot_reservations', v_expired_reservations_count
+  );
+end;
+$$ language plpgsql security definer;
+

@@ -43,7 +43,7 @@ export function getOrganizationSchema() {
       'Freelance Maroc',
       'Micro-tâches au Maroc',
       'Plateforme freelance Casablanca',
-      'E-commerce YouCan Maroc',
+      'E-commerce et Boutiques Shopify',
       'Saisie de données et Excel',
       'Graphiste et Création de Logos',
       'Développeur web et mobile Maroc',
@@ -111,8 +111,8 @@ export function getSiteNavigationSchema() {
       {
         '@type': 'SiteNavigationElement',
         position: 3,
-        name: 'Web, E-commerce YouCan & Tests Réseau',
-        description: 'Paramétrage boutique YouCan/Shopify, tests SMS OTP sur réseaux IAM/Orange/Inwi et corrections bugs.',
+        name: 'Web, E-commerce & Développement',
+        description: 'Paramétrage boutique Shopify/WooCommerce, intégration passerelles de paiement et corrections bugs.',
         url: `${BASE_URL}/fr/tasks?category=development`,
       },
       {
@@ -158,7 +158,7 @@ export function getFAQSchema() {
         name: 'Quels types de micro-tâches et services peut-on déléguer au Maroc ?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Vous pouvez déléguer des tâches digitales et physiques : graphisme, création de logo, saisie Excel de factures, configuration de boutique e-commerce YouCan / Shopify, traduction en Darija marocaine, visites terrain, dépôts de plis urgents et tests d’applications mobiles sur les réseaux marocains (Maroc Telecom, Inwi, Orange).',
+          text: 'Vous pouvez déléguer des tâches digitales : graphisme, création de logo, saisie Excel de factures, configuration de boutique e-commerce Shopify / WooCommerce, traduction en Darija marocaine, marketing digital et développement web.',
         },
       },
       {
@@ -166,7 +166,7 @@ export function getFAQSchema() {
         name: 'Comment les freelances et prestataires marocains reçoivent-ils leurs gains ?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Dès validation de la mission par le client, les fonds sont instantanément crédités sur le solde du prestataire. Le retrait se fait par virement bancaire sur n’importe quel compte marocain (CIH, Attijariwafa, BMCE, Chaabi, etc.) sous 24h ouvrées.',
+          text: 'Dès validation de la mission par le client, les fonds sont instantanément crédités sur le solde du prestataire. Le retrait se fait simplement via Remitly ou instantanément en USDT via Binance Pay.',
         },
       },
       {
@@ -201,7 +201,7 @@ export function getServiceSchema() {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Micro-tâches & Terrain Maroc',
+            name: 'Micro-tâches & Saisie de données',
           },
           priceCurrency: 'MAD',
           price: '15.00',
@@ -219,7 +219,7 @@ export function getServiceSchema() {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Paramétrage E-commerce YouCan Maroc',
+            name: 'Paramétrage E-commerce Shopify Maroc',
           },
           priceCurrency: 'MAD',
           price: '250.00',
@@ -259,7 +259,7 @@ export function getOnlineMarketplaceSchema() {
     '@id': `${BASE_URL}/#marketplace`,
     name: 'tâches.ma Marketplace Freelance Maroc',
     url: BASE_URL,
-    description: 'Marketplace marocaine de services numériques, graphisme, développement, YouCan et micro-tâches sous séquestre Daman.',
+    description: 'Marketplace marocaine de services numériques, graphisme, développement, e-commerce et micro-tâches sous séquestre Daman.',
   };
 }
 

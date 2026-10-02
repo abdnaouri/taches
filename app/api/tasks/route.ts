@@ -1,8 +1,8 @@
-export const runtime = 'edge';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { Task } from '@/types/database';
+import { sendTelegramTaskAlert } from '@/lib/notificationService';
+import { filterOffPlatformContact } from '@/lib/antiCircumvention';
 
 export async function GET(req: NextRequest) {
   try {
@@ -151,9 +151,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sanitizedTitle = filterOffPlatformContact(body.title.trim()).sanitizedText;
+    const sanitizedDesc = filterOffPlatformContact((body.description || '').trim()).sanitizedText;
+
     const dbPayload: Record<string, any> = {
-      title: body.title.trim(),
-      description: (body.description || '').trim(),
+      title: sanitizedTitle,
+      description: sanitizedDesc,
       category: body.category || 'assistance',
       sub_category: body.subCategory || undefined,
       city: body.city || 'Casablanca',
@@ -240,6 +243,17 @@ export async function POST(req: NextRequest) {
       clientHireRate: Number(data.client_hire_rate || 100),
       createdAt: data.created_at,
     };
+
+    // Broadcast instant alert to Telegram subscribers (Workzilla / UNU rapid dispatch)
+    sendTelegramTaskAlert({
+      taskId: data.id,
+      title: data.title,
+      rewardDH: Math.round(reward * 10),
+      category: data.category,
+      city: data.city,
+      taskMode: data.task_mode,
+      timeLimitHours: Number(data.time_limit_hours || 24),
+    }).catch((err) => console.warn('Telegram dispatch error:', err));
 
     return NextResponse.json({
       success: true,

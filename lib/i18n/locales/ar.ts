@@ -52,7 +52,7 @@ export const ar: Translations = {
   statEscrowProtected: 'دفع محمي بضمان Séquestre Daman',
 
   // Filters & Search
-  searchPlaceholder: 'ابحث عن خدمة (شعار، ترجمة، متجر يوكان، إكسيل، فواتير)...',
+  searchPlaceholder: 'ابحث عن خدمة (شعار، ترجمة، متجر شوبيفاي، إكسيل، فواتير)...',
   filterUrgent: 'عاجلة (< 6 ساعات)',
   filterReset: 'إعادة ضبط',
 
@@ -230,12 +230,12 @@ export const ar: Translations = {
   tabDeposit: '+ شحن الرصيد',
   tabWithdraw: 'طلب سحب بنكي',
   depositDesc: 'اشحن رصيدك لنشر المهام فوراً دون انتظار :',
-  depositInstant: 'بطاقة بنكية مغربية CMI / تحويل / كاش بلوس',
+  depositInstant: 'بطاقة بنكية / Remitly / Binance Pay',
   depositCustomLabel: 'المبلغ بالدرهم المغربي (DH) :',
   btnDeposit: 'شحن الحساب',
-  withdrawAvailableLabel: 'المبلغ المتاح للتحويل البنكي :',
-  withdrawFeeAdvantage: 'السحب للبنوك المغربية :',
-  withdrawFeeDiscount: 'CIH, التجاري وفا بنك, كاش بلوس, وفاساش وغيرها',
+  withdrawAvailableLabel: 'المبلغ المتاح للسحب :',
+  withdrawFeeAdvantage: 'السحب نحو الحساب :',
+  withdrawFeeDiscount: 'Remitly & Binance Pay',
   withdrawAmountLabel: 'المبلغ المطلوب سحبه (DH) :',
   btnConfirmWithdrawal: 'تأكيد التحويل إلى حسابي البنكي',
 
@@ -256,11 +256,11 @@ export const ar: Translations = {
   footerWallet: 'محفظتي',
   footerGithub: 'دعم واتساب المغرب',
 
-  // Work-zilla Moroccan Core Keys
+  // Tâches.ma Moroccan Core Keys
   wzHeroKicker: 'المنصة الرائدة للمهام المصغرة والخدمات عن بعد في المغرب',
   wzHeroTitle: 'مستقلون مؤهلون لإنجاز كافة مهامكم اليومية والتجارية',
   wzHeroLead: 'فوض مهامك بكل سهولة لأكثر من 25,000 مستقل مغربي موثق خلال 35 ثانية. الدفع مضمون 100% بنظام حساب الضمان (Daman): لن تدفع درهماً واحداً إلا بعد رضاك الكامل عن النتيجة.',
-  wzHeroInputPlaceholder: 'ما الذي تريد إنجازه؟ (مثال: تصميم شعار، ترجمة عقد، إدخال بيانات فواتير، إنشاء متجر يوكان...)',
+  wzHeroInputPlaceholder: 'ما الذي تريد إنجازه؟ (مثال: تصميم شعار، ترجمة عقد، إدخال بيانات فواتير، إنشاء متجر شوبيفاي...)',
   wzHeroBtnPost: 'نشر مهمتي الآن',
   wzHeroBtnFind: 'إيجاد مستقل',
   wzHeroFreeNotice: '✓ مجاني وبدون التزام • استجابة أولى خلال 35 ثانية • حماية الضمان 100%',
@@ -268,7 +268,7 @@ export const ar: Translations = {
   wzTabCustomer: 'أحتاج إلى خدمة (للأفراد والشركات)',
   wzTabPerformer: 'أريد العمل والربح (للمستقلين والطلاب)',
 
-  // Work-zilla Proof Numbers
+  // Tâches.ma Proof Numbers
   wzStatTasksCount: '85,000+',
   wzStatTasksLabel: 'مهمة أُنجزت بنجاح في المغرب',
   wzStatSpeedTime: '35 ثانية',
@@ -278,7 +278,7 @@ export const ar: Translations = {
   wzStatPriceFrom: 'من 50 درهم',
   wzStatPriceLabel: 'أسعار مناسبة لكافة الميزانيات',
 
-  // Work-zilla 3-Step Process
+  // Tâches.ma 3-Step Process
   wzHowTitle: 'كيف تعمل المنصة؟',
   wzHowSubtitle: 'خطوات بسيطة وواضحة تناسب الجميع دون أي تعقيد',
   wzStep1Title: '1. اشرح طلبك ببساطة',
@@ -297,8 +297,8 @@ export const ar: Translations = {
   wzCatTranslationTitle: 'ترجمة وكتابة نصوص',
   wzCatTranslationDesc: 'عربية، دارجة مغربية، فرنسية، إنجليزية، عقود تجارية، بحوث جامعية، تدقيق لغوي',
   wzCatTranslationPrice: 'من 50 درهم',
-  wzCatWebTitle: 'مواقع ومتاجر YouCan وShopify',
-  wzCatWebDesc: 'إنشاء وضبط متاجر إلكترونية، مواقع ووردبريس، إصلاح الأخطاء البرمجية، ربط بوابات CMI',
+  wzCatWebTitle: 'مواقع ومتاجر Shopify وووكومرس',
+  wzCatWebDesc: 'إنشاء وضبط متاجر إلكترونية، مواقع ووردبريس، إصلاح الأخطاء البرمجية، ربط بوابات الدفع',
   wzCatWebPrice: 'من 250 درهم',
   wzCatAssistanceTitle: 'إدخال بيانات وسكرتارية',
   wzCatAssistanceDesc: 'إدخال فواتير في إكسيل، تنسيق ملفات وورد، متابعة وتواصل عبر واتساب للأعمال',
@@ -317,8 +317,8 @@ export const ar: Translations = {
   wzTrustItem1Desc: 'أموالك لا تخرج من المنصة إلا بعد موافقتك الصريحة على العمل المستلم. لا مجال لأي خسارة.',
   wzTrustItem2Title: 'مستقلون موثقون بالبطاقة الوطنية (CIN)',
   wzTrustItem2Desc: 'كل مستقل نشط يتم التحقق من بطاقته الوطنية ورقم هاتفه المغربي (+212) لضمان المصداقية.',
-  wzTrustItem3Title: 'دعم جميع الأبناك المغربية والسحب الفوري',
-  wzTrustItem3Desc: 'شحن وسحب سهل عبر CIH، التجاري وفا بنك، بريد بنك، كاش بلوس، وفاساش وبطاقات CMI.',
+  wzTrustItem3Title: 'سحب الأرباح عبر Remitly و Binance Pay',
+  wzTrustItem3Desc: 'شحن وسحب سهل ومباشر عبر Remitly أو فورياً بالعملة الرقمية USDT عبر Binance Pay.',
   wzTrustItem4Title: 'دعم محلي وتواصل عبر واتساب',
   wzTrustItem4Desc: 'فريق عمل مغربي في الدار البيضاء والرباط لمساعدتكم هاتفياً وعبر واتساب بالدارجة والفرنسية 7 أيام في الأسبوع.',
 
@@ -332,7 +332,7 @@ export const ar: Translations = {
   wzFaq1Q: 'كيف يعمل نظام حماية الضمان (Daman)؟',
   wzFaq1A: 'عند قبولك لأي عرض، يتم حجز المبلغ في حساب وسيط آمن. يقوم المستقل بإنجاز المطلوب وتسليمه لك. لا يتم تحويل الأجر للمستقل إلا عندما تضغط على "الموافقة". إذا كان العمل غير مطابق، يحق لك طلب التعديل أو استرجاع أموالك كاملة.',
   wzFaq2Q: 'ما هي طرق الدفع المتوفرة في المغرب؟',
-  wzFaq2A: 'يمكنك الدفع واستلام المستحقات عبر البطاقات البنكية المغربية (CMI)، التحويلات البنكية المحلية (CIH، التجاري وفا بنك، البنك الشعبي، وغيرها)، أو نقداً عبر وكالات كاش بلوس ووفاساش.',
+  wzFaq2A: 'يمكنك شحن رصيدك أو استلام أرباحك بكل سهولة عبر Remitly، أو عبر Binance Pay (USDT) أو بالبطاقة البنكية.',
   wzFaq3Q: 'هل الموقع سهل الاستخدام لمن ليس لديه خبرة تقنية؟',
   wzFaq3A: 'نعم بالتأكيد! صُمم الموقع ليكون في غاية البساطة والوضوح لكافة الأعمار، كما يمكنك التواصل مع فريق الدعم المغربي عبر واتساب ليساعدك خطوة بخطوة.',
   wzFaq4Q: 'كم تكلفة نشر مهمة على المنصة؟',
@@ -363,7 +363,7 @@ export const ar: Translations = {
   unuCampaignPriceFrom: 'من 50 درهم',
   unuCampaignHundredsDaily: 'عشرات المهام يومياً',
   unuCheck1: 'تصميم جرافيك، بطاقات، قوائم مطاعم، شعارات',
-  unuCheck2: 'متاجر إلكترونية يوكان وشوبيفاي وإدخال المنتجات',
+  unuCheck2: 'متاجر إلكترونية شوبيفاي وووكومرس وإدخال المنتجات',
   unuCheck3: 'ترجمة معتمدة وعامة بالدارجة والفرنسية والعربية',
   unuStatActiveUsers: '25,000+',
   unuStatActiveUsersLabel: 'مستقل موثق في المغرب',
@@ -392,7 +392,7 @@ export const ar: Translations = {
   unuPerformerCardDesc: 'اكسب دخلاً منتظماً من منزلك أو ميدانياً في مدينتك.',
   unuPerformerBenefit1: 'فرص عمل ومهام يومية متنوعة في شتى المجالات',
   unuPerformerBenefit2: 'مستحقاتك مضمونة ومحجوزة مسبقاً في حساب الضمان',
-  unuPerformerBenefit3: 'تحويلات مباشرة إلى CIH، التجاري، كاش بلوس وغيرها',
+  unuPerformerBenefit3: 'تحويلات وسحب مباشر عبر Remitly أو Binance Pay',
   unuPerformerBenefit4: 'حرية تامة في اختيار أوقات وساعات عملك',
   unuCatalogKicker: 'دليل الخدمات',
   unuCatalogTitle: 'كافة خدمات العمل الحر في المغرب',
@@ -420,7 +420,7 @@ export const ar: Translations = {
   unuCatSeoItem4: 'تسريع الموقع وإصلاح الوسوم البرمجية',
   unuCatSeoItem5: 'إضافة النشاط في الأدلة المهنية',
   unuCatInstallItem1: 'إنشاء موقع تعريفي ووردبريس',
-  unuCatInstallItem2: 'ضبط وتجهيز متجر يوكان أو شوبيفاي',
+  unuCatInstallItem2: 'ضبط وتجهيز متجر شوبيفاي أو ووكومرس',
   unuCatInstallItem3: 'ربط بوابة الدفع الإلكتروني CMI',
   unuCatInstallItem4: 'إصلاح المشاكل البرمجية للويب',
   unuCatInstallItem5: 'حماية وتأمين الخوادم والنسخ الاحتياطي',
@@ -461,7 +461,7 @@ export const ar: Translations = {
   unuFooterFaq: 'الأسئلة الشائعة',
   unuFooterPartner: 'انضم كمستقل',
   unuFooterInfo: 'نظام حماية الضمان (Daman)',
-  unuFooterApi: 'وسائل الدفع (CIH، CMI، كاش بلوس)',
+  unuFooterApi: 'وسائل الدفع المقبولة (Remitly، Binance Pay، البطاقة البنكية)',
   unuFooterThemeToggle: 'المظهر',
   unuFooterGooglePlay: 'تطبيق الويب',
   unuFooterCopyright: '© تَشِيز المغرب 2026. كافة الحقوق محفوظة. منصة آمنة.',

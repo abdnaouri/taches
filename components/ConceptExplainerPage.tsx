@@ -41,7 +41,7 @@ export const ConceptExplainerPage: React.FC = () => {
           
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-brand-500/20 text-brand-300 border border-brand-500/30">
-              <FiZap className="text-amber-400" /> Modèle Workzilla & Architecture
+              <FiZap className="text-amber-400" /> Modèle Tâches Express & Architecture
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
               🇲🇦 Spécification Maroc
@@ -53,7 +53,7 @@ export const ConceptExplainerPage: React.FC = () => {
           </h1>
 
           <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-3xl leading-relaxed">
-            Guide détaillé et transparent sur le modèle de micro-tâches inspiré de Workzilla, le protocole de séquestre bancaire Daman, et l'architecture technique Next.js 14 & Supabase.
+            Guide détaillé et transparent sur le modèle de micro-tâches express Tâches.ma, le protocole de séquestre bancaire Daman, et l'architecture technique Next.js 14 & Supabase.
           </p>
 
           {/* Mode Switcher Buttons */}
@@ -103,7 +103,7 @@ export const ConceptExplainerPage: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                    En quoi consiste le modèle "Workzilla" adapté au Maroc ?
+                    En quoi consiste le modèle Tâches.ma adapté au Maroc ?
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-500">
                     La révolution de la micro-délégation ultra-rapide vs le freelancing classique
@@ -128,7 +128,7 @@ export const ConceptExplainerPage: React.FC = () => {
                 <div className="bg-brand-50/60 rounded-xl p-5 border border-brand-200">
                   <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-2 text-brand-800">
                     <span className="h-2 w-2 rounded-full bg-brand-600" />
-                    Le Modèle tâches.ma (Inspiré de Workzilla)
+                    Le Modèle tâches.ma Express
                   </h3>
                   <ul className="text-xs text-slate-700 space-y-2">
                     <li>• <strong>Micro-tâches standardisées :</strong> Dès 50 DH, exprimées en langage clair.</li>
@@ -236,7 +236,7 @@ export const ConceptExplainerPage: React.FC = () => {
                     <span>Paiements & Retraits Locaux</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Cartes bancaires marocaines (CMI, CIH, Attijariwafa, Al Barid, BP) ainsi que les retraits rapides en espèces via les agences <strong>Cash Plus & Wafacash</strong> partout au Maroc.
+                    Cartes bancaires marocaines (CMI, CIH, Attijariwafa, Al Barid, BP) ainsi que les retraits rapides et fluides via <strong>Remitly & Binance Pay (USDT)</strong>.
                   </p>
                 </div>
 
@@ -519,7 +519,7 @@ export const ConceptExplainerPage: React.FC = () => {
               <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-6">
                 <div>
                   <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <FiCpu className="text-indigo-600" /> Algorithme de Dispatch Express Workzilla
+                    <FiCpu className="text-indigo-600" /> Algorithme de Dispatch Express Tâches.ma
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Formule de ranking dynamique pour apparier les tâches avec les meilleurs prestataires en &lt; 45s.

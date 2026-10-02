@@ -50,7 +50,7 @@ export const fr = {
   statEscrowProtected: 'Paiement garanti par Séquestre Daman',
 
   // Filters & Search
-  searchPlaceholder: 'Rechercher un service (ex: Logo, Traduction Arabe, YouCan, Saisie Excel, Factures)...',
+  searchPlaceholder: 'Rechercher un service (ex: Logo, Traduction Arabe, Shopify, Saisie Excel, Factures)...',
   filterUrgent: 'Urgentes (< 6h)',
   filterReset: 'Réinitialiser',
 
@@ -228,12 +228,12 @@ export const fr = {
   tabDeposit: '+ Recharger mon solde',
   tabWithdraw: 'Demander un virement (Retrait)',
   depositDesc: 'Approvisionnez votre compte pour commander des tâches sans délai :',
-  depositInstant: 'CMI / Virement / Cash Plus',
+  depositInstant: 'Remitly / Binance Pay / Carte',
   depositCustomLabel: 'Montant en Dirhams (DH) :',
   btnDeposit: 'Approvisionner',
   withdrawAvailableLabel: 'Montant disponible pour virement :',
-  withdrawFeeAdvantage: 'Virement vers banque marocaine :',
-  withdrawFeeDiscount: 'CIH, Attijariwafa, Cash Plus, etc.',
+  withdrawFeeAdvantage: 'Virement vers compte :',
+  withdrawFeeDiscount: 'Remitly & Binance Pay',
   withdrawAmountLabel: 'Montant à retirer (DH) :',
   btnConfirmWithdrawal: 'Transférer vers mon compte bancaire',
 
@@ -254,11 +254,11 @@ export const fr = {
   footerWallet: 'Mon Portefeuille',
   footerGithub: 'Assistance WhatsApp',
 
-  // Work-zilla Moroccan Core Keys
+  // Tâches.ma Core Keys
   wzHeroKicker: 'La référence du micro-outsourcing & des services au Maroc',
   wzHeroTitle: 'Des freelances qualifiés pour toutes vos tâches',
   wzHeroLead: 'Déléguez en 1 minute à des milliers de prestataires vérifiés au Maroc. Paiement 100% sécurisé sous séquestre (Daman) : vous ne payez que lorsque le travail est validé.',
-  wzHeroInputPlaceholder: 'Que voulez-vous faire faire ? (ex: Créer un logo, Traduction Arabe/Français, Saisie Excel, Boutique YouCan...)',
+  wzHeroInputPlaceholder: 'Que voulez-vous faire faire ? (ex: Créer un logo, Traduction Arabe/Français, Saisie Excel, Boutique Shopify...)',
   wzHeroBtnPost: 'Déposer ma tâche',
   wzHeroBtnFind: 'Trouver un freelance',
   wzHeroFreeNotice: '✓ Gratuit & sans engagement • Réponse moyenne en 35 secondes • Séquestre Garanti',
@@ -266,7 +266,7 @@ export const fr = {
   wzTabCustomer: 'J’ai besoin d’un service (Client)',
   wzTabPerformer: 'Je veux travailler (Freelance)',
 
-  // Work-zilla Proof Numbers
+  // Tâches.ma Proof Numbers
   wzStatTasksCount: '85 000+',
   wzStatTasksLabel: 'Tâches réalisées avec succès',
   wzStatSpeedTime: '35 secondes',
@@ -276,7 +276,7 @@ export const fr = {
   wzStatPriceFrom: 'Dès 50 DH',
   wzStatPriceLabel: 'Prix abordables pour tout budget',
 
-  // Work-zilla 3-Step Process
+  // Tâches.ma 3-Step Process
   wzHowTitle: 'Comment ça marche ?',
   wzHowSubtitle: 'Un processus simple, rapide et sans risque accessible à tous les âges',
   wzStep1Title: '1. Décrivez votre besoin',
@@ -295,8 +295,8 @@ export const fr = {
   wzCatTranslationTitle: 'Traduction & Rédaction',
   wzCatTranslationDesc: 'Arabe classique, Darija, Français, Anglais, contrats commerciaux, mémoires d’études, correction',
   wzCatTranslationPrice: 'Dès 50 DH',
-  wzCatWebTitle: 'Web, E-commerce & YouCan',
-  wzCatWebDesc: 'Boutiques YouCan / Shopify, sites WordPress vitrines, correction de bugs, passerelle CMI',
+  wzCatWebTitle: 'Web, E-commerce & Shopify',
+  wzCatWebDesc: 'Boutiques Shopify / WooCommerce, sites WordPress vitrines, correction de bugs, intégration Stripe',
   wzCatWebPrice: 'Dès 250 DH',
   wzCatAssistanceTitle: 'Saisie de données & Facturation',
   wzCatAssistanceDesc: 'Saisie de factures sous Excel, mise en page Word, relance de clients par WhatsApp, archivage',
@@ -315,8 +315,8 @@ export const fr = {
   wzTrustItem1Desc: 'Votre argent ne quitte jamais la plateforme avant votre validation écrite du livrable. Zéro risque de payer pour rien.',
   wzTrustItem2Title: 'Freelances Vérifiés (CIN & Mobile +212)',
   wzTrustItem2Desc: 'Chaque prestataire actif fournit sa Carte d’Identité Nationale marocaine et son numéro de téléphone vérifié par SMS.',
-  wzTrustItem3Title: 'Banques Marocaines & Retraits Faciles',
-  wzTrustItem3Desc: 'Dépôts et retraits compatibles avec toutes les banques marocaines (CIH, Attijariwafa, Al Barid, BMCE), Cash Plus, Wafacash et CMI.',
+  wzTrustItem3Title: 'Retraits Faciles Remitly & Binance Pay',
+  wzTrustItem3Desc: 'Dépôts et retraits fluides via Remitly ou instantanément en crypto USDT via Binance Pay.',
   wzTrustItem4Title: 'Support Local & Assistance WhatsApp',
   wzTrustItem4Desc: 'Une équipe marocaine disponible 7j/7 pour vous assister en Français et en Darija par téléphone et WhatsApp.',
 
@@ -329,8 +329,8 @@ export const fr = {
   wzFaqSubtitle: 'Tout ce que vous devez savoir pour démarrer sereinement',
   wzFaq1Q: 'Comment fonctionne la garantie de paiement sous séquestre (Daman) ?',
   wzFaq1A: 'Lorsque vous confirmez une mission, les fonds sont bloqués sur un compte sécurisé tiers. L’exécutant travaille et vous remet le résultat. L’argent n’est versé au freelance que lorsque vous cliquez sur "Valider". Si le livrable n’est pas conforme, vous pouvez demander des corrections ou être remboursé.',
-  wzFaq2Q: 'Quels sont les modes de paiement acceptés au Maroc ?',
-  wzFaq2A: 'Vous pouvez payer ou recevoir vos gains par carte bancaire marocaine (CMI), virement bancaire (CIH, Attijariwafa Bank, Banque Populaire, etc.), ou en espèces via les agences Cash Plus et Wafacash.',
+  wzFaq2Q: 'Quels sont les modes de paiement acceptés ?',
+  wzFaq2A: 'Vous pouvez alimenter votre compte ou recevoir vos gains facilement via Remitly, Binance Pay (USDT) ou par carte bancaire sécurisée.',
   wzFaq3Q: 'Le site est-il simple d’utilisation pour les personnes peu habituées à internet ?',
   wzFaq3A: 'Oui, tout a été simplifié à l’extrême avec de grands boutons clairs. En cas de doute, notre équipe marocaine vous répond directement sur WhatsApp pour vous accompagner.',
   wzFaq4Q: 'Combien coûte la publication d’une tâche ?',
@@ -341,7 +341,7 @@ export const fr = {
   wzWhatsappDesc: 'Nos conseillers au Maroc sont à votre écoute par WhatsApp pour vous guider pas à pas.',
   wzWhatsappBtn: 'Contacter l’assistance WhatsApp (+212)',
 
-  // UNU backward compatibility keys (prevents TS errors if referenced)
+  // Tâches.ma Catalog & Compatibility Keys
   unuHeroKicker: 'Services & micro-tâches au Maroc',
   unuHeroTitle: 'Bourse de micro-tâches Tâches.ma',
   unuHeroLead: 'Commandez des prestations simples ou qualifiées auprès de freelances vérifiés au Maroc.',
@@ -361,7 +361,7 @@ export const fr = {
   unuCampaignPriceFrom: 'dès 50 DH',
   unuCampaignHundredsDaily: 'des dizaines de missions / jour',
   unuCheck1: 'Création graphique, menus resto, flyers, logos vectoriels',
-  unuCheck2: 'Boutiques en ligne YouCan / Shopify & saisie de fiches produits',
+  unuCheck2: 'Boutiques en ligne Shopify / WooCommerce & saisie de fiches produits',
   unuCheck3: 'Traduction assermentée et courante Arabe / Darija / Français',
   unuStatActiveUsers: '25 000+',
   unuStatActiveUsersLabel: 'freelances au Maroc',
@@ -390,7 +390,7 @@ export const fr = {
   unuPerformerCardDesc: 'Gagnez un revenu régulier depuis chez vous ou sur le terrain au Maroc.',
   unuPerformerBenefit1: 'Des missions variées chaque jour dans tous les domaines',
   unuPerformerBenefit2: 'Paiement d’avance garanti bloqué sous séquestre',
-  unuPerformerBenefit3: 'Virements directs vers CIH, Attijari, Cash Plus, etc.',
+  unuPerformerBenefit3: 'Retraits directs vers Remitly ou Binance Pay',
   unuPerformerBenefit4: 'Travaillez à votre rythme selon vos disponibilités',
   unuCatalogKicker: 'Catalogue de services',
   unuCatalogTitle: 'Toutes les catégories de services au Maroc',
@@ -418,7 +418,7 @@ export const fr = {
   unuCatSeoItem4: 'Correction de balises méta et vitesse',
   unuCatSeoItem5: 'Inscriptions dans des annuaires professionnels',
   unuCatInstallItem1: 'Création de site vitrine WordPress',
-  unuCatInstallItem2: 'Paramétrage boutique YouCan / Shopify',
+  unuCatInstallItem2: 'Paramétrage boutique Shopify / WooCommerce',
   unuCatInstallItem3: 'Intégration passerelle de paiement CMI',
   unuCatInstallItem4: 'Résolution de bugs HTML/CSS/PHP',
   unuCatInstallItem5: 'Sauvegarde et sécurisation de serveur',
@@ -459,7 +459,7 @@ export const fr = {
   unuFooterFaq: 'Foire Aux Questions',
   unuFooterPartner: 'Devenir Freelance',
   unuFooterInfo: 'Sécurité Séquestre (Daman)',
-  unuFooterApi: 'Paiements acceptés (CIH, CMI, Cash Plus)',
+  unuFooterApi: 'Paiements acceptés (Remitly, Binance Pay, Carte)',
   unuFooterThemeToggle: 'Affichage',
   unuFooterGooglePlay: 'Application Web',
   unuFooterCopyright: '© Tâches Maroc 2026. Tous droits réservés. Plateforme sécurisée.',

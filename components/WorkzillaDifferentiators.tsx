@@ -40,7 +40,7 @@ export const WorkzillaDifferentiators: React.FC<WorkzillaDifferentiatorsProps> =
   const { locale, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState<'express' | 'device' | 'trust'>('express');
 
-  // Quick Micro-tasks and Device-Specific Templates (Workzilla's signature use cases)
+  // Quick Micro-tasks and Device-Specific Templates (Tâches.ma signature use cases)
   const signatureTemplates = [
     {
       id: 'samsung-test',
@@ -169,7 +169,7 @@ export const WorkzillaDifferentiators: React.FC<WorkzillaDifferentiatorsProps> =
             <span>
               {locale === 'ar'
                 ? 'لماذا تختلف منصة tâches.ma عن منصات العمل التقليدية؟'
-                : 'L’expérience Workzilla adaptée au Maroc'}
+                : 'L’expérience de micro-outsourcing N°1 au Maroc'}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -277,7 +277,7 @@ export const WorkzillaDifferentiators: React.FC<WorkzillaDifferentiatorsProps> =
               </div>
             </div>
 
-            {/* How Express Dispatch Works (Workzilla Style) */}
+            {/* How Express Dispatch Works (Tâches.ma Style) */}
             <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-6 sm:p-7 flex flex-col justify-between shadow-2xs">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900 mb-4 flex items-center gap-2">
@@ -409,7 +409,7 @@ export const WorkzillaDifferentiators: React.FC<WorkzillaDifferentiatorsProps> =
         {activeTab === 'trust' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch animate-in fade-in duration-300">
             
-            {/* Qualification Test Box (Workzilla's strict barrier) */}
+            {/* Qualification Test Box (Tâches.ma strict barrier) */}
             <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-teal-50/30 p-6 sm:p-7 flex flex-col justify-between shadow-2xs">
               <div>
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/80 px-3 py-1 text-xs font-bold text-emerald-800 mb-3 border border-emerald-300">

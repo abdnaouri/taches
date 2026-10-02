@@ -25,7 +25,7 @@ import {
 interface ProofSubmissionDrawerProps {
   task: Task | null;
   onClose: () => void;
-  onSubmitProof: (taskId: string, reportText: string, proofUrls: string[]) => void;
+  onSubmitProof: (taskId: string, reportText: string, proofUrls: string[], antiSpamEntered?: string) => void;
 }
 
 interface UploadedFileItem {
@@ -45,6 +45,8 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [reportText, setReportText] = useState('');
   const [proofLink, setProofLink] = useState('');
+  const [antiSpamInput, setAntiSpamInput] = useState('');
+  const [antiSpamError, setAntiSpamError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileItem[]>([]);
   const [checkedChecklist, setCheckedChecklist] = useState<Record<number, boolean>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -148,7 +150,20 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setAntiSpamError(null);
     if (!reportText.trim()) return;
+
+    if (task.antiSpamKeyword && task.antiSpamKeyword.trim().length > 0) {
+      const required = task.antiSpamKeyword.trim().toLowerCase();
+      const entered = antiSpamInput.trim().toLowerCase();
+      const inText = reportText.toLowerCase().includes(required);
+
+      if (entered !== required && !inText) {
+        setAntiSpamError('Le mot secret anti-spam est incorrect. Veuillez relire attentivement les consignes de la mission.');
+        sounds.playAlert();
+        return;
+      }
+    }
 
     const allUrls = uploadedFiles.map((f) => f.url);
     if (proofLink.trim()) {
@@ -156,7 +171,7 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
     }
 
     sounds.playSuccess();
-    onSubmitProof(task.id, reportText, allUrls);
+    onSubmitProof(task.id, reportText, allUrls, antiSpamInput.trim());
     onClose();
   };
 
@@ -252,6 +267,35 @@ export const ProofSubmissionDrawer: React.FC<ProofSubmissionDrawerProps> = ({
               className="w-full rounded-2xl border border-slate-300 bg-white p-3.5 text-xs text-slate-900 outline-none focus:border-brand-700 focus:ring-1 focus:ring-brand-700 transition"
             />
           </div>
+
+          {/* Anti-Spam Secret Keyword (UNU Quality Guard) */}
+          {task.antiSpamKeyword && (
+            <div className="rounded-2xl bg-amber-50/70 border border-amber-200 p-4">
+              <label className="block text-xs font-bold text-amber-900 mb-1">
+                🔒 Mot secret anti-spam exigé par le client <span className="text-rose-500">*</span>
+              </label>
+              <p className="text-[11px] text-amber-700 mb-2">
+                Un mot clé secret a été inséré dans le texte de la mission par le client pour vérifier que vous avez lu toutes les consignes.
+              </p>
+              <input
+                type="text"
+                required
+                value={antiSpamInput}
+                onChange={(e) => {
+                  setAntiSpamInput(e.target.value);
+                  setAntiSpamError(null);
+                }}
+                placeholder="Entrez le mot secret trouvé dans les consignes..."
+                className="w-full rounded-xl border border-amber-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600"
+              />
+              {antiSpamError && (
+                <p className="text-[11px] font-bold text-rose-600 mt-1.5 flex items-center gap-1">
+                  <FiAlertCircle />
+                  <span>{antiSpamError}</span>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Deliverable URL (Figma / Drive / Canva / Github / Loom) */}
           <div>

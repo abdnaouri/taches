@@ -9,7 +9,7 @@ export interface PayoutNotificationParams {
   amountDH: number;
   netAmountDH: number;
   feeDH: number;
-  payoutMethod: 'RIB' | 'CASHPLUS' | 'BINANCE_PAY' | 'USDT';
+  payoutMethod: 'REMITLY' | 'BINANCE_PAY' | string;
   bankName?: string;
   maskedDestination: string;
   trackingReference: string;
@@ -97,3 +97,53 @@ export async function sendEscrowReleaseNotification(
     return false;
   }
 }
+
+/**
+ * Instant Telegram Bot Alert Dispatcher (Workzilla & UNU parity)
+ * Broadcasts newly published tasks to Telegram channels/subscribers in real-time.
+ */
+export async function sendTelegramTaskAlert(params: {
+  taskId: string;
+  title: string;
+  rewardDH: number;
+  category: string;
+  city?: string;
+  taskMode?: string;
+  timeLimitHours: number;
+}): Promise<boolean> {
+  try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHANNEL_ID || process.env.TELEGRAM_CHAT_ID;
+
+    const message = [
+      `🚀 *NOUVELLE MISSION SUR TÂCHES.MA*`,
+      ``,
+      `📌 *${params.title.replace(/[_*[\]()~`>#+-=|{}.!]/g, '\\$&')}*`,
+      `💰 *Rémunération :* ${params.rewardDH} DH _(Garantie sous séquestre Daman)_`,
+      `⏱️ *Délai :* ${params.timeLimitHours}h | 📍 *Lieu :* ${params.city || 'En ligne'}`,
+      `🏷️ *Catégorie :* #${params.category}`,
+      ``,
+      `👉 [Postuler immédiatement sur Tâches\\.ma](https://taches.ma/fr/task/${params.taskId})`,
+    ].join('\n');
+
+    if (botToken && chatId) {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'MarkdownV2',
+          disable_web_page_preview: false,
+        }),
+      }).catch((err) => console.warn('Telegram broadcast failed (non-blocking):', err.message));
+    }
+
+    console.log(`[Telegram Alert Engine] Broadcasted task #${params.taskId} (${params.rewardDH} DH)`);
+    return true;
+  } catch (err: any) {
+    console.warn('Failed to send Telegram alert:', err.message);
+    return false;
+  }
+}
+

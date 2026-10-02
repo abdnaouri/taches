@@ -25,7 +25,7 @@ interface FreelanceMarocProps {
 
 export const metadata: Metadata = {
   title: 'Freelance Maroc — 1ère Plateforme de Freelances & Micro-Tâches au Maroc | Tâches.ma',
-  description: 'Trouvez et recrutez des freelances vérifiés au Maroc ou trouvez des missions rémunérées. Graphisme, développement web, marketing YouCan, saisie, traduction. Paiement 100% garanti sous séquestre Daman.',
+  description: 'Trouvez et recrutez des freelances vérifiés au Maroc ou trouvez des missions rémunérées. Graphisme, développement web, e-commerce & Shopify, saisie, traduction. Paiement 100% garanti sous séquestre Daman.',
   keywords: [
     'freelance maroc',
     'plateforme freelance maroc',
@@ -89,7 +89,7 @@ export default function FreelanceMarocPillarPage({ params }: FreelanceMarocProps
             name: 'Quels sont les métiers freelance les plus recherchés au Maroc ?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Les spécialités les plus demandées sont le développement web (WordPress, React, Shopify), le graphisme & logo, la gestion de boutiques e-commerce YouCan / COD, le montage vidéo TikTok/Reels, la saisie Excel et la traduction Darija/Français.',
+              text: 'Les spécialités les plus demandées sont le développement web (WordPress, React, Shopify), le graphisme & logo, la création de boutiques e-commerce (Shopify, WooCommerce), le montage vidéo TikTok/Reels, la saisie Excel et la traduction Darija/Français.',
             },
           },
           {
@@ -146,7 +146,7 @@ export default function FreelanceMarocPillarPage({ params }: FreelanceMarocProps
               {/* Action Buttons */}
               <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
                 <Link
-                  href={`/${locale}?action=create`}
+                  href={`/${locale}/tasks/new`}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 text-base font-bold shadow-lg transition-all"
                 >
                   <FiBriefcase className="text-lg" />
@@ -297,10 +297,10 @@ export default function FreelanceMarocPillarPage({ params }: FreelanceMarocProps
 
               <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/70">
                 <h3 className="font-bold text-slate-900 text-base mb-2">
-                  Comment retirer ses gains vers une banque marocaine ?
+                  Comment retirer ses gains sur Tâches.ma ?
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Les retraits s’effectuent par virement bancaire direct (RIB marocain : Attijariwafa, BCP, BMCE, CIH, CDM, SGMB) ou par Cash Plus / Wafacash sous 24h ouvrées.
+                  Les retraits s’effectuent facilement et rapidement par Remitly ou Binance Pay (USDT) sous 24h ouvrées, sans frais cachés.
                 </p>
               </div>
 

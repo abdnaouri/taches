@@ -59,26 +59,13 @@ const MOROCCAN_CITIES = [
   'Autre / 100% En ligne',
 ];
 
-const MOROCCAN_BANKS = [
-  { code: 'CIH', name: 'CIH Bank (Crédit Immobilier et Hôtelier)' },
-  { code: 'AWB', name: 'Attijariwafa bank' },
-  { code: 'BMCE', name: 'Bank of Africa (BMCE Group)' },
-  { code: 'BCP', name: 'Banque Populaire (Chaabi Bank)' },
-  { code: 'SGMB', name: 'Société Générale Maroc' },
-  { code: 'CDM', name: 'Crédit du Maroc' },
-  { code: 'CAM', name: 'Crédit Agricole du Maroc' },
-  { code: 'BMCI', name: 'BMCI (Groupe BNP Paribas)' },
-  { code: 'ABB', name: 'Al Barid Bank (Poste Maroc)' },
-  { code: 'CASHP', name: 'Cash Plus / Wafacash' },
-];
-
 const AVAILABLE_SKILLS_SUGGESTIONS = [
-  'YouCan Shop',
   'Shopify',
+  'WooCommerce',
   'Next.js & React',
   'Tailwind CSS',
   'WordPress',
-  'WooCommerce',
+  'Stripe',
   'HTML / CSS / JS',
   'Canva Pro',
   'Photoshop',
@@ -98,7 +85,7 @@ const AVAILABLE_SKILLS_SUGGESTIONS = [
 ];
 
 const DEFAULT_CATEGORIES = [
-  { id: 'development', label: 'Web & E-commerce', icon: '💻', desc: 'Sites YouCan, Shopify, Next.js, WordPress' },
+  { id: 'development', label: 'Web & E-commerce', icon: '💻', desc: 'Sites Shopify, WooCommerce, Next.js, WordPress' },
   { id: 'design', label: 'Design & Graphisme', icon: '🎨', desc: 'Logos, bannières, menus, retouches photo' },
   { id: 'assistance', label: 'Saisie & Secrétariat', icon: '📊', desc: 'Excel, fiches produits, qualification contacts' },
   { id: 'copywriting', label: 'Traduction & Rédaction', icon: '✍️', desc: 'Arabe, Darija, Français, Anglais' },
@@ -660,7 +647,7 @@ export const ProfilePageContent: React.FC = () => {
             { id: 'skills', label: 'Compétences & Filtres', icon: FiSliders },
             { id: 'portfolio', label: `Portfolio (${portfolio.length})`, icon: FiBriefcase },
             { id: 'reviews', label: `Avis Clients (${user.performerReviewsCount || 48})`, icon: FiStar },
-            { id: 'payout', label: 'RIB & Retraits Maroc', icon: FiDollarSign },
+            { id: 'payout', label: 'Retraits Remitly & Binance', icon: FiDollarSign },
             { id: 'tests', label: 'Tests & Certification', icon: FiAward },
             { id: 'settings', label: 'Paramètres & Alertes', icon: FiZap },
           ].map((tab) => {
@@ -773,10 +760,10 @@ export const ProfilePageContent: React.FC = () => {
                     Portefeuille
                   </div>
                   <h3 className="text-base font-extrabold mt-2">
-                    Demander un virement CIH / BMCE
+                    Demander un virement Remitly / Binance Pay
                   </h3>
                   <p className="text-xs text-slate-300 mt-1">
-                    Retirez vos gains de missions instantanément vers votre compte bancaire marocain.
+                    Retirez vos gains de missions facilement via Remitly ou Binance Pay.
                   </p>
                 </div>
                 <button
@@ -901,7 +888,7 @@ export const ProfilePageContent: React.FC = () => {
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
-                  placeholder="Ex: Expert Shopify / YouCan & Développeur Web"
+                  placeholder="Ex: Expert Shopify & Développeur Web Fullstack"
                 />
               </div>
 
@@ -1342,7 +1329,7 @@ export const ProfilePageContent: React.FC = () => {
                       handleAddSkill();
                     }
                   }}
-                  placeholder="Ex: Figma, Dropcontact, YouCan Shop..."
+                  placeholder="Ex: Figma, Dropcontact, Stripe..."
                   className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
                 />
                 <button
@@ -1623,15 +1610,15 @@ export const ProfilePageContent: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 6: BANK DETAILS & PAYOUT */}
+        {/* TAB 6: REMITLY & BINANCE PAYOUT DETAILS */}
         {activeTab === 'payout' && (
           <div className="rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-6 animate-in fade-in duration-150">
             <div>
               <h2 className="text-base font-extrabold text-slate-900">
-                Coordonnées Bancaires & Retraits vers le Maroc
+                Coordonnées de Retrait (Remitly & Binance Pay)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Renseignez votre Relevé d'Identité Bancaire (RIB 24 chiffres) pour recevoir vos gains sous 24h ouvrées.
+                Renseignez vos coordonnées de réception pour recevoir vos gains rapidement.
               </p>
             </div>
 
@@ -1663,28 +1650,10 @@ export const ProfilePageContent: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-              {/* Bank Selector */}
+              {/* Remitly Recipient Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Établissement Bancaire au Maroc
-                </label>
-                <select
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
-                >
-                  {MOROCCAN_BANKS.map((b) => (
-                    <option key={b.code} value={b.name}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Account Holder */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nom & Prénom du Titulaire du Compte
+                  Nom & Prénom du Bénéficiaire (Remitly)
                 </label>
                 <input
                   type="text"
@@ -1695,20 +1664,34 @@ export const ProfilePageContent: React.FC = () => {
                 />
               </div>
 
-              {/* RIB 24 Digits */}
+              {/* Remitly Phone or Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Téléphone ou Email associé à Remitly
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
+                  placeholder="Ex: +212 600 000000 ou email@example.com"
+                />
+              </div>
+
+              {/* Binance Pay ID */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  RIB Marocain (24 Chiffres)
+                  ID Binance Pay ou Email Binance (Optionnel pour Crypto)
                 </label>
                 <input
                   type="text"
                   value={bankRib}
                   onChange={(e) => setBankRib(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 focus:border-brand-700 focus:outline-none tracking-wider"
-                  placeholder="230 780 4567890123456789 45"
+                  placeholder="Ex: 892401844 ou user@binance.com"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Format standard : Code banque (3) + Code ville (3) + Numéro de compte (16) + Clé RIB (2).
+                  Pour les retraits instantanés en USDT sans frais.
                 </p>
               </div>
             </div>
@@ -1717,12 +1700,12 @@ export const ProfilePageContent: React.FC = () => {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
               <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
                 <FiCheckCircle className="text-emerald-600" />
-                <span>Règles de virement Tâches.ma Maroc</span>
+                <span>Règles de virement Tâches.ma (Remitly & Binance)</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 pl-1">
-                <li>Virements interbancaires exécutés chaque jour ouvré à 16h00.</li>
+                <li>Retraits exécutés via Remitly ou Binance Pay.</li>
                 <li>Montant minimum de retrait : <strong>50 DH</strong>.</li>
-                <li>0% de commission sur les retraits vers les banques marocaines (frais fixes pris en charge).</li>
+                <li>0% de commission de retrait.</li>
               </ul>
             </div>
 
@@ -1734,7 +1717,7 @@ export const ProfilePageContent: React.FC = () => {
                 className="flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 text-xs font-extrabold shadow-sm transition active:scale-95 cursor-pointer"
               >
                 <FiSave className="text-sm" />
-                <span>Enregistrer mes coordonnées bancaires</span>
+                <span>Enregistrer mes coordonnées</span>
               </button>
             </div>
           </div>
@@ -1745,7 +1728,7 @@ export const ProfilePageContent: React.FC = () => {
           <div className="space-y-6 animate-in fade-in duration-150">
             <div>
               <h2 className="text-base font-extrabold text-slate-900">
-                Tests de Qualification & Certifications Work-Zilla
+                Tests de Qualification & Certifications Tâches.ma
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Prouvez vos compétences pour débloquer les missions de niveau supérieur et afficher les badges certifiés.
@@ -1789,7 +1772,7 @@ export const ProfilePageContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* E-commerce & YouCan Test */}
+              {/* E-commerce & Shopify Test */}
               <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -1798,9 +1781,9 @@ export const ProfilePageContent: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-sm font-extrabold text-slate-900">
-                        Certification YouCan Shop & Shopify
+                        Certification Shopify & E-commerce
                       </h3>
-                      <span className="text-[11px] text-slate-500">Intégration thèmes, CMI et livraisons</span>
+                      <span className="text-[11px] text-slate-500">Intégration thèmes, passerelles et tunnels de vente</span>
                     </div>
                   </div>
 
@@ -2018,7 +2001,7 @@ export const ProfilePageContent: React.FC = () => {
                 type="text"
                 value={newPortTitle}
                 onChange={(e) => setNewPortTitle(e.target.value)}
-                placeholder="Ex: Création Boutique YouCan pour Marque de Mode"
+                placeholder="Ex: Création Boutique Shopify pour Marque de Mode"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
               />
             </div>

@@ -61,8 +61,11 @@ export interface UserProfile {
   performerReviewsCount: number;
   performerCompletedTasks: number;
   passedQualification: boolean;
+  hasActiveSubscription?: boolean;
+  subscriptionExpiresAt?: string;
+  freeTasksRemaining?: number;
 
-  // Worker Extended Profile (Work-zilla style)
+  // Worker Extended Profile (Tâches.ma Verified Performer)
   headline?: string;
   bio?: string;
   city?: string;
@@ -173,6 +176,9 @@ export interface Task {
   taskMode?: 'single' | 'multi';
   targetExecutionsCount?: number;
   unitPriceDH?: number;
+  antiSpamKeyword?: string;
+  executionsApprovedCount?: number;
+  executionsReservedCount?: number;
   referenceLinks?: string[];
   verificationQuestion?: string;
   applicantsCount: number;
@@ -194,6 +200,40 @@ export interface Task {
   finalPerformerAmountDH?: number;
   finalClientRefundDH?: number;
   createdAt: string;
+}
+
+export type SubscriptionPlanType = '1_MONTH' | '3_MONTHS' | '1_YEAR';
+
+export interface PerformerSubscription {
+  id: string;
+  userId: string;
+  planType: SubscriptionPlanType;
+  startsAt: string;
+  expiresAt: string;
+  amountPaidDH: number;
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  createdAt: string;
+}
+
+export type ExecutionStatus = 'RESERVED' | 'SUBMITTED' | 'APPROVED' | 'REWORK_REQUESTED' | 'REJECTED' | 'EXPIRED';
+
+export interface TaskExecution {
+  id: string;
+  taskId: string;
+  performerId: string;
+  performerName?: string;
+  performerAvatar?: string;
+  performerRating?: number;
+  status: ExecutionStatus;
+  reservedAt: string;
+  reservedUntil: string;
+  submittedAt?: string;
+  reportText?: string;
+  proofUrls?: string[];
+  antiSpamEntered?: string;
+  clientFeedback?: string;
+  reviewedAt?: string;
+  unitRewardDH: number;
 }
 
 export interface TaskBid {

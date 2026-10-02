@@ -4,6 +4,7 @@ import React from 'react';
 import { Task, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { formatRelativeTime } from '@/lib/dateUtils';
+import { getTaskSlug } from '@/lib/slug';
 import {
   FiClock,
   FiCheckCircle,
@@ -19,7 +20,7 @@ interface TaskCardProps {
   task: Task;
   userRole?: UserRole;
   userId?: string;
-  onSelectTask: (task: Task) => void;
+  onSelectTask?: (task: Task) => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -32,11 +33,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const isAssignedToMe = (userId && task.assignedToId === userId) || Boolean(task.assignedToName?.includes('Vous') || task.assignedToName?.includes('You'));
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
+  const slug = getTaskSlug(task);
+  const taskUrl = `/${locale}/task/${slug}`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (onSelectTask) {
+      e.preventDefault();
+      onSelectTask(task);
+    }
+  };
 
   return (
-    <div
-      onClick={() => onSelectTask(task)}
-      className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
+    <a
+      href={taskUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleClick}
+      className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md cursor-pointer block no-underline text-inherit ${
         isAssignedToMe
           ? 'border-brand-600 ring-2 ring-brand-600/30'
           : 'border-slate-200 hover:border-brand-600'
@@ -172,6 +186,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </span>
         </div>
       </div>
-    </div>
+    </a>
   );
 };

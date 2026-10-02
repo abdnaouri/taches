@@ -33,6 +33,7 @@ import { ProofSubmissionDrawer } from '@/components/ProofSubmissionDrawer';
 import { WalletModal } from '@/components/WalletModal';
 import { WalletPageContent } from '@/components/WalletPageContent';
 import { QualificationModal } from '@/components/QualificationModal';
+import { PerformerSubscriptionModal } from '@/components/PerformerSubscriptionModal';
 import { TaskExamplesPage } from '@/components/TaskExamplesPage';
 import { TaskExample } from '@/lib/taskExamplesData';
 import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
@@ -134,7 +135,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const [isChatWidgetOpen, setIsChatWidgetOpen] = useState<boolean>(false);
   const [chatActiveTaskId, setChatActiveTaskId] = useState<string | null>(null);
 
-  // Work-zilla Pre-filled Task Input State
+  // Tâches.ma Pre-filled Task Input State
   const [prefillTaskTitle, setPrefillTaskTitle] = useState<string>('');
   const [prefillTaskDesc, setPrefillTaskDesc] = useState<string>('');
   const [prefillTaskBudget, setPrefillTaskBudget] = useState<number | undefined>(undefined);
@@ -207,6 +208,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const proofTaskId = searchParams.get('proof') || null;
   const isWalletOpen = searchParams.get('wallet') === 'true';
   const isQualificationOpen = searchParams.get('test') === 'true';
+  const isSubscriptionOpen = searchParams.get('pass') === 'true' || searchParams.get('subscription') === 'true';
 
   // Guard ?create=true if not authenticated
   useEffect(() => {
@@ -270,12 +272,15 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     setIsChatWidgetOpen(true);
   };
 
-  // Navigate to task details modal route: /:locale/task/:slug
+  // Open task details in a dedicated new tab so users retain their feed and get full workspace access
   const handleOpenTask = (task: Task) => {
     track.viewTask(task);
     const slug = getTaskSlug(task);
-    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
-    router.push(`/${locale}/task/${slug}${query}`, { scroll: false });
+    if (typeof window !== 'undefined') {
+      window.open(`/${locale}/task/${slug}`, '_blank');
+    } else {
+      router.push(`/${locale}/task/${slug}`);
+    }
   };
 
   // Close task details modal route back to /:locale or /:locale/tasks
@@ -415,9 +420,17 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Check if qualification passed
+    // 1. Check if qualification passed
     if (!profile.passedQualification) {
       updateQuery({ test: 'true' });
+      return;
+    }
+
+    // 2. Check if Workzilla Pass subscription or free trial tasks are available
+    const hasActiveSub = profile.subscriptionExpiresAt && new Date(profile.subscriptionExpiresAt) > new Date();
+    const freeRemaining = Number(profile.freeTasksRemaining ?? 3);
+    if (!hasActiveSub && freeRemaining <= 0) {
+      updateQuery({ pass: 'true' });
       return;
     }
 
@@ -1106,7 +1119,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
         /* DEDICATED WORKER / CUSTOMER PROFILE PAGE */
         <ProfilePageContent />
       ) : viewMode === 'tasks' ? (
-        /* DEDICATED ALL TASKS CATALOG / WORK-ZILLA TABS VIEW */
+        /* DEDICATED ALL TASKS CATALOG / TACHES.MA TABS VIEW */
         <main className="flex-1 py-6 sm:py-10 bg-slate-50">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
             
@@ -1419,7 +1432,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
               </div>
             )}
 
-            {/* 1. Work-zilla Direct Task Action Stage */}
+            {/* 1. Tâches.ma Direct Task Action Stage */}
             <WorkzillaHero
               onDirectPost={handleDirectHeroPost}
               onExploreFeed={() => {
@@ -1437,7 +1450,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
               }}
             />
 
-            {/* 4. Simple 3-Step Process (Work-zilla Model) */}
+            {/* 4. Simple 3-Step Process (Tâches.ma Model) */}
             <WorkzillaHowItWorks
               onPostTask={handleOpenCreateTask}
             />
@@ -1467,7 +1480,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                   </button>
                 </div>
 
-                {/* Compact Task List (Work-zilla style) */}
+                {/* Compact Task List (Tâches.ma style) */}
                 <div className="space-y-2.5">
                   {localizedTasks.slice(0, 8).map((task) => (
                     <TaskRow
@@ -1510,7 +1523,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       {/* Functional Moroccan Footer */}
       <WorkzillaFooter />
 
-      {/* GLOBAL FLOATING WORKZILLA MESSENGER DOCK WIDGET */}
+      {/* GLOBAL FLOATING TACHES.MA MESSENGER DOCK WIDGET */}
       <FloatingMessengerWidget
         currentUser={profile}
         tasks={tasks}
@@ -1555,6 +1568,18 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             updateProfile({ passedQualification: true });
           }
           showToast(t('toastQualificationPassed'));
+        }}
+      />
+
+      {/* Performer Subscription Pass Modal */}
+      <PerformerSubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => updateQuery({ pass: null, subscription: null })}
+        onSuccess={() => {
+          showToast('Pass Prestataire activé avec succès !');
+        }}
+        onOpenDeposit={() => {
+          updateQuery({ pass: null, subscription: null, wallet: 'true' });
         }}
       />
 

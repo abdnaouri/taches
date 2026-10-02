@@ -52,7 +52,7 @@ export const en: Translations = {
   statEscrowProtected: 'Payment guaranteed by Escrow Daman',
 
   // Filters & Search
-  searchPlaceholder: 'Search for a service (e.g. Logo, Arabic Translation, YouCan, Excel, Invoices)...',
+  searchPlaceholder: 'Search for a service (e.g. Logo, Arabic Translation, Shopify, Excel, Invoices)...',
   filterUrgent: 'Urgent (< 6h)',
   filterReset: 'Reset filters',
 
@@ -230,12 +230,12 @@ export const en: Translations = {
   tabDeposit: '+ Top-up Balance',
   tabWithdraw: 'Request Bank Payout',
   depositDesc: 'Top-up your balance to hire freelancers instantly:',
-  depositInstant: 'CMI / Moroccan Bank Transfer / Cash Plus',
+  depositInstant: 'Remitly / Binance Pay / Card',
   depositCustomLabel: 'Amount in Dirhams (DH):',
   btnDeposit: 'Top-up',
-  withdrawAvailableLabel: 'Available for bank payout:',
-  withdrawFeeAdvantage: 'Transfer to Moroccan Banks:',
-  withdrawFeeDiscount: 'CIH, Attijariwafa, Cash Plus, Wafacash, etc.',
+  withdrawAvailableLabel: 'Available for payout:',
+  withdrawFeeAdvantage: 'Transfer to account:',
+  withdrawFeeDiscount: 'Remitly & Binance Pay',
   withdrawAmountLabel: 'Withdrawal amount (DH):',
   btnConfirmWithdrawal: 'Transfer to My Bank Account',
 
@@ -256,11 +256,11 @@ export const en: Translations = {
   footerWallet: 'My Wallet',
   footerGithub: 'WhatsApp Support',
 
-  // Work-zilla Moroccan Core Keys
+  // Tâches.ma Core Keys
   wzHeroKicker: 'The Leading Micro-outsourcing & Service Platform in Morocco',
   wzHeroTitle: 'Qualified freelancers for all your everyday tasks',
   wzHeroLead: 'Delegate in 1 minute to over 25,000 verified Moroccan freelancers in 35 seconds. 100% escrow payment protection (Daman): you only pay when you are satisfied with the result.',
-  wzHeroInputPlaceholder: 'What do you need done? (e.g. Create a logo, Arabic/French Translation, Excel Data Entry, YouCan Store...)',
+  wzHeroInputPlaceholder: 'What do you need done? (e.g. Create a logo, Arabic/French Translation, Excel Data Entry, Shopify Store...)',
   wzHeroBtnPost: 'Post My Task',
   wzHeroBtnFind: 'Find a Freelancer',
   wzHeroFreeNotice: '✓ Free & non-binding • First response in 35 seconds • Escrow Guaranteed',
@@ -268,7 +268,7 @@ export const en: Translations = {
   wzTabCustomer: 'I need a service (Clients & Businesses)',
   wzTabPerformer: 'I want to work (Freelancers & Students)',
 
-  // Work-zilla Proof Numbers
+  // Tâches.ma Proof Numbers
   wzStatTasksCount: '85,000+',
   wzStatTasksLabel: 'Successfully completed tasks in Morocco',
   wzStatSpeedTime: '35 seconds',
@@ -278,7 +278,7 @@ export const en: Translations = {
   wzStatPriceFrom: 'From 50 DH',
   wzStatPriceLabel: 'Affordable for every budget',
 
-  // Work-zilla 3-Step Process
+  // Tâches.ma 3-Step Process
   wzHowTitle: 'How does it work?',
   wzHowSubtitle: 'A simple, fast, and risk-free process designed for all ages',
   wzStep1Title: '1. Describe your need',
@@ -297,8 +297,8 @@ export const en: Translations = {
   wzCatTranslationTitle: 'Translation & Writing',
   wzCatTranslationDesc: 'Standard Arabic, Darija, French, English, commercial contracts, academic papers, proofreading',
   wzCatTranslationPrice: 'From 50 DH',
-  wzCatWebTitle: 'Web, E-commerce & YouCan',
-  wzCatWebDesc: 'YouCan / Shopify stores, WordPress showcase sites, bug fixing, CMI payment gateways',
+  wzCatWebTitle: 'Web, E-commerce & Shopify',
+  wzCatWebDesc: 'Shopify / WooCommerce stores, WordPress showcase sites, bug fixing, Stripe integration',
   wzCatWebPrice: 'From 250 DH',
   wzCatAssistanceTitle: 'Data Entry & Virtual Admin',
   wzCatAssistanceDesc: 'Excel invoice entry, Word formatting, WhatsApp Business customer follow-ups',
@@ -317,8 +317,8 @@ export const en: Translations = {
   wzTrustItem1Desc: 'Your money never leaves the platform before your explicit sign-off on the deliverable. Zero risk of losing deposits.',
   wzTrustItem2Title: 'Verified Freelancers (National ID & Mobile +212)',
   wzTrustItem2Desc: 'Every active freelancer is verified with their Moroccan National ID card (CIN) and phone number via SMS.',
-  wzTrustItem3Title: 'All Moroccan Banks & Fast Payouts',
-  wzTrustItem3Desc: 'Seamless deposits and withdrawals with CIH, Attijariwafa Bank, Al Barid, BMCE, Cash Plus, Wafacash, and CMI.',
+  wzTrustItem3Title: 'Remitly & Binance Pay Payouts',
+  wzTrustItem3Desc: 'Seamless deposits and withdrawals with Remitly or instant crypto USDT via Binance Pay.',
   wzTrustItem4Title: 'Local Support & Direct WhatsApp Help',
   wzTrustItem4Desc: 'A dedicated Moroccan support team in Casablanca & Rabat ready to assist you by phone or WhatsApp in Darija and French 7 days a week.',
 
@@ -332,7 +332,7 @@ export const en: Translations = {
   wzFaq1Q: 'How does the Escrow (Daman) payment guarantee work?',
   wzFaq1A: 'When you accept a freelancer proposal, funds are locked in a secure third-party escrow account. The freelancer completes the work and submits it to you. The payment is only released once you click "Approve". If the deliverable does not match requirements, you can request revisions or obtain a full refund.',
   wzFaq2Q: 'What payment methods are supported in Morocco?',
-  wzFaq2A: 'We support Moroccan bank cards (CMI), local bank transfers (CIH, Attijariwafa, Banque Populaire, etc.), cash deposits via Cash Plus and Wafacash agencies, as well as international cards (Visa, Mastercard).',
+  wzFaq2A: 'You can fund your account or receive payouts easily via Remitly, Binance Pay (USDT), or major credit cards.',
   wzFaq3Q: 'Is this site easy to use for people who are not tech-savvy?',
   wzFaq3A: 'Yes! The platform is designed to be straightforward with large, high-contrast buttons and simple language. If you need help, our Moroccan WhatsApp support is one click away to guide you.',
   wzFaq4Q: 'How much does it cost to post a task?',
@@ -343,7 +343,7 @@ export const en: Translations = {
   wzWhatsappDesc: 'Our Moroccan advisors are available on WhatsApp to guide you step-by-step.',
   wzWhatsappBtn: 'Contact WhatsApp Support (+212)',
 
-  // UNU backward compatibility keys
+  // Tâches.ma Catalog & Compatibility Keys
   unuHeroKicker: 'Services & micro-tasks in Morocco',
   unuHeroTitle: 'Tâches.ma Micro-task Exchange',
   unuHeroLead: 'Order services from verified freelancers across Morocco.',
@@ -363,7 +363,7 @@ export const en: Translations = {
   unuCampaignPriceFrom: 'from 50 DH',
   unuCampaignHundredsDaily: 'dozens of tasks daily',
   unuCheck1: 'Graphic design, menus, flyers, vector logos',
-  unuCheck2: 'YouCan / Shopify online shops & catalog product entry',
+  unuCheck2: 'Shopify / WooCommerce online shops & catalog product entry',
   unuCheck3: 'Certified & general translation in Arabic / Darija / French',
   unuStatActiveUsers: '25,000+',
   unuStatActiveUsersLabel: 'verified freelancers in Morocco',
@@ -392,7 +392,7 @@ export const en: Translations = {
   unuPerformerCardDesc: 'Earn a steady income from home or locally in your Moroccan city.',
   unuPerformerBenefit1: 'Diverse daily missions across multiple industries',
   unuPerformerBenefit2: 'Payment secured upfront in escrow account',
-  unuPerformerBenefit3: 'Direct payouts to CIH, Attijariwafa, Cash Plus, etc.',
+  unuPerformerBenefit3: 'Direct payouts via Remitly or Binance Pay',
   unuPerformerBenefit4: 'Work on your own schedule with complete flexibility',
   unuCatalogKicker: 'Service catalog',
   unuCatalogTitle: 'All Freelance Categories in Morocco',
@@ -420,7 +420,7 @@ export const en: Translations = {
   unuCatSeoItem4: 'Meta tags and web speed optimization',
   unuCatSeoItem5: 'Business directory listing submissions',
   unuCatInstallItem1: 'WordPress showcase site creation',
-  unuCatInstallItem2: 'YouCan / Shopify store setup',
+  unuCatInstallItem2: 'Shopify / WooCommerce store setup',
   unuCatInstallItem3: 'CMI payment gateway integration',
   unuCatInstallItem4: 'Web programming bug fixes',
   unuCatInstallItem5: 'Server backup and hardening',
@@ -461,7 +461,7 @@ export const en: Translations = {
   unuFooterFaq: 'FAQ',
   unuFooterPartner: 'Become a Freelancer',
   unuFooterInfo: 'Escrow Guarantee (Daman)',
-  unuFooterApi: 'Accepted Payments (CIH, CMI, Cash Plus)',
+  unuFooterApi: 'Accepted Payments (Remitly, Binance Pay, Card)',
   unuFooterThemeToggle: 'Display',
   unuFooterGooglePlay: 'Web App',
   unuFooterCopyright: '© Tâches Morocco 2026. All rights reserved. Secure platform.',

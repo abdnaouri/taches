@@ -52,7 +52,7 @@ export const ru: Translations = {
   statEscrowProtected: 'Защищено гарантией Daman',
 
   // Filters & Search
-  searchPlaceholder: 'Поиск услуги (логотип, перевод, YouCan, Excel, счета)...',
+  searchPlaceholder: 'Поиск услуги (логотип, перевод, Shopify, Excel, счета)...',
   filterUrgent: 'Срочные (< 6ч)',
   filterReset: 'Сбросить',
 
@@ -223,21 +223,21 @@ export const ru: Translations = {
   walletModalSubtitle: 'Управление платежами в Марокко',
   walletModalTitle: 'Кошелек и эскроу Tâches',
   walletAvailableBalance: 'Доступный баланс',
-  walletAvailableDesc: 'Готов к выводу на счет в марокканском банке или оплате новых заданий.',
+  walletAvailableDesc: 'Готов к выводу через Remitly / Binance Pay или оплате новых заданий.',
   walletEscrowFunds: 'В резерве эскроу',
   walletEscrowDesc: 'Зарезервировано под ваши активные задания.',
   tabOperationsHistory: 'История операций',
   tabDeposit: '+ Пополнить баланс',
-  tabWithdraw: 'Запросить вывод на банк',
+  tabWithdraw: 'Запросить вывод (Remitly / Binance)',
   depositDesc: 'Пополните баланс для мгновенного найма исполнителей:',
-  depositInstant: 'CMI / Банковский перевод / Cash Plus',
+  depositInstant: 'Remitly / Binance Pay / Карта',
   depositCustomLabel: 'Сумма в дирхамах (DH):',
   btnDeposit: 'Пополнить',
   withdrawAvailableLabel: 'Доступно для вывода:',
-  withdrawFeeAdvantage: 'Вывод на банки Марокко:',
-  withdrawFeeDiscount: 'CIH, Attijariwafa, Cash Plus, Wafacash и др.',
+  withdrawFeeAdvantage: 'Способы выплаты:',
+  withdrawFeeDiscount: 'Remitly и Binance Pay (USDT)',
   withdrawAmountLabel: 'Сумма к выводу (DH):',
-  btnConfirmWithdrawal: 'Вывести на банковский счет',
+  btnConfirmWithdrawal: 'Подтвердить заявку на вывод',
 
   // Toasts
   toastRoleCustomer: 'Включен режим заказчика: создавайте задания и выбирайте лучших специалистов.',
@@ -248,7 +248,7 @@ export const ru: Translations = {
   toastTaskApproved: 'Работа принята! {amount} DH зачислено на ваш баланс.',
   toastQualificationPassed: 'Профиль верифицирован! Доступны все задания.',
   toastDepositSuccess: '{amount} DH успешно зачислено на ваш баланс.',
-  toastWithdrawalInitiated: 'Запрос на вывод {amount} DH на банковский счет отправлен.',
+  toastWithdrawalInitiated: 'Заявка на вывод {amount} DH успешно создана.',
 
   // Footer
   footerDesc: '— Ведущая марокканская биржа микрозадач и фриланса с защитой платежей (Daman).',
@@ -256,11 +256,11 @@ export const ru: Translations = {
   footerWallet: 'Мой кошелек',
   footerGithub: 'Поддержка WhatsApp',
 
-  // Work-zilla Moroccan Core Keys
+  // Tâches.ma Moroccan Core Keys
   wzHeroKicker: 'Платформа микроаутсорсинга и удаленных услуг №1 в Марокко',
   wzHeroTitle: 'Исполнители для любых ваших задач в Марокко',
   wzHeroLead: 'Делегируйте за 1 минуту тысячам проверенных фрилансеров со средним временем отклика 35 секунд. Безопасная сделка (Daman): вы платите только тогда, когда полностью довольны результатом.',
-  wzHeroInputPlaceholder: 'Что вам нужно сделать? (например: Создать логотип, Перевод арабский/французский, Таблица Excel, Магазин YouCan...)',
+  wzHeroInputPlaceholder: 'Что вам нужно сделать? (например: Создать логотип, Перевод арабский/французский, Таблица Excel, Магазин Shopify...)',
   wzHeroBtnPost: 'Дать задание',
   wzHeroBtnFind: 'Найти исполнителя',
   wzHeroFreeNotice: '✓ Бесплатно и без обязательств • Первый отклик за 35 секунд • Защита платежа',
@@ -268,7 +268,7 @@ export const ru: Translations = {
   wzTabCustomer: 'Нужен специалист (Заказчик)',
   wzTabPerformer: 'Хочу зарабатывать (Исполнитель)',
 
-  // Work-zilla Proof Numbers
+  // Tâches.ma Proof Numbers
   wzStatTasksCount: '85 000+',
   wzStatTasksLabel: 'Успешно выполненных заданий в Марокко',
   wzStatSpeedTime: '35 секунд',
@@ -278,7 +278,7 @@ export const ru: Translations = {
   wzStatPriceFrom: 'От 50 DH',
   wzStatPriceLabel: 'Доступно для любого бюджета',
 
-  // Work-zilla 3-Step Process
+  // Tâches.ma 3-Step Process
   wzHowTitle: 'Как это работает?',
   wzHowSubtitle: 'Простой, понятный и безопасный процесс для всех возрастов',
   wzStep1Title: '1. Опишите вашу задачу',
@@ -297,8 +297,8 @@ export const ru: Translations = {
   wzCatTranslationTitle: 'Перевод и тексты',
   wzCatTranslationDesc: 'Арабский, дарижа, французский, английский, договоры, статьи, корректура',
   wzCatTranslationPrice: 'От 50 DH',
-  wzCatWebTitle: 'Сайты, YouCan и e-commerce',
-  wzCatWebDesc: 'Магазины YouCan / Shopify, сайты WordPress, исправление ошибок, интеграция CMI',
+  wzCatWebTitle: 'Сайты, Shopify и e-commerce',
+  wzCatWebDesc: 'Магазины Shopify / WooCommerce, сайты WordPress, исправление ошибок, интеграция Stripe',
   wzCatWebPrice: 'От 250 DH',
   wzCatAssistanceTitle: 'Ввод данных и бухгалтерия',
   wzCatAssistanceDesc: 'Счета в Excel, оформление документов Word, общение с клиентами в WhatsApp',
@@ -317,8 +317,8 @@ export const ru: Translations = {
   wzTrustItem1Desc: 'Деньги не покидают платформу до вашего личного подтверждения. Ноль риска потерять предоплату.',
   wzTrustItem2Title: 'Проверенные исполнители (Паспорт CIN и телефон +212)',
   wzTrustItem2Desc: 'Каждый активный исполнитель подтверждает паспорт и марокканский номер телефона по SMS.',
-  wzTrustItem3Title: 'Все банки Марокко и мгновенный вывод',
-  wzTrustItem3Desc: 'Пополнение и вывод средств через CIH, Attijariwafa, Cash Plus, Wafacash и карты CMI.',
+  wzTrustItem3Title: 'Быстрый вывод через Remitly и Binance Pay',
+  wzTrustItem3Desc: 'Получайте заработанные средства удобным переводом Remitly или в крипте Binance Pay (USDT).',
   wzTrustItem4Title: 'Локальная поддержка и WhatsApp',
   wzTrustItem4Desc: 'Команда в Касабланке и Рабате готова помочь вам по телефону и в WhatsApp без выходных.',
 
@@ -332,7 +332,7 @@ export const ru: Translations = {
   wzFaq1Q: 'Как работает гарантия безопасной сделки (Daman)?',
   wzFaq1A: 'При подтверждении исполнителя сумма замораживается на специальном счете. Исполнитель сдает работу, вы ее проверяете. Деньги переводятся только после нажатия кнопки "Принять". Если работа не соответствует ТЗ, вы можете запросить доработку или вернуть всю сумму.',
   wzFaq2Q: 'Какие способы оплаты поддерживаются в Марокко?',
-  wzFaq2A: 'Банковские карты Марокко (CMI), прямые банковские переводы (CIH, Attijariwafa Bank, Banque Populaire и др.), а также наличные через отделения Cash Plus и Wafacash.',
+  wzFaq2A: 'Мы принимаем пополнение банковскими картами, а также переводы и вывод через Remitly и Binance Pay (USDT).',
   wzFaq3Q: 'Удобен ли сайт для тех, кто редко пользуется интернетом?',
   wzFaq3A: 'Да, интерфейс предельно понятен, с крупными шрифтами и кнопками. В любой момент можно написать нашему марокканскому консультанту в WhatsApp.',
   wzFaq4Q: 'Сколько стоит разместить задание?',
@@ -363,7 +363,7 @@ export const ru: Translations = {
   unuCampaignPriceFrom: 'от 50 DH',
   unuCampaignHundredsDaily: 'десятки задач в день',
   unuCheck1: 'Графический дизайн, меню, флаеры, векторные логотипы',
-  unuCheck2: 'Интернет-магазины YouCan / Shopify и заполнение каталогов',
+  unuCheck2: 'Интернет-магазины Shopify / WooCommerce и заполнение каталогов',
   unuCheck3: 'Переводы на арабский / дарижа / французский языки',
   unuStatActiveUsers: '25 000+',
   unuStatActiveUsersLabel: 'проверенных специалистов в Марокко',
@@ -392,7 +392,7 @@ export const ru: Translations = {
   unuPerformerCardDesc: 'Получайте стабильный доход из дома или на месте в вашем городе.',
   unuPerformerBenefit1: 'Ежедневные разнообразные заказы во всех сферах',
   unuPerformerBenefit2: 'Гарантированная предоплата на счете эскроу',
-  unuPerformerBenefit3: 'Прямые выплаты на CIH, Attijari, Cash Plus и др.',
+  unuPerformerBenefit3: 'Быстрые выплаты через Remitly и Binance Pay (USDT)',
   unuPerformerBenefit4: 'Свободный график и работа в удобное время',
   unuCatalogKicker: 'Каталог услуг',
   unuCatalogTitle: 'Все категории услуг в Марокко',
@@ -420,7 +420,7 @@ export const ru: Translations = {
   unuCatSeoItem4: 'Ускорение загрузки страниц и мета-теги',
   unuCatSeoItem5: 'Регистрация в профильных бизнес-каталогах',
   unuCatInstallItem1: 'Создание сайта-визитки на WordPress',
-  unuCatInstallItem2: 'Настройка магазина YouCan или Shopify',
+  unuCatInstallItem2: 'Настройка магазина Shopify или WooCommerce',
   unuCatInstallItem3: 'Подключение марокканского эквайринга CMI',
   unuCatInstallItem4: 'Устранение программных ошибок на сайте',
   unuCatInstallItem5: 'Резервное копирование и защита сервера',
@@ -461,7 +461,7 @@ export const ru: Translations = {
   unuFooterFaq: 'Вопросы и ответы',
   unuFooterPartner: 'Стать исполнителем',
   unuFooterInfo: 'Безопасная сделка (Daman)',
-  unuFooterApi: 'Способы оплаты (CIH, CMI, Cash Plus)',
+  unuFooterApi: 'Способы оплаты (Remitly, Binance Pay, Карты)',
   unuFooterThemeToggle: 'Оформление',
   unuFooterGooglePlay: 'Веб-приложение',
   unuFooterCopyright: '© Tâches Марокко 2026. Все права защищены. Безопасная платформа.',

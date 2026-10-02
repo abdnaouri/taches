@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       amountDH,
-      depositMethod = 'CARD',
+      depositMethod = 'REMITLY',
     } = body;
 
     if (!amountDH || Number(amountDH) <= 0) {
@@ -27,20 +27,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = authResult.user.id;
-    const amountEur = Number((Number(amountDH) * MAD_TO_EUR_RATE).toFixed(2));
-    const supabase = getAdminClient();
-
-    let methodLabel = 'Carte Bancaire / Apple Pay';
-    if (depositMethod === 'BANK') {
-      methodLabel = 'Virement Bancaire';
-    } else if (depositMethod === 'CRYPTO' || depositMethod === 'BINANCE_PAY') {
-      methodLabel = 'Dépôt Crypto (Binance Pay / USDT)';
-    } else if (depositMethod === 'CASH') {
-      methodLabel = 'Dépôt Espèces (Cash Plus / Wafacash)';
+    const numAmountDH = Number(amountDH);
+    // Anti-fraud guard: cap single deposit transactions
+    if (numAmountDH > 20000) {
+      return NextResponse.json(
+        { success: false, error: 'Le montant maximum par recharge est plafonné à 20 000 DH (Plafond de sécurité CMI / Daman).' },
+        { status: 400 }
+      );
     }
 
-    const txDescription = `Recharge de compte (${amountDH} DH / ${amountEur} €) via ${methodLabel}`;
+    const userId = authResult.user.id;
+    const amountEur = Number((numAmountDH * MAD_TO_EUR_RATE).toFixed(2));
+    const supabase = getAdminClient();
+
+    let methodLabel = 'Carte Bancaire Marocaine (CMI)';
+    const methodUpper = String(depositMethod).toUpperCase();
+    if (methodUpper === 'CMI' || methodUpper === 'CARD') {
+      methodLabel = 'Carte Bancaire Marocaine (CMI / Visa / Mastercard)';
+    } else if (methodUpper === 'VIREMENT_INSTANTANE' || methodUpper === 'BANK_TRANSFER') {
+      methodLabel = 'Virement Bancaire Instantané (24/7)';
+    } else if (methodUpper === 'CASHP' || methodUpper === 'CASHPLUS') {
+      methodLabel = 'Dépôt Espèces Cash Plus';
+    } else if (methodUpper === 'REMITLY') {
+      methodLabel = 'Transfert Remitly (MRE)';
+    } else if (methodUpper === 'CRYPTO' || methodUpper === 'BINANCE_PAY') {
+      methodLabel = 'Binance Pay (USDT)';
+    }
+
+    const txDescription = `Recharge de compte (${numAmountDH} DH / ${amountEur} €) via ${methodLabel}`;
 
     // 1. Fetch current profile
     const { data: profile, error: profileErr } = await supabase

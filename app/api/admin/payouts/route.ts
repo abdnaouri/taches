@@ -42,24 +42,11 @@ export async function GET(req: NextRequest) {
 
       const grossEur = Math.abs(Number(tx.amount || 0));
       const grossDH = Math.round(grossEur * 10);
-      const isExpress = (tx.description || '').toLowerCase().includes('express');
-      const isCashPlus = (tx.description || '').toLowerCase().includes('cash plus');
       const isBinance = (tx.description || '').toLowerCase().includes('binance');
 
-      let feeDH = 15;
-      let method: 'RIB' | 'CASHPLUS' | 'BINANCE_PAY' | 'USDT' = 'RIB';
-
-      if (isBinance) {
-        method = 'BINANCE_PAY';
-        feeDH = 10;
-      } else if (isCashPlus) {
-        method = 'CASHPLUS';
-        feeDH = Math.max(20, Math.round(grossDH * 0.035));
-      } else if (isExpress) {
-        feeDH = Math.max(35, Math.round(grossDH * 0.04));
-      }
-
-      const netDH = Math.max(0, grossDH - feeDH);
+      const feeDH = 0; // Free / direct
+      const method: 'REMITLY' | 'BINANCE_PAY' = isBinance ? 'BINANCE_PAY' : 'REMITLY';
+      const netDH = grossDH;
 
       return {
         id: tx.id,
@@ -99,14 +86,15 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err: any) {
+    console.error('Admin Payouts GET error:', err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || 'Erreur lors de la récupération des virements.' },
       { status: 500 }
     );
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const authResult = await requireAdminUser(req);
     if (!authResult.isAdmin) {
@@ -126,14 +114,14 @@ export async function PATCH(req: NextRequest) {
 
     if (!transactionId || !status) {
       return NextResponse.json(
-        { success: false, error: 'Identifiant de transaction ou statut manquant.' },
+        { success: false, error: 'Paramètres manquants (transactionId, status).' },
         { status: 400 }
       );
     }
 
     const supabase = getAdminClient();
 
-    // 1. Fetch current transaction
+    // 1. Fetch original transaction
     const { data: tx, error: fetchErr } = await supabase
       .from('transactions')
       .select('*')
@@ -142,7 +130,7 @@ export async function PATCH(req: NextRequest) {
 
     if (fetchErr || !tx) {
       return NextResponse.json(
-        { success: false, error: 'Transaction introuvable.' },
+        { success: false, error: 'Transaction de virement introuvable.' },
         { status: 404 }
       );
     }
@@ -150,32 +138,46 @@ export async function PATCH(req: NextRequest) {
     // 2. Fetch user profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, full_name, email, balance_available')
+      .select('id, balance_available, email, full_name')
       .eq('id', tx.user_id)
       .single();
 
-    // 3. If CANCELLED, refund the user's available balance
+    // 3. Handle cancellation refund
     if (status === 'CANCELLED' && tx.status !== 'CANCELLED') {
-      const refundEur = Math.abs(Number(tx.amount || 0));
-      if (profile) {
-        const newBalance = Number(profile.balance_available || 0) + refundEur;
+      const refundAmountEur = Math.abs(Number(tx.amount || 0));
+      if (profile && refundAmountEur > 0) {
+        const restoredBalance = Number(profile.balance_available || 0) + refundAmountEur;
         await supabase
           .from('profiles')
-          .update({ balance_available: newBalance })
-          .eq('id', tx.user_id);
+          .update({ balance_available: restoredBalance })
+          .eq('id', profile.id);
+
+        // Record refund reversal
+        await supabase.from('transactions').insert({
+          user_id: tx.user_id,
+          type: 'DEPOSIT',
+          amount: refundAmountEur,
+          currency: 'EUR',
+          description: `Remboursement de la demande de virement annulée #${tx.id.slice(0, 8)}${rejectionReason ? ` (${rejectionReason})` : ''}`,
+          status: 'COMPLETED',
+        });
       }
     }
 
     // 4. Update transaction status
-    const updatedDesc = trackingReference
-      ? `${tx.description} • Suivi: ${trackingReference}`
-      : tx.description;
+    let updatedDescription = tx.description;
+    if (trackingReference) {
+      updatedDescription += ` • Réf: ${trackingReference}`;
+    }
+    if (rejectionReason) {
+      updatedDescription += ` • Motif de rejet: ${rejectionReason}`;
+    }
 
     const { data: updatedTx, error: updateErr } = await supabase
       .from('transactions')
       .update({
         status,
-        description: updatedDesc,
+        description: updatedDescription,
       })
       .eq('id', transactionId)
       .select()
@@ -192,32 +194,18 @@ export async function PATCH(req: NextRequest) {
     if (profile && profile.email) {
       const grossEur = Math.abs(Number(tx.amount || 0));
       const grossDH = Math.round(grossEur * 10);
-      const isExpress = (tx.description || '').toLowerCase().includes('express');
-      const isCashPlus = (tx.description || '').toLowerCase().includes('cash plus');
       const isBinance = (tx.description || '').toLowerCase().includes('binance');
-
-      let feeDH = 15;
-      let method: 'RIB' | 'CASHPLUS' | 'BINANCE_PAY' | 'USDT' = 'RIB';
-      if (isBinance) {
-        method = 'BINANCE_PAY';
-        feeDH = 10;
-      } else if (isCashPlus) {
-        method = 'CASHPLUS';
-        feeDH = Math.max(20, Math.round(grossDH * 0.035));
-      } else if (isExpress) {
-        feeDH = Math.max(35, Math.round(grossDH * 0.04));
-      }
-      const netDH = Math.max(0, grossDH - feeDH);
+      const method = isBinance ? 'BINANCE_PAY' : 'REMITLY';
 
       await sendPayoutNotification({
         recipientEmail: profile.email,
         recipientName: profile.full_name || 'Prestataire',
         amountDH: grossDH,
-        netAmountDH: netDH,
-        feeDH,
+        netAmountDH: grossDH,
+        feeDH: 0,
         payoutMethod: method,
         maskedDestination: 'Compte vérifié',
-        trackingReference: trackingReference || `VIR-${Date.now().toString().slice(-6)}`,
+        trackingReference: trackingReference || `REF-${Date.now().toString().slice(-6)}`,
         status,
         rejectionReason,
       });

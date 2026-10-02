@@ -35,13 +35,13 @@ export const metadata: Metadata = {
     template: '%s | tâches.ma',
   },
   description:
-    'Déléguez vos tâches au Maroc en 1 minute à des milliers de prestataires vérifiés. Graphisme, traduction, YouCan, saisie Excel. Paiement 100% garanti sous séquestre Daman.',
+    'Déléguez vos tâches au Maroc en 1 minute à des milliers de prestataires vérifiés. Graphisme, traduction, e-commerce, saisie Excel. Paiement 100% garanti sous séquestre Daman.',
   keywords: [
     'freelance maroc',
     'micro-tâches maroc',
     'tâches.ma',
     'taches maroc',
-    'youcan maroc',
+    'shopify maroc',
     'services freelance maroc',
     'traduction darija',
     'séquestre daman',
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'tâches.ma — Bourse de micro-tâches & services freelance au Maroc',
     description:
-      'Déléguez vos tâches au Maroc en 1 minute à des prestataires vérifiés. Graphisme, saisie Excel, YouCan, traduction. Paiement 100% garanti sous séquestre Daman.',
+      'Déléguez vos tâches au Maroc en 1 minute à des prestataires vérifiés. Graphisme, saisie Excel, e-commerce, traduction. Paiement 100% garanti sous séquestre Daman.',
     url: 'https://taches.ma',
     siteName: 'tâches.ma',
     locale: 'fr_MA',

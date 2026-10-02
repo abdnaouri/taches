@@ -76,7 +76,7 @@ export default function AdminDisputesPage() {
     }
   }, [isAuthenticated, profile?.isAdmin]);
 
-  const handleExecuteRuling = async (ruling: 'REFUND_CLIENT' | 'RELEASE_PERFORMER') => {
+  const handleExecuteRuling = async (ruling: 'REFUND_CLIENT' | 'RELEASE_PERFORMER' | 'SPLIT_50_50') => {
     if (!selectedDispute) return;
     setIsSubmitting(true);
 
@@ -94,11 +94,13 @@ export default function AdminDisputesPage() {
 
       const data = await res.json();
       if (data.success) {
-        setToastMsg(
-          ruling === 'REFUND_CLIENT'
-            ? `Litige clos : ${selectedDispute.totalBudgetDH} DH remboursés au client.`
-            : `Litige clos : ${selectedDispute.rewardDH} DH libérés au freelance.`
-        );
+        let msg = `Litige clos : ${selectedDispute.totalBudgetDH} DH remboursés au client.`;
+        if (ruling === 'RELEASE_PERFORMER') {
+          msg = `Litige clos : ${selectedDispute.rewardDH} DH libérés au freelance.`;
+        } else if (ruling === 'SPLIT_50_50') {
+          msg = `Litige clos : Partage 50/50 (${Math.round(selectedDispute.totalBudgetDH / 2)} DH chacun).`;
+        }
+        setToastMsg(msg);
         setSelectedDispute(null);
         setNotes('');
         fetchDisputes();
@@ -292,22 +294,30 @@ export default function AdminDisputesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => handleExecuteRuling('REFUND_CLIENT')}
-                  className="rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold py-3 transition shadow-xs"
+                  className="rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold py-2.5 transition shadow-xs"
                 >
-                  Rembourser le Client (100%)
+                  Client (100%)
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleExecuteRuling('SPLIT_50_50')}
+                  className="rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold py-2.5 transition shadow-xs"
+                >
+                  Compromis (50/50)
                 </button>
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => handleExecuteRuling('RELEASE_PERFORMER')}
-                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold py-3 transition shadow-xs"
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold py-2.5 transition shadow-xs"
                 >
-                  Débloquer le Freelance (100%)
+                  Freelance (100%)
                 </button>
               </div>
             </div>

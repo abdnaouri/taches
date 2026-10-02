@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { taskId, reportText, proofUrls } = body;
+    const { taskId, reportText, proofUrls, antiSpamEntered } = body;
 
     if (!taskId || !reportText?.trim()) {
       return NextResponse.json(
@@ -99,12 +99,30 @@ export async function POST(req: NextRequest) {
     // Verify caller is assigned to task
     const { data: task, error: taskErr } = await supabase
       .from('tasks')
-      .select('client_id, assigned_to_id, status, task_mode')
+      .select('client_id, assigned_to_id, status, task_mode, anti_spam_keyword')
       .eq('id', taskId)
       .single();
 
     if (taskErr || !task) {
       return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
+    }
+
+    // Check anti-spam secret keyword if required by client (UNU Anti-Spam barrier)
+    if (task.anti_spam_keyword && task.anti_spam_keyword.trim().length > 0) {
+      const requiredKeyword = task.anti_spam_keyword.trim().toLowerCase();
+      const enteredKeyword = (antiSpamEntered || '').trim().toLowerCase();
+      const textIncludesKeyword = reportText.toLowerCase().includes(requiredKeyword);
+
+      if (enteredKeyword !== requiredKeyword && !textIncludesKeyword) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Le mot secret anti-spam est incorrect. Veuillez vérifier les consignes de la mission.',
+            antiSpamFailed: true,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const isAssigned = task.assigned_to_id === performerId || task.task_mode === 'multi';

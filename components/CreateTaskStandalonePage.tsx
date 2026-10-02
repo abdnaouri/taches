@@ -107,6 +107,8 @@ export const CreateTaskStandalonePage: React.FC = () => {
   const [whatsappAlert, setWhatsappAlert] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [hasRestoredDraft, setHasRestoredDraft] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [insufficientFundsInfo, setInsufficientFundsInfo] = useState<{ requiredDH: number; availableDH: number } | null>(null);
 
   // All Suggestions from Knowledge Base
   const allSuggestions = useMemo(() => getAllTaskSuggestions(), []);
@@ -385,6 +387,7 @@ export const CreateTaskStandalonePage: React.FC = () => {
         taskMode: taskExecutionMode,
         unitPriceDH: taskExecutionMode === 'multi' ? unitPriceDH : cleanBudgetDH,
         targetExecutionsCount: taskExecutionMode === 'multi' ? targetExecutionsCount : 1,
+        antiSpamKeyword: antiSpamKeyword.trim() ? antiSpamKeyword.trim().toUpperCase() : undefined,
         status: 'OPEN',
         reward: rewardEur,
         platformFee: platformFeeEur,
@@ -436,7 +439,14 @@ export const CreateTaskStandalonePage: React.FC = () => {
       router.push(`/${locale}/task/${slug}?created=true`);
     } catch (err: any) {
       console.error('Task creation failed:', err);
-      alert(err.message || 'Une erreur est survenue lors de la publication. Veuillez réessayer.');
+      const errMsg = err.message || 'Une erreur est survenue lors de la publication. Veuillez réessayer.';
+      setFormError(errMsg);
+      if (errMsg.toLowerCase().includes('solde') || errMsg.toLowerCase().includes('insuffisant')) {
+        setInsufficientFundsInfo({
+          requiredDH: Math.round(rewardDH),
+          availableDH: Math.round(Number(profile?.balanceAvailable || 0) * 10),
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1295,6 +1305,31 @@ export const CreateTaskStandalonePage: React.FC = () => {
                 </div>
               )}
 
+              {/* Inline Form Error & Insufficient Funds Banner */}
+              {formError && (
+                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs sm:text-sm text-rose-800 space-y-2">
+                  <div className="flex items-center gap-2 font-bold">
+                    <FiAlertCircle className="text-base text-rose-600 shrink-0" />
+                    <span>Impossible de publier la mission</span>
+                  </div>
+                  <p className="text-xs text-rose-700 leading-relaxed">{formError}</p>
+                  {insufficientFundsInfo && (
+                    <div className="pt-2 flex flex-wrap items-center gap-3">
+                      <a
+                        href={`/${locale}/wallet?deposit=${Math.max(50, insufficientFundsInfo.requiredDH - insufficientFundsInfo.availableDH)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-xs transition"
+                      >
+                        <FiDollarSign />
+                        <span>Recharger mon portefeuille (+{Math.max(50, insufficientFundsInfo.requiredDH - insufficientFundsInfo.availableDH)} DH)</span>
+                      </a>
+                      <span className="text-2xs text-rose-500">Séquestre Daman garanti à 100%</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Step Navigation Buttons */}
               <div className="flex items-center justify-between pt-6 border-t border-slate-200">
                 {currentStep > 1 ? (
@@ -1424,9 +1459,9 @@ export const CreateTaskStandalonePage: React.FC = () => {
                     Moyens de paiement acceptés
                   </div>
                   <div className="flex items-center justify-center gap-2 text-xs text-slate-600 font-semibold flex-wrap">
-                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">💳 CMI / Carte</span>
-                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">🏦 Virement RIB</span>
-                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">💵 Cash Plus</span>
+                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">💳 Carte & Apple Pay</span>
+                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">💸 Remitly</span>
+                    <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">🟡 Binance Pay</span>
                   </div>
                 </div>
               </div>

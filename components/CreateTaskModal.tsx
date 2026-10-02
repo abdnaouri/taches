@@ -91,7 +91,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [newDeliverableInput, setNewDeliverableInput] = useState('');
   const [referenceLinks, setReferenceLinks] = useState<string>('');
 
-  // Decision 4: Budget & Accelerators (Workzilla Upsells)
+  // Decision 4: Budget & Accelerators (Tâches.ma Fast-track Add-ons)
   const [rewardDH, setRewardDH] = useState<number>(initialRewardDH || 120);
   const [timeLimitHours, setTimeLimitHours] = useState<number>(24);
   const [pinToTop, setPinToTop] = useState<boolean>(false);
@@ -244,7 +244,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
 
-  // Price Benchmark Status Calculation (Workzilla Engine)
+  // Price Benchmark Status Calculation (Tâches.ma Engine)
   const priceBenchmarkInfo = useMemo(() => {
     const benchmark = selectedSubcategory?.marketAverageDH || (taskExecutionMode === 'multi' ? 150 : 150);
     const minRec = selectedSubcategory?.minPriceDH || (taskExecutionMode === 'multi' ? 50 : 70);
@@ -362,7 +362,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             Publier une tâche au Maroc
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Processus guidé inspiré de Workzilla avec suggestions et prix conseillés du marché marocain.
+            Processus guidé intelligent avec suggestions et prix conseillés du marché marocain.
           </p>
         </div>
 
@@ -615,7 +615,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 2: DECISION TREE BRANCH 2 - TASK SUGGESTIONS & WORKZILLA PRICING */}
+        {/* STEP 2: DECISION TREE BRANCH 2 - TASK SUGGESTIONS & TACHES.MA PRICING */}
         {/* ========================================================================= */}
         {currentStep === 2 && (
           <div className="space-y-4 animate-in fade-in duration-150">
@@ -624,7 +624,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 Branche 2 de l'Arbre de Décision
               </span>
               <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
-                Suggestions de tâches avec tarifs conseillés (Style Workzilla)
+                Suggestions de tâches avec tarifs conseillés Tâches.ma
               </h3>
               <p className="text-xs text-slate-500">
                 Sélectionnez une tâche type dans le catalogue ou tapez un mot-clé pour pré-remplir le cahier des charges et le prix moyen recommandé.
@@ -907,14 +907,14 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               </div>
             </div>
 
-            {/* WORKZILLA PRICE BENCHMARK CARD */}
+            {/* TACHES.MA PRICE BENCHMARK CARD */}
             {selectedSubcategory && (
               <div className="p-3.5 rounded-2xl border bg-slate-50 border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <FiTrendingUp className="text-brand-600 text-sm" />
                     <span className="text-xs font-black text-slate-800">
-                      Indicateur de tarif Workzilla
+                      Indicateur de tarif Tâches.ma
                     </span>
                   </div>
                   <span
@@ -1128,7 +1128,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <label className="block text-xs font-bold text-slate-800">
                   Mot-clé anti-spam (Vérification de lecture) :
                 </label>
-                <span className="text-[10px] text-slate-500 font-medium">Contrôle Workzilla</span>
+                <span className="text-[10px] text-slate-500 font-medium">Contrôle Tâches.ma</span>
               </div>
               <input
                 type="text"
@@ -1265,10 +1265,10 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               </select>
             </div>
 
-            {/* Quality & Speed Add-ons (Workzilla Upsells) */}
+            {/* Quality & Speed Add-ons (Tâches.ma Fast-track Upsells) */}
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
               <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider block mb-1">
-                Options d’accélération Workzilla :
+                Options d’accélération Tâches.ma :
               </span>
 
               <label className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer">

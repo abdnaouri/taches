@@ -279,3 +279,121 @@ export async function updateDynamicProfile(userId: string, updates: any): Promis
     return false;
   }
 }
+
+/**
+ * Fetch performer subscription status and plans
+ */
+export async function fetchPerformerSubscriptions(): Promise<any> {
+  try {
+    const headers = await getAuthHeaders(false);
+    const res = await fetch('/api/subscriptions', { headers, cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to fetch subscriptions:', err);
+    return null;
+  }
+}
+
+/**
+ * Purchase a performer subscription pass
+ */
+export async function purchasePerformerSubscription(planType: string): Promise<{ success: boolean; message?: string; error?: string; requiresDeposit?: boolean }> {
+  try {
+    const headers = await getAuthHeaders(true);
+    const res = await fetch('/api/subscriptions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ planType }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to purchase subscription:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Fetch slots/executions for a multi-task campaign
+ */
+export async function fetchCampaignSlots(taskId: string): Promise<any[]> {
+  try {
+    const headers = await getAuthHeaders(false);
+    const res = await fetch(`/api/campaigns/slots?taskId=${encodeURIComponent(taskId)}`, {
+      headers,
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.executions || [];
+  } catch (err: any) {
+    console.error('Failed to fetch campaign slots:', err);
+    return [];
+  }
+}
+
+/**
+ * Reserve a slot in a multi-execution campaign (holds for 45 min)
+ */
+export async function reserveCampaignSlot(taskId: string): Promise<{ success: boolean; executionId?: string; reservedUntil?: string; message?: string; error?: string }> {
+  try {
+    const headers = await getAuthHeaders(true);
+    const res = await fetch('/api/campaigns/slots', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'reserve', taskId }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to reserve slot:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Submit proof for a reserved slot
+ */
+export async function submitCampaignExecution(
+  executionId: string,
+  reportText: string,
+  proofUrls: string[],
+  antiSpamEntered?: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const headers = await getAuthHeaders(true);
+    const res = await fetch('/api/campaigns/slots', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        action: 'submit',
+        executionId,
+        reportText,
+        proofUrls,
+        antiSpamEntered,
+      }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to submit campaign execution:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Approve a campaign slot execution (releases unit reward)
+ */
+export async function approveCampaignExecution(executionId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const headers = await getAuthHeaders(true);
+    const res = await fetch('/api/campaigns/slots', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'approve', executionId }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to approve campaign execution:', err);
+    return { success: false, error: err.message };
+  }
+}
+

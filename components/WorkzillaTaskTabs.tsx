@@ -176,7 +176,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. WORK-ZILLA HIGH DENSITY TOP TAB SWITCHER */}
+      {/* 1. TACHES.MA HIGH DENSITY TOP TAB SWITCHER */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-3">
         {/* Role Context Bar & Customer Scope Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 text-xs">
@@ -223,7 +223,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           
-          {/* Main 3 Work-zilla Tabs */}
+          {/* Main 3 Tâches.ma Tabs */}
           <div className="inline-flex rounded-2xl bg-slate-100 p-1.5 border border-slate-200 text-xs sm:text-sm font-extrabold flex-wrap gap-1">
             <button
               type="button"

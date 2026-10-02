@@ -6,10 +6,8 @@ import { UserProfile, WalletTransaction } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import {
   calculatePayoutFees,
-  detectMoroccanBank,
   MIN_WITHDRAWAL_DH,
   PayoutMethod,
-  PayoutSpeed,
   MAD_TO_EUR_RATE,
 } from '@/lib/payoutService';
 import {
@@ -31,7 +29,8 @@ import {
   FiZap,
   FiClock,
   FiAlertTriangle,
-  FiCopy
+  FiCopy,
+  FiSend
 } from 'react-icons/fi';
 import { SiBinance } from 'react-icons/si';
 
@@ -57,7 +56,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
 
   // Deposit Form State
   const [depositAmount, setDepositAmount] = useState<number>(500);
-  const [depositMethod, setDepositMethod] = useState<'card' | 'bank' | 'crypto' | 'cash'>('card');
+  const [depositMethod, setDepositMethod] = useState<'card' | 'remitly' | 'crypto'>('remitly');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
@@ -65,17 +64,15 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
 
   // Withdraw Form State
   const [withdrawAmount, setWithdrawAmount] = useState<number>(Math.max(MIN_WITHDRAWAL_DH, Math.round(user.balanceAvailable * 10)));
-  const [withdrawMethod, setWithdrawMethod] = useState<PayoutMethod>('RIB');
-  const [speedTier, setSpeedTier] = useState<PayoutSpeed>('STANDARD');
+  const [withdrawMethod, setWithdrawMethod] = useState<PayoutMethod>('REMITLY');
   
-  // Destination Details
-  const [ribNumber, setRibNumber] = useState('');
-  const [accountHolderName, setAccountHolderName] = useState(user.fullName || '');
-  const [cinNumber, setCinNumber] = useState('');
-  const [recipientPhone, setRecipientPhone] = useState('+212 6');
+  // Remitly Destination Details
+  const [remitlyRecipientName, setRemitlyRecipientName] = useState(user.fullName || '');
+  const [remitlyPhoneOrEmail, setRemitlyPhoneOrEmail] = useState('');
+  const [remitlyCountry, setRemitlyCountry] = useState('Maroc');
+  
+  // Binance Pay Destination Details
   const [binancePayId, setBinancePayId] = useState('');
-  const [usdtAddress, setUsdtAddress] = useState('');
-  const [usdtNetwork, setUsdtNetwork] = useState<'TRC20' | 'BEP20'>('TRC20');
   const [isWithdrawSubmitting, setIsWithdrawSubmitting] = useState(false);
 
   // Transaction Filters
@@ -86,15 +83,10 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
   const escrowDH = Math.round(user.balanceEscrow * 10);
   const totalVolumeDH = Math.round((user.customerTotalSpent || user.balanceAvailable + 500) * 10);
 
-  // Detect Moroccan bank from 24-digit RIB
-  const detectedBank = useMemo(() => {
-    return detectMoroccanBank(ribNumber);
-  }, [ribNumber]);
-
   // Dynamic fee calculation for withdrawal
   const payoutCalculation = useMemo(() => {
-    return calculatePayoutFees(withdrawAmount, withdrawMethod, speedTier, balanceDH);
-  }, [withdrawAmount, withdrawMethod, speedTier, balanceDH]);
+    return calculatePayoutFees(withdrawAmount, withdrawMethod, balanceDH);
+  }, [withdrawAmount, withdrawMethod, balanceDH]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -123,15 +115,10 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
 
     const payloadDetails = {
       method: withdrawMethod,
-      speed: speedTier,
-      rib: ribNumber,
-      bankName: detectedBank?.name || 'Banque Marocaine',
-      accountHolder: accountHolderName,
-      cin: cinNumber,
-      phone: recipientPhone,
+      recipientName: remitlyRecipientName,
+      phoneOrEmail: remitlyPhoneOrEmail,
+      country: remitlyCountry,
       binancePayId,
-      usdtAddress,
-      usdtNetwork,
       feeDH: payoutCalculation.feeDH,
       netAmountDH: payoutCalculation.netAmountDH,
     };
@@ -140,9 +127,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
       onWithdraw(withdrawAmount, payloadDetails);
       setIsWithdrawSubmitting(false);
       setSuccessToast(
-        `Demande de retrait de ${withdrawAmount} DH initiée (Net à recevoir : ${payoutCalculation.netAmountDH} DH). ${
-          speedTier === 'EXPRESS' ? 'Délai Express : < 2h.' : 'Délai standard : sous 24h ouvrées.'
-        }`
+        `Demande de retrait de ${withdrawAmount} DH initiée avec succès (Net viré : ${payoutCalculation.netAmountDH} DH).`
       );
       setActiveTab('overview');
       setTimeout(() => setSuccessToast(null), 6000);
@@ -201,13 +186,13 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-3">
                 <FiShield className="text-emerald-600 text-sm" />
-                <span>Sécurité Séquestre Daman • Virement Bank Al-Maghrib, Cash Plus & Binance Pay</span>
+                <span>Sécurité Séquestre Daman • Remitly & Binance Pay</span>
               </div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
                 Portefeuille & Gestion Financière
               </h1>
               <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Gérez vos fonds en Dirhams marocains (MAD) avec équivalence internationale en Euros. Vos paiements clients sont sécurisés sous séquestre neutre et vos retraits freelances sont virés directement sur votre RIB marocain, Cash Plus ou Binance Pay.
+                Gérez vos fonds en Dirhams marocains (MAD) avec équivalence internationale en Euros. Vos paiements clients sont sécurisés sous séquestre neutre et vos retraits freelances sont virés directement via Remitly ou Binance Pay.
               </p>
             </div>
 
@@ -663,21 +648,21 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div
-                      onClick={() => setDepositMethod('card')}
+                      onClick={() => setDepositMethod('remitly')}
                       className={`rounded-2xl p-4 border transition cursor-pointer flex flex-col justify-between ${
-                        depositMethod === 'card'
+                        depositMethod === 'remitly'
                           ? 'border-brand-700 bg-brand-50/50 shadow-xs ring-1 ring-brand-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <FiCreditCard className="text-brand-700 text-xl" />
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Instantané</span>
+                          <FiSend className="text-brand-700 text-xl" />
+                          <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">Recommandé</span>
                         </div>
-                        <h4 className="font-extrabold text-xs text-slate-900">Carte & Apple Pay</h4>
+                        <h4 className="font-extrabold text-xs text-slate-900">Remitly</h4>
                         <p className="mt-1 text-[11px] text-slate-500">
-                          Visa, Mastercard, Cartes internationales & marocaines
+                          Transfert international rapide et sécurisé
                         </p>
                       </div>
                     </div>
@@ -703,21 +688,21 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                     </div>
 
                     <div
-                      onClick={() => setDepositMethod('bank')}
+                      onClick={() => setDepositMethod('card')}
                       className={`rounded-2xl p-4 border transition cursor-pointer flex flex-col justify-between ${
-                        depositMethod === 'bank'
+                        depositMethod === 'card'
                           ? 'border-brand-700 bg-brand-50/50 shadow-xs ring-1 ring-brand-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <FiArrowDownLeft className="text-brand-700 text-xl" />
-                          <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">B2B</span>
+                          <FiCreditCard className="text-brand-700 text-xl" />
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Instantané</span>
                         </div>
-                        <h4 className="font-extrabold text-xs text-slate-900">Virement Bancaire</h4>
+                        <h4 className="font-extrabold text-xs text-slate-900">Carte & Apple Pay</h4>
                         <p className="mt-1 text-[11px] text-slate-500">
-                          Virement direct CIH, Attijariwafa, BCP
+                          Visa, Mastercard, Cartes internationales
                         </p>
                       </div>
                     </div>
@@ -782,7 +767,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                           <button
                             type="button"
                             onClick={() => copyToClipboard('892401844', 'binanceId')}
-                            className="text-amber-700 hover:text-amber-800 p-1"
+                            className="text-amber-700 hover:text-amber-800 p-1 cursor-pointer"
                           >
                             <FiCopy />
                           </button>
@@ -802,21 +787,19 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   </div>
                 )}
 
-                {depositMethod === 'bank' && (
+                {depositMethod === 'remitly' && (
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
-                    <div className="font-bold text-slate-900">Coordonnées bancaires pour virement :</div>
-                    <div className="font-mono text-[11px] bg-white p-3 rounded-xl border border-slate-200 space-y-1">
-                      <div><span className="text-slate-400">Banque :</span> CIH Bank Maroc</div>
-                      <div><span className="text-slate-400">Titulaire :</span> TÂCHES DIGITAL SERVICES</div>
-                      <div><span className="text-slate-400">RIB 24 chiffres :</span> 230 780 0000 1234 5678 9012 34</div>
-                      <div>
-                        <span className="text-slate-400">Motif obligatoire :</span>{' '}
-                        <span className="font-bold text-brand-700">DEP-{user.id.toUpperCase().slice(0, 8)}</span>
-                      </div>
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <FiSend className="text-brand-700" />
+                      Recharge via Remitly :
                     </div>
-                    <p className="text-[11px] text-slate-500">
-                      Indiquez le motif dans votre virement pour un crédit automatique sous 10 minutes.
-                    </p>
+                    <div className="text-[11px] bg-white p-3 rounded-xl border border-slate-200 space-y-1.5 leading-relaxed">
+                      <div><span className="text-slate-400">Service :</span> Remitly Money Transfer</div>
+                      <div><span className="text-slate-400">Référence client :</span> <span className="font-bold font-mono text-brand-700">DEP-{user.id.toUpperCase().slice(0, 8)}</span></div>
+                      <p className="text-slate-600 mt-1">
+                        Initiez votre transfert via Remitly en spécifiant votre référence client. Les fonds sont crédités automatiquement dès confirmation du transfert.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -883,7 +866,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                     Demander un retrait de vos gains
                   </h3>
                   <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                    Transférez vos gains validés vers votre compte bancaire marocain (RIB 24 chiffres), en espèces via Cash Plus, ou instantanément via Binance Pay (USDT).
+                    Transférez vos gains validés directement via Remitly ou instantanément via Binance Pay (USDT).
                   </p>
                 </div>
 
@@ -958,50 +941,29 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
                     Mode de réception des fonds :
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Method 1: RIB */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Method 1: Remitly */}
                     <div
-                      onClick={() => setWithdrawMethod('RIB')}
+                      onClick={() => setWithdrawMethod('REMITLY')}
                       className={`rounded-2xl p-4 border transition cursor-pointer flex flex-col justify-between ${
-                        withdrawMethod === 'RIB'
+                        withdrawMethod === 'REMITLY'
                           ? 'border-brand-700 bg-brand-50/50 shadow-xs ring-1 ring-brand-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <FiArrowUpRight className="text-brand-700 text-xl" />
+                          <FiSend className="text-brand-700 text-xl" />
                           <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">Recommandé</span>
                         </div>
-                        <h4 className="font-extrabold text-xs text-slate-900">Virement RIB (24 chiffres)</h4>
+                        <h4 className="font-extrabold text-xs text-slate-900">Remitly</h4>
                         <p className="mt-1 text-[11px] text-slate-500">
-                          CIH, Attijariwafa, BCP, BMCE, SGMB, CAM...
+                          Transfert direct vers votre compte bancaire ou point de retrait
                         </p>
                       </div>
                     </div>
 
-                    {/* Method 2: Cash Plus */}
-                    <div
-                      onClick={() => setWithdrawMethod('CASHPLUS')}
-                      className={`rounded-2xl p-4 border transition cursor-pointer flex flex-col justify-between ${
-                        withdrawMethod === 'CASHPLUS'
-                          ? 'border-brand-700 bg-brand-50/50 shadow-xs ring-1 ring-brand-700'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <FiDollarSign className="text-amber-700 text-xl" />
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Espèces</span>
-                        </div>
-                        <h4 className="font-extrabold text-xs text-slate-900">Cash Plus / Wafacash</h4>
-                        <p className="mt-1 text-[11px] text-slate-500">
-                          Retrait en agence avec Carte Nationale (CIN)
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Method 3: Binance Pay */}
+                    {/* Method 2: Binance Pay */}
                     <div
                       onClick={() => setWithdrawMethod('BINANCE_PAY')}
                       className={`rounded-2xl p-4 border transition cursor-pointer flex flex-col justify-between ${
@@ -1024,106 +986,19 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   </div>
                 </div>
 
-                {/* Speed Tier Selector for RIB and Cash Plus */}
-                {(withdrawMethod === 'RIB' || withdrawMethod === 'CASHPLUS') && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                      Délai de traitement :
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div
-                        onClick={() => setSpeedTier('STANDARD')}
-                        className={`p-3.5 rounded-xl border transition cursor-pointer ${
-                          speedTier === 'STANDARD'
-                            ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-extrabold">
-                          <div className="flex items-center gap-1.5">
-                            <FiClock />
-                            <span>Standard (24h ouvrées)</span>
-                          </div>
-                          <span className={speedTier === 'STANDARD' ? 'text-slate-300' : 'text-slate-500'}>
-                            Frais: 15 DH
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setSpeedTier('EXPRESS')}
-                        className={`p-3.5 rounded-xl border transition cursor-pointer ${
-                          speedTier === 'EXPRESS'
-                            ? 'border-brand-700 bg-brand-50 text-brand-900 ring-1 ring-brand-700 shadow-xs'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-extrabold">
-                          <div className="flex items-center gap-1.5 text-brand-800">
-                            <FiZap className="text-amber-500" />
-                            <span>Express (&lt; 2 heures)</span>
-                          </div>
-                          <span className="text-brand-700 font-bold">
-                            Frais: 35 DH
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Form fields based on withdraw method */}
-                {withdrawMethod === 'RIB' && (
+                {withdrawMethod === 'REMITLY' && (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Relevé d'Identité Bancaire (RIB marocain - 24 chiffres) :
+                        Nom complet du bénéficiaire :
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: 230 780 0000 1234 5678 9012 34"
-                        value={ribNumber}
-                        onChange={(e) => setRibNumber(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-mono text-slate-900 outline-none focus:border-brand-700"
-                        required
-                      />
-                      {/* Bank detection badge */}
-                      {detectedBank && (
-                        <div className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold border ${detectedBank.bg} ${detectedBank.color}`}>
-                          <FiCheck className="text-sm" />
-                          <span>Banque marocaine détectée : {detectedBank.name}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Nom et Prénom du titulaire du compte bancaire :
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Doit correspondre exactement au compte bancaire"
-                        value={accountHolderName}
-                        onChange={(e) => setAccountHolderName(e.target.value)}
+                        placeholder="Nom et prénom (tel qu'indiqué sur votre pièce d'identité)"
+                        value={remitlyRecipientName}
+                        onChange={(e) => setRemitlyRecipientName(e.target.value)}
                         className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {withdrawMethod === 'CASHPLUS' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Numéro de Carte Nationale d'Identité (CIN marocain) :
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: BE123456"
-                        value={cinNumber}
-                        onChange={(e) => setCinNumber(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-mono text-slate-900 outline-none focus:border-brand-700 uppercase"
                         required
                       />
                     </div>
@@ -1131,12 +1006,13 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Nom complet du bénéficiaire :
+                          Téléphone ou Email associé à Remitly :
                         </label>
                         <input
                           type="text"
-                          value={accountHolderName}
-                          onChange={(e) => setAccountHolderName(e.target.value)}
+                          placeholder="Ex: +212 600 000000 ou email@example.com"
+                          value={remitlyPhoneOrEmail}
+                          onChange={(e) => setRemitlyPhoneOrEmail(e.target.value)}
                           className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700"
                           required
                         />
@@ -1144,14 +1020,14 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Numéro de téléphone (pour SMS de retrait) :
+                          Pays de réception :
                         </label>
                         <input
                           type="text"
-                          placeholder="+212 600 000000"
-                          value={recipientPhone}
-                          onChange={(e) => setRecipientPhone(e.target.value)}
-                          className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700 font-mono"
+                          placeholder="Ex: Maroc, France, etc."
+                          value={remitlyCountry}
+                          onChange={(e) => setRemitlyCountry(e.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-brand-700"
                           required
                         />
                       </div>
@@ -1167,17 +1043,17 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                         Paiement direct sur Binance Pay :
                       </div>
                       <p className="text-[11px] text-amber-900 leading-relaxed">
-                        Entrez votre ID Binance Pay (8 à 9 chiffres). Les USDT sont transférés automatiquement et sans frais de réseau. Vous pouvez ensuite les convertir en Dirhams sur votre compte CIH ou Attijari via Binance P2P en 60 secondes.
+                        Entrez votre ID Binance Pay (8 à 9 chiffres) ou votre adresse email Binance. Les fonds sont envoyés instantanément en USDT sans frais de réseau.
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Votre ID Binance Pay (8-9 chiffres) :
+                        Votre ID Binance Pay ou Email Binance :
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: 892401844"
+                        placeholder="Ex: 892401844 ou user@binance.com"
                         value={binancePayId}
                         onChange={(e) => setBinancePayId(e.target.value)}
                         className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-mono text-slate-900 outline-none focus:border-brand-700"
@@ -1220,16 +1096,14 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Frais de traitement :</span>
-                    <span className="font-bold text-slate-900">{payoutCalculation.feeDH} DH</span>
+                    <span className="font-bold text-emerald-700">0 DH (Gratuit)</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Délai estimé :</span>
                     <span className="font-bold text-emerald-700">
                       {payoutCalculation.estimatedHours <= 0.5
                         ? '< 15 minutes'
-                        : payoutCalculation.estimatedHours <= 2
-                        ? '< 2 heures (Express)'
-                        : '24h ouvrées'}
+                        : '12-24h ouvrées'}
                     </span>
                   </div>
                   <div className="pt-2 border-t border-slate-100 flex justify-between text-sm font-black text-slate-900">
@@ -1248,7 +1122,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                   Réglementation & Sécurité
                 </h5>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Les virements bancaires sont émis directement en Dirhams (MAD) via le réseau interbancaire marocain (SIMT/Bank Al-Maghrib). Aucun frais de change imprévu n'est déduit à la réception.
+                  Vos retraits sont exécutés en toute sécurité via nos partenaires agréés Remitly et Binance Pay. Aucun frais de change masqué n'est déduit.
                 </p>
               </div>
             </div>
@@ -1308,7 +1182,7 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
                 </div>
                 <h4 className="font-extrabold text-sm text-slate-900">Libération instantanée</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Dès accord client, le gain net (déduit de 15% commission) est crédité au freelance, retirable par RIB ou Binance Pay.
+                  Dès accord client, le gain net (déduit de 15% commission) est crédité au freelance, retirable par Remitly ou Binance Pay.
                 </p>
               </div>
             </div>

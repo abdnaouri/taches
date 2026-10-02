@@ -41,7 +41,7 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
     { title: 'Conception Logo & Identité', price: '150 DH', icon: '🎨' },
     { title: 'Traduction Arabe / Français', price: '100 DH', icon: '📄' },
     { title: 'Saisie factures sous Excel', price: '80 DH', icon: '📊' },
-    { title: 'Boutique YouCan ou Shopify', price: '250 DH', icon: '🛍️' },
+    { title: 'Boutique Shopify & E-commerce', price: '250 DH', icon: '🛍️' },
     { title: 'Montage vidéo TikTok / Reels', price: '120 DH', icon: '📱' },
     { title: 'Démarches & Dépôt de plis', price: '70 DH', icon: '🚚' },
   ];
@@ -101,7 +101,7 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
               </p>
             </div>
 
-            {/* Work-zilla Instant Task Action Box */}
+            {/* Tâches.ma Instant Task Action Box */}
             <div className="mt-8 sm:mt-10 max-w-3xl mx-auto">
               <form
                 onSubmit={handleSubmit}
@@ -206,7 +206,7 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
   );
 };
 
-/* Proof Metrics Bar (Work-zilla Numbers Proof) */
+/* Proof Metrics Bar (Tâches.ma Numbers Proof) */
 export const WorkzillaProofBar: React.FC = () => {
   const { t } = useLanguage();
 
@@ -238,7 +238,7 @@ export const WorkzillaProofBar: React.FC = () => {
   );
 };
 
-/* Visual Categories Grid (Workzilla Universal Categorization) */
+/* Visual Categories Grid (Tâches.ma Universal Categorization) */
 interface WorkzillaCategoryGridProps {
   onSelectCategory: (categoryKey: string) => void;
 }
@@ -273,7 +273,7 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
     },
     {
       key: 'development',
-      title: 'Boutiques YouCan & Sites Web',
+      title: 'Boutiques Shopify & Sites Web',
       desc: 'Création boutique en ligne, ajout de fiches produits, dépannage WordPress',
       price: 'Dès 200 DH',
       icon: '🛍️',
@@ -355,7 +355,7 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
   );
 };
 
-/* 3-Step Process (Work-zilla Simple Workflow) */
+/* 3-Step Process (Tâches.ma Simple Workflow) */
 interface WorkzillaHowItWorksProps {
   onPostTask: () => void;
 }
@@ -468,8 +468,8 @@ export const WorkzillaTrustSection: React.FC = () => {
       icon: <FiUsers className="text-brand-700 text-2xl" />,
     },
     {
-      title: 'Banques Marocaines & Retraits CMI / Wafacash',
-      desc: 'Compatible avec toutes les banques du Maroc (CIH, Attijariwafa, Al Barid, BMCE), cartes CMI et agences Cash Plus / Wafacash.',
+      title: 'Paiements & Retraits Remitly & Binance Pay',
+      desc: 'Rechargez votre solde et retirez vos gains en toute simplicité via Remitly ou instantanément en crypto USDT via Binance Pay.',
       icon: <FiDollarSign className="text-amber-700 text-2xl" />,
     },
     {
@@ -519,7 +519,7 @@ export const WorkzillaTrustSection: React.FC = () => {
   );
 };
 
-/* Recent Completed / Real Tasks Showcase (Work-zilla Feed from Database) */
+/* Recent Completed / Real Tasks Showcase (Tâches.ma Feed from Database) */
 export const WorkzillaCompletedFeed: React.FC = () => {
   const { t, locale } = useLanguage();
   const [realTasks, setRealTasks] = useState<any[]>([]);
@@ -621,7 +621,7 @@ export const WorkzillaHelpCenter: React.FC = () => {
     },
     {
       q: 'Comment sont payés les prestataires au Maroc ?',
-      a: 'Les freelances reçoivent leurs gains directement par virement bancaire sur leur compte au Maroc (CIH, Attijariwafa, Banque Populaire, BMCE, etc.) ou en espèces via Cash Plus / Wafacash.',
+      a: 'Les freelances reçoivent leurs gains directement via Remitly ou instantanément en crypto USDT via Binance Pay.',
     },
     {
       q: 'Que faire si j’ai besoin d’aide pour rédiger ou commander ?',
@@ -738,7 +738,7 @@ export const WorkzillaFooter: React.FC = () => {
               <li><a href={`/${locale}/freelance-maroc`} className="text-brand-400 font-bold hover:underline">🇲🇦 Guide Freelance Maroc</a></li>
               <li><a href={`/${locale}/services/graphiste-freelance-maroc`} className="hover:text-white transition-colors">Graphiste & Logo Maroc</a></li>
               <li><a href={`/${locale}/services/developpeur-freelance-maroc`} className="hover:text-white transition-colors">Développeur Web & Mobile</a></li>
-              <li><a href={`/${locale}/services/gestion-boutique-youcan-maroc`} className="hover:text-white transition-colors">Expert YouCan & Shopify</a></li>
+              <li><a href={`/${locale}/services/expert-e-commerce-shopify-maroc`} className="hover:text-white transition-colors">Expert Shopify & E-commerce</a></li>
               <li><a href={`/${locale}/services/saisie-donnees-maroc`} className="hover:text-white transition-colors">Saisie Données & Excel</a></li>
               <li><a href={`/${locale}/services/traduction-darija-maroc`} className="hover:text-white transition-colors">Traduction Darija / Arabe</a></li>
             </ul>
@@ -767,9 +767,9 @@ export const WorkzillaFooter: React.FC = () => {
             <ul className="space-y-2 text-xs text-slate-400">
               <li><a href={`/${locale}/daman`} className="text-brand-400 font-semibold hover:underline">✓ 100% Séquestre Daman</a></li>
               <li><a href={`/${locale}/wallet`} className="hover:text-white transition-colors">Portefeuille & Retraits</a></li>
-              <li><span>Paiement CMI & Banques Maroc</span></li>
-              <li><span>Vérification CIN des prestataires</span></li>
-              <li><span>Virements CIH, Attijari, BCP sous 24h</span></li>
+              <li><span>Paiement Carte, Remitly & Binance</span></li>
+              <li><span>Vérification d’identité des prestataires</span></li>
+              <li><span>Retraits Remitly & Binance Pay</span></li>
               <li><a href={`/${locale}#help-faq`} className="hover:text-white transition-colors">Questions fréquentes (FAQ)</a></li>
             </ul>
           </div>

@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
+import { filterOffPlatformContact } from '@/lib/antiCircumvention';
 
 export async function GET(req: NextRequest) {
   try {
@@ -107,12 +108,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify Performer Qualification & Active Subscription / Free Trial (Workzilla Barrier)
+    const { data: performerProfile } = await supabase
+      .from('profiles')
+      .select('passed_qualification, subscription_active_until, free_tasks_remaining, is_admin')
+      .eq('id', performerId)
+      .single();
+
+    if (!performerProfile?.is_admin) {
+      if (!performerProfile?.passed_qualification) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Vous devez réussir le test de qualification prestataire pour pouvoir postuler.',
+            requiresQualification: true,
+          },
+          { status: 403 }
+        );
+      }
+
+      const hasActiveSub = performerProfile.subscription_active_until && new Date(performerProfile.subscription_active_until) > new Date();
+      const freeRemaining = Number(performerProfile.free_tasks_remaining ?? 3);
+
+      if (!hasActiveSub && freeRemaining <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Vos 3 candidatures d\'essai sont épuisées. Activez votre Pass Prestataire pour continuer à postuler.',
+            requiresSubscription: true,
+          },
+          { status: 403 }
+        );
+      }
+
+      // If relying on free trial, decrement it
+      if (!hasActiveSub && freeRemaining > 0) {
+        await supabase
+          .from('profiles')
+          .update({ free_tasks_remaining: freeRemaining - 1 })
+          .eq('id', performerId);
+      }
+    }
+
+    // Anti-circumvention filter on proposal pitch
+    const sanitizedPitch = filterOffPlatformContact(pitch.trim()).sanitizedText;
+
     const { data: createdBid, error: bidError } = await supabase
       .from('bids')
       .insert({
         task_id: taskId,
         performer_id: performerId,
-        pitch: pitch.trim(),
+        pitch: sanitizedPitch,
         proposed_hours: proposedHours,
       })
       .select()

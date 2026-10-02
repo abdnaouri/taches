@@ -19,8 +19,8 @@ export const initialUser: UserProfile = {
   performerCompletedTasks: 52,
   passedQualification: true,
 
-  // Worker Extended Profile (Work-zilla style)
-  headline: 'Expert Shopify / YouCan & Développeur Web Fullstack',
+  // Worker Extended Profile (Tâches.ma Verified Performer)
+  headline: 'Expert Shopify & Développeur Web Fullstack',
   bio: 'Freelance passionné basé à Casablanca avec plus de 4 ans d’expérience en création de sites e-commerce, intégration Tailwind CSS / Next.js et assistance technique. Réactivité garantie sous 15 minutes et 100% de respect des délais.',
   city: 'Casablanca',
   phone: '+212 6 61 23 45 67',
@@ -34,31 +34,31 @@ export const initialUser: UserProfile = {
     { language: 'Espagnol', level: 'intermediate' },
   ],
   skills: [
-    'YouCan Shop',
     'Shopify',
+    'WooCommerce',
     'Next.js & React',
     'Tailwind CSS',
-    'WordPress & WooCommerce',
+    'WordPress',
     'Traduction Arabe-Français',
     'Saisie de données Excel',
     'Canva Pro & Graphisme',
-    'Intégration CMI & Stripe',
+    'Intégration Stripe & Paiements',
   ],
   specializedCategories: ['development', 'design', 'assistance', 'copywriting'],
   minTaskReward: 30,
   isAvailableForHire: true,
 
   // Banking & Payout (Morocco)
-  bankName: 'CIH Bank',
-  bankRib: '230 780 4567890123456789 45',
+  bankName: 'Remitly / Binance Pay',
+  bankRib: '892401844',
   bankAccountHolder: 'Mehdi Aero',
 
   // Portfolio & Certs
   portfolio: [
     {
       id: 'port_1',
-      title: 'Boutique E-commerce YouCan pour Marque de Cosmétiques Naturels',
-      description: 'Configuration intégrale du thème, optimisation mobile, intégration des passerelles de paiement CMI et configuration du suivi WhatsApp.',
+      title: 'Boutique E-commerce Shopify pour Marque de Cosmétiques Naturels',
+      description: 'Configuration intégrale du thème, optimisation mobile, intégration des passerelles de paiement et tunnel de commande express.',
       category: 'development',
       imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800&auto=format&fit=crop&q=80',
       linkUrl: 'https://example.com/demo-boutique',
@@ -91,7 +91,7 @@ export const initialUser: UserProfile = {
     },
     {
       id: 'cert_2',
-      title: 'Certification E-commerce & Intégration YouCan Shop',
+      title: 'Certification E-commerce & Intégration Shopify',
       score: 96,
       passedAt: '20 Fév 2026',
       category: 'development',
@@ -124,18 +124,18 @@ export interface LocalizedTaskContent {
 export const taskTranslations: Record<string, LocalizedTaskContent> = {
   tsk_101: {
     title: {
-      ru: "Настройка и оптимизация магазина YouCan / Shopify",
-      fr: "Configuration et personnalisation boutique YouCan / Shopify",
-      ar: "إعداد وتخصيص متجر إلكتروني على YouCan / Shopify",
-      en: "Setup & optimization of YouCan / Shopify online store",
-      es: "Configuración y optimización de tienda YouCan / Shopify",
+      ru: "Настройка и оптимизация магазина Shopify / WooCommerce",
+      fr: "Configuration et personnalisation boutique Shopify / WooCommerce",
+      ar: "إعداد وتخصيص متجر إلكتروني على Shopify / WooCommerce",
+      en: "Setup & optimization of Shopify / WooCommerce online store",
+      es: "Configuración y optimización de tienda Shopify / WooCommerce",
     },
     description: {
-      ru: "Требуется настроить тему YouCan Shop, подключить оплату CMI и загрузить первые 15 товаров с описаниями на арабском и французском.",
-      fr: "Configuration complète d’une boutique YouCan Shop : installation du thème, mode de livraison au Maroc, intégration des 15 premiers produits avec descriptions soignées.",
-      ar: "إعداد كامل لمتجر YouCan Shop: تثبيت القالب، ضبط وسائل التوصيل في المغرب، وإدخال أول 15 منتجاً مع صور ووصف احترافي.",
-      en: "Full setup of a YouCan Shop store: theme configuration, Moroccan shipping rates, and upload of 15 initial products with clean descriptions.",
-      es: "Configuración completa de tienda YouCan Shop: instalación del tema, métodos de envío en Marruecos y carga de los primeros 15 productos con fotos.",
+      ru: "Требуется настроить тему Shopify, подключить онлайн-оплату и загрузить первые 15 товаров с описаниями на арабском и французском.",
+      fr: "Configuration complète d’une boutique Shopify : installation du thème, mode de livraison au Maroc, intégration des 15 premiers produits avec descriptions soignées.",
+      ar: "إعداد كامل لمتجر Shopify: تثبيت القالب، ضبط وسائل التوصيل في المغرب، وإدخال أول 15 منتجاً مع صور ووصف احترافي.",
+      en: "Full setup of a Shopify store: theme configuration, Moroccan shipping rates, and upload of 15 initial products with clean descriptions.",
+      es: "Configuración completa de tienda Shopify: instalación del tema, métodos de envío en Marruecos y carga de los primeros 15 productos con fotos.",
     },
     requiredProofs: {
       ru: [
@@ -344,7 +344,7 @@ export const initialTasks: Task[] = [
     title: taskTranslations.tsk_101.title.fr,
     description: taskTranslations.tsk_101.description.fr,
     category: 'development',
-    subCategory: 'Boutique YouCan Shop / Shopify',
+    subCategory: 'Boutique Shopify / WooCommerce',
     locationMode: 'online',
     taskMode: 'single',
     status: 'OPEN',
@@ -633,9 +633,9 @@ export const initialReviews = [
     authorName: 'Amina El Fassi (Boutique Bio)',
     authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     rating: 5.0,
-    comment: 'Boutique YouCan configurée parfaitement avec paiement CMI et livraison Amana. Mehdi est un vrai expert du e-commerce au Maroc.',
+    comment: 'Boutique Shopify configurée parfaitement avec tunnel rapide et fiches produits au top. Mehdi est un vrai expert du e-commerce.',
     createdAt: 'Il y a 1 semaine',
-    taskTitle: 'Configuration et personnalisation boutique YouCan / Shopify',
+    taskTitle: 'Configuration et personnalisation boutique Shopify / WooCommerce',
     rewardDH: 450,
   },
   {

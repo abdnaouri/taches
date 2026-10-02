@@ -157,7 +157,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         {
           event: '*',
           schema: 'public',
-          table: 'task_bids',
+          table: 'bids',
           filter: `task_id=eq.${task.id}`,
         },
         (payload) => {
@@ -216,7 +216,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'task_messages',
+          table: 'messages',
           filter: `task_id=eq.${task.id}`,
         },
         (payload) => {

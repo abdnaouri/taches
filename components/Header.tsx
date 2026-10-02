@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { UserProfile, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { PerformerSubscriptionModal } from '@/components/PerformerSubscriptionModal';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useAnalytics } from '@/lib/analytics';
 import {
@@ -73,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -246,19 +248,28 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="sm:hidden text-xs">Publier</span>
                   </button>
                 ) : (
-                  <button
-                    onClick={() => {
-                      if (isTasksPage) {
-                        setActiveTab('my-tasks');
-                      } else {
-                        router.push(`/${locale}/tasks?tab=my-tasks`);
-                      }
-                    }}
-                    className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold text-white shadow-xs transition cursor-pointer whitespace-nowrap"
-                  >
-                    <FiClock className="text-xs text-emerald-400" />
-                    <span className="hidden sm:inline">1 {t('btnInProgress')}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsSubModalOpen(true)}
+                      className="hidden md:inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 px-3 py-1.5 sm:py-2 text-xs font-extrabold text-slate-950 shadow-2xs transition cursor-pointer"
+                    >
+                      <FiAward className="text-sm" />
+                      <span>Pass Prestataire</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (isTasksPage) {
+                          setActiveTab('my-tasks');
+                        } else {
+                          router.push(`/${locale}/tasks?tab=my-tasks`);
+                        }
+                      }}
+                      className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold text-white shadow-xs transition cursor-pointer whitespace-nowrap"
+                    >
+                      <FiClock className="text-xs text-emerald-400" />
+                      <span className="hidden sm:inline">1 {t('btnInProgress')}</span>
+                    </button>
+                  </div>
                 )}
 
                 {/* Notification Bell Dropdown */}
@@ -860,6 +871,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Performer Subscription Pass Modal */}
+      <PerformerSubscriptionModal
+        isOpen={isSubModalOpen}
+        onClose={() => setIsSubModalOpen(false)}
+        onOpenDeposit={onOpenWallet}
+      />
     </>
   );
 };

@@ -220,12 +220,12 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
             </h1>
             <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
               {locale === 'ar'
-                ? 'ابحث بالنية الطبيعية (يوكان، لوجو، ترجمة عقود، إكسيل، مونتاج ريلز) واستلهم من مهام حقيقية مع أسعار بالدرهم وأنشيء مهمة مطابقة بنقرة واحدة.'
+                ? 'ابحث بالنية الطبيعية (شوبيفاي، تصميم لوجو، ترجمة عقود، إكسيل، مونتاج ريلز) واستلهم من مهام حقيقية مع أسعار بالدرهم وأنشيء مهمة مطابقة بنقرة واحدة.'
                 : locale === 'ru'
                 ? 'Посмотрите примеры реальных задач, реальные цены в MAD и отзывы клиентов. Создайте аналогичное задание в 1 клик.'
                 : locale === 'en'
                 ? 'Search natural tasks (Shopify COD, Logo, Arabic translation, Excel data, Reels editing) and copy templates in 1 click.'
-                : 'Trouvez l’inspiration parmi des centaines de besoins concrets (Boutique YouCan COD, Création Logo, Traduction juridique, Saisie Excel, Montage Reels) et dupliquez une mission identique en 1 clic.'}
+                : 'Trouvez l’inspiration parmi des centaines de besoins concrets (Boutique Shopify COD, Création Logo, Traduction juridique, Saisie Excel, Montage Reels) et dupliquez une mission identique en 1 clic.'}
             </p>
           </div>
 
@@ -314,12 +314,12 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
                   locale === 'ar'
-                    ? 'اكتب ما تبحث عنه (مثال: متجر يوكان، تصميم شعار، ترجمة عقود، إكسيل، مونتاج ريلز، صوت بالدارجة)...'
+                    ? 'اكتب ما تبحث عنه (مثال: متجر شوبيفاي، تصميم شعار، ترجمة عقود، إكسيل، مونتاج ريلز، صوت بالدارجة)...'
                     : locale === 'ru'
-                    ? 'Поиск по естественным запросам (YouCan, логотип, перевод, Excel, Reels, WhatsApp)...'
+                    ? 'Поиск по естественным запросам (Shopify, логотип, перевод, Excel, Reels, WhatsApp)...'
                     : locale === 'en'
-                    ? 'Search natural intent (YouCan store, logo design, contract translation, Excel data, reels editing)...'
-                    : 'Recherchez par besoin (ex: YouCan COD, Créer un logo, Traduction contrat, Saisie Excel, Montage Reels, Voix off)...'
+                    ? 'Search natural intent (Shopify store, logo design, contract translation, Excel data, reels editing)...'
+                    : 'Recherchez par besoin (ex: Shopify COD, Créer un logo, Traduction contrat, Saisie Excel, Montage Reels, Voix off)...'
                 }
                 className={`w-full rounded-xl border border-slate-300 bg-slate-50/60 py-3 ${
                   isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'
@@ -430,7 +430,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
         </div>
       </section>
 
-      {/* TASKS LIST SECTION (Work-zilla Accordion Sliding Cards) */}
+      {/* TASKS LIST SECTION (Tâches.ma Accordion Sliding Cards) */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-6">
         
         {/* Results Count Banner */}
@@ -498,7 +498,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
 
               return (
                 <React.Fragment key={task.id}>
-                  {/* WORKZILLA ACCORDION TASK ITEM */}
+                  {/* TACHES.MA ACCORDION TASK ITEM */}
                   <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs transition-all hover:border-slate-300 hover:shadow-sm">
                     
                     {/* ACCORDION HEADER (Clickable to Toggle) */}
@@ -551,7 +551,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
                       </div>
                     </div>
 
-                    {/* EXPANDED CONTENT PANEL (Work-zilla Slide-Down Panel) */}
+                    {/* EXPANDED CONTENT PANEL (Tâches.ma Slide-Down Panel) */}
                     {isExpanded && (
                       <div className="border-t border-slate-100 bg-slate-50/50 p-5 sm:p-6 animate-in slide-in-from-top-2 duration-200">
                         
@@ -674,7 +674,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
 
                   </div>
 
-                  {/* IN-FEED CTA BANNER (Work-zilla Style After 4th item) */}
+                  {/* IN-FEED CTA BANNER (Tâches.ma Style After 4th item) */}
                   {index === 3 && (
                     <div className="my-6 rounded-2xl bg-gradient-to-r from-brand-700 via-blue-700 to-indigo-800 p-6 sm:p-8 text-white shadow-md text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-5">
                       <div>
@@ -732,7 +732,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
           </div>
         )}
 
-        {/* BOTTOM BIG CTA BANNER (Work-zilla Style) */}
+        {/* BOTTOM BIG CTA BANNER (Tâches.ma Style) */}
         <div className="mt-12 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 p-8 sm:p-10 text-white shadow-xl text-center">
           <div className="max-w-2xl mx-auto">
             <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-brand-600 text-white text-xl mb-4 shadow-sm">
@@ -767,7 +767,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
           </div>
         </div>
 
-        {/* COMPREHENSIVE SEO DIRECTORY & ADVANTAGES BLOCK (Work-zilla Style) */}
+        {/* COMPREHENSIVE SEO DIRECTORY & ADVANTAGES BLOCK (Tâches.ma Style) */}
         <div className="mt-12 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
           
           <div className="mb-6">
@@ -792,7 +792,7 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="font-bold text-brand-700">⬩ Web & E-commerce :</span> configuration YouCan Shop, Shopify, landing pages COD, intégration passerelle CMI, correction de bugs.
+                <span className="font-bold text-brand-700">⬩ Web & E-commerce :</span> configuration Shopify, WooCommerce, landing pages e-commerce, intégration passerelles/Stripe, correction de bugs.
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <span className="font-bold text-brand-700">⬩ Graphisme & Design :</span> création de logo vectoriel, bannières réseaux sociaux, menus de restaurant, flyers A5, détourage photos e-commerce.

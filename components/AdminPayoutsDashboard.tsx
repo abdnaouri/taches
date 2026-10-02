@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { detectMoroccanBank } from '@/lib/payoutService';
 import { getAuthHeaders } from '@/lib/supabase';
 import {
   FiShield,
@@ -23,7 +22,8 @@ import {
   FiTrendingUp,
   FiExternalLink,
   FiLock,
-  FiUser
+  FiUser,
+  FiSend
 } from 'react-icons/fi';
 import { SiBinance } from 'react-icons/si';
 
@@ -37,7 +37,7 @@ interface PayoutItem {
   grossAmountEur: number;
   feeDH: number;
   netAmountDH: number;
-  method: 'RIB' | 'CASHPLUS' | 'BINANCE_PAY' | 'USDT';
+  method: 'REMITLY' | 'BINANCE_PAY' | string;
   description: string;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
   createdAt: string;
@@ -99,7 +99,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Export CSV for Sendwave / Remitly / CIH Bank batch processing
+  // Export CSV for Remitly / Binance batch processing
   const exportToCSV = () => {
     const pendingOnly = items.filter((i) => i.status === 'PENDING' || i.status === 'PROCESSING');
     if (pendingOnly.length === 0) {
@@ -107,7 +107,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
       return;
     }
 
-    const headers = ['ID Transaction', 'Bénéficiaire', 'Email', 'Méthode', 'Montant Brut DH', 'Frais DH', 'Net à Virer DH', 'Description / RIB / CIN', 'Statut', 'Date'];
+    const headers = ['ID Transaction', 'Bénéficiaire', 'Email', 'Méthode', 'Montant Brut DH', 'Frais DH', 'Net à Virer DH', 'Description / Destination', 'Statut', 'Date'];
     const rows = pendingOnly.map((i) => [
       i.id,
       `"${i.userName}"`,
@@ -139,14 +139,17 @@ export const AdminPayoutsDashboard: React.FC = () => {
     const targetStatus = actionType === 'COMPLETE' ? 'COMPLETED' : actionType === 'PROCESS' ? 'PROCESSING' : 'CANCELLED';
 
     try {
-      const authHeaders = await getAuthHeaders(true);
+      const authHeaders = await getAuthHeaders(false);
       const res = await fetch('/api/admin/payouts', {
-        method: 'PATCH',
-        headers: authHeaders,
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           transactionId: selectedItem.id,
           status: targetStatus,
-          trackingReference: trackingReference || `VIR-${Date.now().toString().slice(-6)}`,
+          trackingReference: trackingReference.trim() || undefined,
         }),
       });
 
@@ -154,98 +157,116 @@ export const AdminPayoutsDashboard: React.FC = () => {
       if (data.success) {
         showToast(
           targetStatus === 'COMPLETED'
-            ? `Virement de ${selectedItem.netAmountDH} DH marqué comme envoyé avec succès !`
-            : targetStatus === 'CANCELLED'
-            ? `Virement annulé. ${selectedItem.grossAmountDH} DH remboursés sur le solde du freelance.`
-            : `Statut mis à jour : En cours d'exécution.`
+            ? 'Virement validé et marqué comme viré.'
+            : targetStatus === 'PROCESSING'
+            ? 'Demande passée en cours de traitement.'
+            : 'Demande de retrait annulée avec succès.'
         );
         setSelectedItem(null);
         setActionType(null);
         setTrackingReference('');
         fetchPayouts();
       } else {
-        showToast(`Erreur : ${data.error || 'Impossible de mettre à jour le statut'}`);
+        alert(data.error || 'Erreur lors de la mise à jour.');
       }
     } catch (err: any) {
-      showToast(`Erreur réseau : ${err.message}`);
+      alert(err.message || 'Erreur réseau.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Metrics
   const pendingItems = useMemo(() => items.filter((i) => i.status === 'PENDING' || i.status === 'PROCESSING'), [items]);
   const completedItems = useMemo(() => items.filter((i) => i.status === 'COMPLETED'), [items]);
-  const totalPendingVolumeDH = useMemo(() => pendingItems.reduce((acc, cur) => acc + cur.netAmountDH, 0), [pendingItems]);
-  const totalFeesEarnedDH = useMemo(() => items.reduce((acc, cur) => acc + cur.feeDH, 0), [items]);
 
-  // Filtered List
+  const totalPendingVolumeDH = useMemo(() => {
+    return pendingItems.reduce((acc, cur) => acc + cur.netAmountDH, 0);
+  }, [pendingItems]);
+
+  const totalCompletedVolumeDH = useMemo(() => {
+    return completedItems.reduce((acc, cur) => acc + cur.netAmountDH, 0);
+  }, [completedItems]);
+
+  const totalFeesEarnedDH = useMemo(() => {
+    return items.reduce((acc, cur) => acc + cur.feeDH, 0);
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      if (filterStatus !== 'ALL' && item.status !== filterStatus) return false;
-      if (filterMethod !== 'ALL' && item.method !== filterMethod) return false;
+      // Filter by status
+      if (filterStatus !== 'ALL') {
+        if (filterStatus === 'PENDING' && (item.status !== 'PENDING' && item.status !== 'PROCESSING')) return false;
+        if (filterStatus === 'COMPLETED' && item.status !== 'COMPLETED') return false;
+        if (filterStatus === 'CANCELLED' && item.status !== 'CANCELLED') return false;
+      }
 
+      // Filter by method
+      if (filterMethod !== 'ALL' && item.method !== filterMethod) {
+        return false;
+      }
+
+      // Filter by search query
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
-        const matchName = item.userName.toLowerCase().includes(q);
-        const matchEmail = item.userEmail.toLowerCase().includes(q);
-        const matchDesc = item.description.toLowerCase().includes(q);
-        const matchId = item.id.toLowerCase().includes(q);
-        return matchName || matchEmail || matchDesc || matchId;
+        const matchesName = item.userName.toLowerCase().includes(q);
+        const matchesEmail = item.userEmail.toLowerCase().includes(q);
+        const matchesDesc = item.description.toLowerCase().includes(q);
+        const matchesId = item.id.toLowerCase().includes(q);
+        if (!matchesName && !matchesEmail && !matchesDesc && !matchesId) {
+          return false;
+        }
       }
+
       return true;
     });
   }, [items, filterStatus, filterMethod, searchTerm]);
 
   if (!isAuthenticated || !profile?.isAdmin) {
     return (
-      <main className="flex-1 py-16 bg-slate-50 flex items-center justify-center">
-        <div className="max-w-md w-full mx-4 bg-white p-8 rounded-3xl border border-slate-200 shadow-xl text-center">
-          <div className="h-12 w-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200">
-            <FiLock className="text-2xl" />
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl bg-white p-8 border border-slate-200 shadow-xl text-center space-y-4">
+          <div className="h-14 w-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-2xl font-bold">
+            <FiShield />
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 mb-2">
-            Console Administrateur Protégée
-          </h2>
-          <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-            {isAuthenticated
-              ? 'Votre compte n\'a pas les privilèges administrateur requis pour accéder aux règlements et virements.'
-              : 'Veuillez vous connecter avec un compte administrateur autorisé pour accéder aux règlements et virements.'}
+          <h2 className="text-xl font-black text-slate-900">Accès Administrateur Restreint</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Cette interface de règlement des virements est réservée exclusivement aux administrateurs certifiés de Tâches.ma.
           </p>
-          <button
-            type="button"
-            onClick={() => openAuthModal('login', 'Connexion Administrateur requise')}
-            className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer"
-          >
-            {isAuthenticated ? 'Changer de compte' : 'Se connecter à l\'espace Admin'}
-          </button>
+          <div className="pt-2">
+            <button
+              onClick={() => openAuthModal('login')}
+              className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 text-xs shadow-md transition cursor-pointer"
+            >
+              Se connecter avec un compte Admin
+            </button>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 py-8 sm:py-12 bg-slate-50/70">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Toast Alert */}
-        {toastMessage && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl bg-slate-900 text-white p-4 shadow-xl animate-in fade-in">
-            <FiCheckCircle className="text-emerald-400 text-xl shrink-0" />
-            <div className="text-sm font-semibold">{toastMessage}</div>
-          </div>
-        )}
+    <main className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 rounded-2xl bg-slate-900 text-white px-5 py-3.5 shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-top-4">
+          <FiCheckCircle className="text-emerald-400 text-base shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
-        {/* Admin Subheader Navigation Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-900 text-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-              <FiShield className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Console d&apos;Administration</span>
-              <h2 className="text-base font-black text-white">Règlement des Gains & Payouts</h2>
-            </div>
+      <div className="max-w-7xl mx-auto">
+        {/* Navigation Breadcrumb / Top Bar */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+            <button
+              onClick={() => router.push(`/${locale}/tasks`)}
+              className="hover:text-brand-700 transition cursor-pointer"
+            >
+              Tâches.ma
+            </button>
+            <span>/</span>
+            <span className="text-slate-900 font-extrabold">Console Admin Payouts</span>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60">
@@ -280,10 +301,10 @@ export const AdminPayoutsDashboard: React.FC = () => {
               <span>Console d'Administration & Règlement des Gains</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Gestion des Virements & Payouts Maroc
+              Gestion des Virements (Remitly & Binance Pay)
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-600">
-              Traitez les demandes de retraits des prestataires en Dirhams (RIB 24 chiffres, Cash Plus) ou en USDT via Binance Pay.
+              Traitez les demandes de retraits des prestataires via Remitly ou instantanément en USDT via Binance Pay.
             </p>
           </div>
 
@@ -293,7 +314,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-800 shadow-2xs transition active:scale-95 cursor-pointer"
             >
               <FiDownload className="text-sm text-slate-500" />
-              <span>Exporter CSV (Sendwave / Batch)</span>
+              <span>Exporter CSV (Batch)</span>
             </button>
             <button
               onClick={fetchPayouts}
@@ -335,14 +356,14 @@ export const AdminPayoutsDashboard: React.FC = () => {
 
           <div className="rounded-2xl bg-brand-900 text-white p-5 shadow-xs">
             <div className="flex items-center justify-between text-xs text-brand-200 font-bold uppercase tracking-wider mb-1">
-              <span>Frais de traitement perçus</span>
+              <span>Volume Total Réglé</span>
               <FiDollarSign className="text-brand-300" />
             </div>
             <div className="text-3xl font-black text-white mt-1">
-              {totalFeesEarnedDH} <span className="text-lg text-brand-300 font-bold">DH</span>
+              {totalCompletedVolumeDH} <span className="text-lg text-brand-300 font-bold">DH</span>
             </div>
             <div className="mt-2 text-xs text-brand-200">
-              Marge pure de transfert
+              Paiements prestataires
             </div>
           </div>
 
@@ -353,8 +374,8 @@ export const AdminPayoutsDashboard: React.FC = () => {
             </div>
             <div className="text-sm font-extrabold text-slate-900 mt-2 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Sendwave / Remitly :</span>
-                <span className="text-emerald-700 font-bold">Actif (0% frais)</span>
+                <span className="text-slate-500">Remitly :</span>
+                <span className="text-emerald-700 font-bold">Actif (0% commission)</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Binance Pay USDT :</span>
@@ -399,7 +420,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher par nom, email, RIB, ID..."
+              placeholder="Rechercher par nom, email, ID..."
               className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-brand-700 focus:bg-white transition"
             />
           </div>
@@ -433,15 +454,6 @@ export const AdminPayoutsDashboard: React.FC = () => {
                     const isCompleted = item.status === 'COMPLETED';
                     const isCancelled = item.status === 'CANCELLED';
 
-                    // Parse destination details from description
-                    let destinationText = item.description;
-                    let bankDetected = null;
-
-                    if (item.method === 'RIB') {
-                      const ribMatch = item.description.match(/RIB:\s*(\.\.\.[0-9]+|[0-9\s]+)/i);
-                      if (ribMatch) destinationText = ribMatch[0];
-                    }
-
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/60 transition">
                         {/* Column 1: Beneficiary */}
@@ -458,13 +470,9 @@ export const AdminPayoutsDashboard: React.FC = () => {
                               <span className="inline-flex items-center gap-1 rounded bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[10px]">
                                 <SiBinance className="text-amber-600" /> Binance Pay
                               </span>
-                            ) : item.method === 'CASHPLUS' ? (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[10px]">
-                                <FiDollarSign /> Cash Plus
-                              </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 text-[10px]">
-                                <FiArrowUpRight /> RIB Bancaire
+                              <span className="inline-flex items-center gap-1 rounded bg-brand-50 text-brand-800 border border-brand-200 px-1.5 py-0.5 text-[10px]">
+                                <FiSend className="text-brand-700" /> Remitly
                               </span>
                             )}
                           </div>
@@ -487,7 +495,7 @@ export const AdminPayoutsDashboard: React.FC = () => {
 
                         {/* Column 4: Platform Fee */}
                         <td className="p-4 font-semibold text-emerald-700">
-                          +{item.feeDH} DH
+                          0 DH (Gratuit)
                         </td>
 
                         {/* Column 5: Net Payout */}
@@ -601,11 +609,11 @@ export const AdminPayoutsDashboard: React.FC = () => {
               {actionType === 'COMPLETE' && (
                 <div className="mt-4 space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700">
-                    Référence du virement Sendwave / Remitly / CIH :
+                    Référence Remitly ou TxID Binance Pay :
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: SW-982341 / VIR-2026-09"
+                    placeholder="Ex: REMITLY-982341 ou BINANCE-TXID-7819"
                     value={trackingReference}
                     onChange={(e) => setTrackingReference(e.target.value)}
                     className="w-full rounded-xl border border-slate-300 p-3 text-xs font-mono outline-none focus:border-brand-700"

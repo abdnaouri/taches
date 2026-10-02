@@ -38,9 +38,9 @@ const AUDIENCE_DATA: AudienceItem[] = [
   {
     id: 'ecommerce',
     tabTitle: {
-      fr: 'E-commerce & YouCan Shop',
-      ar: 'التجارة الإلكترونية ومتاجر يوكان',
-      en: 'E-commerce & YouCan Shop',
+      fr: 'E-commerce & Shopify',
+      ar: 'التجارة الإلكترونية ومتاجر شوبيفاي',
+      en: 'E-commerce & Shopify',
     },
     icon: '🛍️',
     badge: {
@@ -81,9 +81,9 @@ const AUDIENCE_DATA: AudienceItem[] = [
     popularTasks: [
       {
         title: {
-          fr: 'Montage 3 vidéos TikTok / Reels pour produit YouCan',
-          ar: 'مونتاج 3 فيديوهات إعلانية لمنتج في متجر يوكان',
-          en: 'Edit 3 TikTok/Reels ads for a YouCan product',
+          fr: 'Montage 3 vidéos TikTok / Reels pour produit e-commerce',
+          ar: 'مونتاج 3 فيديوهات إعلانية لمنتج متجر إلكتروني',
+          en: 'Edit 3 TikTok/Reels ads for an e-commerce product',
         },
         desc: {
           fr: 'Créer 3 variations de pubs courtes (30s) avec sous-titres animés et voix Darija pour tester sur Meta Ads.',
@@ -101,9 +101,9 @@ const AUDIENCE_DATA: AudienceItem[] = [
           en: '20 clean product listings with retouched photos',
         },
         desc: {
-          fr: 'Importer 20 articles sur YouCan avec descriptions vendeuses en Français/Arabe et photos sur fond blanc.',
-          ar: 'إدخال 20 مادة لمتجر يوكان مع صور واضحة ووصف مميز وتحديد خيارات المقاس والألوان.',
-          en: 'Upload 20 products to YouCan with clean photos and persuasive descriptions in French & Arabic.',
+          fr: 'Importer 20 articles sur votre boutique avec descriptions vendeuses en Français/Arabe et photos sur fond blanc.',
+          ar: 'إدخال 20 مادة لمتجرك الإلكتروني مع صور واضحة ووصف مميز وتحديد خيارات المقاس والألوان.',
+          en: 'Upload 20 products to your store with clean photos and persuasive descriptions in French & Arabic.',
         },
         budgetDH: 100,
         turnaround: '5h',
@@ -297,26 +297,26 @@ const AUDIENCE_DATA: AudienceItem[] = [
       en: 'Monetize your skills with 100% escrow-guaranteed payouts',
     },
     subheadline: {
-      fr: 'Vous maîtrisez Excel, Canva, Photoshop, la traduction ou le montage ? Recevez des missions rémunérées de 50 à 500 DH avec virement sur votre compte CIH, Attijariwafa ou Cash Plus.',
-      ar: 'هل تتقن إكسيل، كانفا، فوتوشوب، الترجمة أو المونتاج؟ أنجز مهاماً يومية واكسب من 50 إلى 500 درهم لكل مهمة مع استلام أرباحك بدون تأخير.',
-      en: 'Skilled in Excel, Canva, Photoshop, translation, or video? Complete daily tasks and earn 50 to 500 DH with fast Moroccan bank payouts.',
+      fr: 'Vous maîtrisez Excel, Canva, Photoshop, la traduction ou le montage ? Recevez des missions rémunérées de 50 à 500 DH avec retraits faciles via Remitly ou Binance Pay.',
+      ar: 'هل تتقن إكسيل، كانفا، فوتوشوب، الترجمة أو المونتاج؟ أنجز مهاماً يومية واكسب من 50 إلى 500 درهم لكل مهمة مع استلام أرباحك عبر Remitly أو Binance Pay.',
+      en: 'Skilled in Excel, Canva, Photoshop, translation, or video? Complete daily tasks and earn 50 to 500 DH with seamless Remitly & Binance Pay payouts.',
     },
     bulletPoints: {
       fr: [
         'Zéro risque d’impayé : l’argent du client est bloqué d’avance par Daman',
-        'Virements rapides vers toutes les banques marocaines (CIH, Attijari, BMCE)',
+        'Retraits rapides et sans tracasserie via Remitly ou Binance Pay',
         'Missions flexibles réalisables depuis chez vous ou votre smartphone',
         'Système de notation équitable pour augmenter vos tarifs',
       ],
       ar: [
         'ضمان مالي تام: أموال الزبون محفوظة في صندوق الضمان مسبقاً',
-        'سحب أرباحك بسهولة نحو جميع البنوك المغربية أو كاش بلوس',
+        'سحب أرباحك بسهولة عبر Remitly أو Binance Pay',
         'عمل مرن يناسب وقتك من المنزل أو عبر هاتفك',
         'نظام تقييم شفاف لرفع مستواك وزيادة دخلك',
       ],
       en: [
         'Zero non-payment risk: funds are locked in escrow upfront',
-        'Fast bank transfers to CIH, Attijariwafa, BMCE, or Cash Plus',
+        'Fast payouts via Remitly or instant Binance Pay (USDT)',
         'Flexible work from home or mobile on your own schedule',
         'Transparent 5-star rating system to boost your earnings',
       ],

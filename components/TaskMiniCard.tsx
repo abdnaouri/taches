@@ -4,6 +4,7 @@ import React from 'react';
 import { Task } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { formatRelativeTime } from '@/lib/dateUtils';
+import { getTaskSlug } from '@/lib/slug';
 import {
   FiClock,
   FiUsers,
@@ -17,7 +18,7 @@ import {
 
 interface TaskMiniCardProps {
   task: Task;
-  onSelectTask: (task: Task) => void;
+  onSelectTask?: (task: Task) => void;
 }
 
 export const TaskMiniCard: React.FC<TaskMiniCardProps> = ({
@@ -27,11 +28,24 @@ export const TaskMiniCard: React.FC<TaskMiniCardProps> = ({
   const { locale, isRTL, getCategoryLabel } = useLanguage();
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
+  const slug = getTaskSlug(task);
+  const taskUrl = `/${locale}/task/${slug}`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (onSelectTask) {
+      e.preventDefault();
+      onSelectTask(task);
+    }
+  };
 
   return (
-    <div
-      onClick={() => onSelectTask(task)}
-      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-600 hover:shadow-lg cursor-pointer"
+    <a
+      href={taskUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleClick}
+      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-600 hover:shadow-lg cursor-pointer block no-underline text-inherit"
     >
       {/* Top Badges Row */}
       <div>
@@ -107,7 +121,7 @@ export const TaskMiniCard: React.FC<TaskMiniCardProps> = ({
           </span>
         </div>
       </div>
-    </div>
+    </a>
   );
 };
 

@@ -52,7 +52,7 @@ export const es: Translations = {
   statEscrowProtected: 'Pago protegido por custodia Daman',
 
   // Filters & Search
-  searchPlaceholder: 'Buscar un servicio (ej: Logo, Traducción Árabe, YouCan, Excel, Facturas)...',
+  searchPlaceholder: 'Buscar un servicio (ej: Logo, Traducción Árabe, Shopify, Excel, Facturas)...',
   filterUrgent: 'Urgentes (< 6h)',
   filterReset: 'Restablecer',
 
@@ -223,21 +223,21 @@ export const es: Translations = {
   walletModalSubtitle: 'Gestión de pagos en Marruecos',
   walletModalTitle: 'Billetera y Custodia Tâches',
   walletAvailableBalance: 'Saldo Disponible',
-  walletAvailableDesc: 'Listo para retirar a cuenta bancaria marroquí o reutilizar para publicar tareas.',
+  walletAvailableDesc: 'Listo para transferir vía Remitly / Binance Pay o reutilizar para publicar tareas.',
   walletEscrowFunds: 'Fondos en Custodia (Retenidos)',
   walletEscrowDesc: 'Asegurados para tus misiones activas en curso.',
   tabOperationsHistory: 'Historial de operaciones',
   tabDeposit: '+ Recargar saldo',
-  tabWithdraw: 'Solicitar transferencia (Retiro)',
+  tabWithdraw: 'Solicitar Retiro (Remitly / Binance)',
   depositDesc: 'Recarga tu saldo para contratar freelancers al instante:',
-  depositInstant: 'CMI / Transferencia marroquí / Cash Plus',
+  depositInstant: 'Remitly / Binance Pay / Tarjeta',
   depositCustomLabel: 'Importe en Dirhams (DH):',
   btnDeposit: 'Recargar',
   withdrawAvailableLabel: 'Importe disponible para transferencia:',
-  withdrawFeeAdvantage: 'Transferencia a bancos marroquíes:',
-  withdrawFeeDiscount: 'CIH, Attijariwafa, Cash Plus, Wafacash, etc.',
+  withdrawFeeAdvantage: 'Retiros rápidos:',
+  withdrawFeeDiscount: 'Remitly & Binance Pay (USDT)',
   withdrawAmountLabel: 'Importe a retirar (DH):',
-  btnConfirmWithdrawal: 'Transferir a mi cuenta bancaria',
+  btnConfirmWithdrawal: 'Confirmar solicitud de retiro',
 
   // Toasts
   toastRoleCustomer: 'Modo Cliente activado: Publica tareas y contrata los mejores talentos.',
@@ -248,7 +248,7 @@ export const es: Translations = {
   toastTaskApproved: '¡Misión validada! {amount} DH acreditados en tu cuenta.',
   toastQualificationPassed: '¡Perfil certificado! Ahora puedes postular a todas las tareas.',
   toastDepositSuccess: '{amount} DH añadidos a tu saldo con éxito.',
-  toastWithdrawalInitiated: 'Transferencia de {amount} DH iniciada hacia tu cuenta bancaria.',
+  toastWithdrawalInitiated: 'Solicitud de retiro de {amount} DH enviada con éxito.',
 
   // Footer
   footerDesc: '— La principal plataforma marroquí de tareas y freelance con custodia segura (Daman).',
@@ -256,11 +256,11 @@ export const es: Translations = {
   footerWallet: 'Mi Billetera',
   footerGithub: 'Soporte WhatsApp',
 
-  // Work-zilla Moroccan Core Keys
+  // Tâches.ma Moroccan Core Keys
   wzHeroKicker: 'La plataforma líder en micro-outsourcing y servicios en Marruecos',
   wzHeroTitle: 'Freelancers cualificados para todas tus tareas',
   wzHeroLead: 'Delega en 1 minuto a miles de prestadores verificados en Marruecos en 35 segundos. Pago 100% seguro en custodia (Daman): sólo pagas tras comprobar el resultado.',
-  wzHeroInputPlaceholder: '¿Qué deseas hacer? (ej: Crear un logo, Traducción Árabe/Francés, Excel, Tienda YouCan...)',
+  wzHeroInputPlaceholder: '¿Qué deseas hacer? (ej: Crear un logo, Traducción Árabe/Francés, Excel, Tienda Shopify...)',
   wzHeroBtnPost: 'Publicar mi tarea',
   wzHeroBtnFind: 'Buscar un freelance',
   wzHeroFreeNotice: '✓ Gratis y sin compromiso • Primera respuesta en 35 segundos • Custodia Garantizada',
@@ -268,7 +268,7 @@ export const es: Translations = {
   wzTabCustomer: 'Necesito un servicio (Clientes y Empresas)',
   wzTabPerformer: 'Quiero trabajar (Freelancers y Estudiantes)',
 
-  // Work-zilla Proof Numbers
+  // Tâches.ma Proof Numbers
   wzStatTasksCount: '85 000+',
   wzStatTasksLabel: 'Tareas completadas con éxito en Marruecos',
   wzStatSpeedTime: '35 segundos',
@@ -278,7 +278,7 @@ export const es: Translations = {
   wzStatPriceFrom: 'Desde 50 DH',
   wzStatPriceLabel: 'Asequible para cualquier presupuesto',
 
-  // Work-zilla 3-Step Process
+  // Tâches.ma 3-Step Process
   wzHowTitle: '¿Cómo funciona?',
   wzHowSubtitle: 'Un método simple, rápido y sin riesgos para todas las edades',
   wzStep1Title: '1. Describe tu necesidad',
@@ -297,8 +297,8 @@ export const es: Translations = {
   wzCatTranslationTitle: 'Traducción y Redacción',
   wzCatTranslationDesc: 'Árabe estándar, Darija, Francés, Inglés, contratos, trabajos académicos, corrección',
   wzCatTranslationPrice: 'Desde 50 DH',
-  wzCatWebTitle: 'Web, E-commerce y YouCan',
-  wzCatWebDesc: 'Tiendas YouCan / Shopify, sitios WordPress, resolución de errores, pasarela CMI',
+  wzCatWebTitle: 'Web, E-commerce y Shopify',
+  wzCatWebDesc: 'Tiendas Shopify / WooCommerce, sitios WordPress, resolución de errores, integración Stripe',
   wzCatWebPrice: 'Desde 250 DH',
   wzCatAssistanceTitle: 'Entrada de datos y Facturación',
   wzCatAssistanceDesc: 'Facturas en Excel, maquetación Word, atención comercial por WhatsApp',
@@ -317,8 +317,8 @@ export const es: Translations = {
   wzTrustItem1Desc: 'Tu dinero nunca sale de la plataforma antes de tu confirmación por escrito. Cero riesgo de pérdidas.',
   wzTrustItem2Title: 'Freelancers Verificados (DNI marroquí y Móvil +212)',
   wzTrustItem2Desc: 'Cada freelance activo valida su DNI marroquí (CIN) y su número de teléfono por SMS.',
-  wzTrustItem3Title: 'Bancos Marroquíes y Retiros Fáciles',
-  wzTrustItem3Desc: 'Depósitos y retiros directos con CIH, Attijariwafa, Cash Plus, Wafacash y tarjetas CMI.',
+  wzTrustItem3Title: 'Retiros Rápidos con Remitly y Binance Pay',
+  wzTrustItem3Desc: 'Recibe tus ganancias cómodamente mediante transferencia Remitly o cripto Binance Pay (USDT).',
   wzTrustItem4Title: 'Soporte Local y Ayuda por WhatsApp',
   wzTrustItem4Desc: 'Equipo en Casablanca y Rabat disponible los 7 días de la semana por teléfono y WhatsApp.',
 
@@ -332,7 +332,7 @@ export const es: Translations = {
   wzFaq1Q: '¿Cómo funciona la garantía de custodia (Daman)?',
   wzFaq1A: 'Al aceptar una propuesta, los fondos quedan retenidos en una cuenta neutral segura. El freelance ejecuta el trabajo y te lo remite. El pago sólo se transfiere al freelance cuando haces clic en "Validar". Si el trabajo no es conforme, puedes pedir correcciones o solicitar un reembolso completo.',
   wzFaq2Q: '¿Cuáles son los métodos de pago aceptados en Marruecos?',
-  wzFaq2A: 'Aceptamos tarjetas bancarias marroquíes (CMI), transferencias bancarias locales (CIH, Attijariwafa Bank, Banque Populaire, etc.), o en efectivo en agencias Cash Plus y Wafacash.',
+  wzFaq2A: 'Aceptamos recargas con tarjeta bancaria, así como transferencias y retiros seguros a través de Remitly y Binance Pay (USDT).',
   wzFaq3Q: '¿Es el sitio fácil de usar para personas con poca experiencia en internet?',
   wzFaq3A: 'Sí, todo ha sido diseñado para ser ultra sencillo, con botones grandes y claros. En caso de duda, nuestro equipo marroquí te asesora directamente por WhatsApp.',
   wzFaq4Q: '¿Cuánto cuesta publicar una tarea?',
@@ -363,7 +363,7 @@ export const es: Translations = {
   unuCampaignPriceFrom: 'desde 50 DH',
   unuCampaignHundredsDaily: 'decenas de tareas diarias',
   unuCheck1: 'Diseño gráfico, menús, folletos, logotipos vectoriales',
-  unuCheck2: 'Tiendas online YouCan / Shopify y carga de productos',
+  unuCheck2: 'Tiendas online Shopify / WooCommerce y carga de productos',
   unuCheck3: 'Traducción jurada y general en Árabe / Darija / Francés',
   unuStatActiveUsers: '25 000+',
   unuStatActiveUsersLabel: 'freelancers verificados en Marruecos',
@@ -392,7 +392,7 @@ export const es: Translations = {
   unuPerformerCardDesc: 'Genera ingresos constantes desde tu hogar o en tu ciudad en Marruecos.',
   unuPerformerBenefit1: 'Oportunidades diarias en múltiples sectores',
   unuPerformerBenefit2: 'Pago garantizado por adelantado en cuenta de custodia',
-  unuPerformerBenefit3: 'Transferencias directas a CIH, Attijariwafa, Cash Plus, etc.',
+  unuPerformerBenefit3: 'Transferencias rápidas con Remitly y Binance Pay (USDT)',
   unuPerformerBenefit4: 'Trabaja a tu propio ritmo con total flexibilidad',
   unuCatalogKicker: 'Catálogo de servicios',
   unuCatalogTitle: 'Todas las categorías de servicios en Marruecos',
@@ -420,7 +420,7 @@ export const es: Translations = {
   unuCatSeoItem4: 'Optimización de etiquetas meta y velocidad',
   unuCatSeoItem5: 'Inscripción en directorios profesionales',
   unuCatInstallItem1: 'Creación de sitio web corporativo WordPress',
-  unuCatInstallItem2: 'Configuración de tienda YouCan o Shopify',
+  unuCatInstallItem2: 'Configuración de tienda Shopify o WooCommerce',
   unuCatInstallItem3: 'Integración de pasarela de pago CMI',
   unuCatInstallItem4: 'Corrección de errores de código web',
   unuCatInstallItem5: 'Copia de seguridad y seguridad de servidores',
@@ -461,7 +461,7 @@ export const es: Translations = {
   unuFooterFaq: 'Preguntas Frecuentes',
   unuFooterPartner: 'Ser Freelance',
   unuFooterInfo: 'Garantía Custodia (Daman)',
-  unuFooterApi: 'Pagos Aceptados (CIH, CMI, Cash Plus)',
+  unuFooterApi: 'Pagos Aceptados (Remitly, Binance Pay, Tarjetas)',
   unuFooterThemeToggle: 'Visualización',
   unuFooterGooglePlay: 'Aplicación Web',
   unuFooterCopyright: '© Tâches Marruecos 2026. Todos los derechos reservados. Plataforma segura.',

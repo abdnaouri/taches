@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
-import { calculatePayoutFees, PayoutMethod, PayoutSpeed } from '@/lib/payoutService';
+import { calculatePayoutFees, detectMoroccanBank, validateMoroccanRIB, PayoutMethod } from '@/lib/payoutService';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,8 +17,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       amountDH,
-      payoutMethod = 'RIB',
-      speedTier = 'STANDARD',
+      payoutMethod = 'REMITLY',
       payoutDetails = {},
     } = body;
 
@@ -53,7 +52,6 @@ export async function POST(req: NextRequest) {
     const feeCalculation = calculatePayoutFees(
       Number(amountDH),
       payoutMethod as PayoutMethod,
-      speedTier as PayoutSpeed,
       availableDH
     );
 
@@ -68,23 +66,33 @@ export async function POST(req: NextRequest) {
     let methodLabel = 'Virement Bancaire (RIB)';
     let destinationSummary = '';
 
-    if (payoutMethod === 'RIB') {
-      const rib = payoutDetails.rib || '';
-      const bankName = payoutDetails.bankName || 'Banque Marocaine';
-      methodLabel = `Virement ${bankName}`;
-      destinationSummary = `RIB: ...${rib.slice(-8)}`;
-    } else if (payoutMethod === 'CASHPLUS') {
-      methodLabel = 'Mise à disposition Cash Plus / Wafacash';
-      destinationSummary = `Bénéficiaire: ${payoutDetails.fullName || profile.full_name || ''} (CIN: ${payoutDetails.cin || ''})`;
-    } else if (payoutMethod === 'BINANCE_PAY') {
-      methodLabel = 'Virement Crypto Instantané (Binance Pay)';
+    const cleanMethod = String(payoutMethod).toUpperCase();
+    if (['RIB', 'CIH', 'AWB', 'BMCE', 'BCP', 'SGMB', 'ABB', 'BANK'].includes(cleanMethod)) {
+      if (payoutDetails.rib) {
+        const ribCheck = validateMoroccanRIB(payoutDetails.rib);
+        if (!ribCheck.isValid) {
+          return NextResponse.json({ success: false, error: ribCheck.error }, { status: 400 });
+        }
+      }
+      const bankInfo = detectMoroccanBank(payoutDetails.rib || cleanMethod);
+      const ribFormatted = (payoutDetails.rib || '').replace(/\s+/g, '');
+      methodLabel = `Virement ${bankInfo.name}`;
+      destinationSummary = `RIB: ${ribFormatted || 'N/A'} • Titulaire: ${payoutDetails.accountHolder || profile.full_name || 'Prestataire'}`;
+    } else if (cleanMethod === 'CASHP' || cleanMethod === 'CASHPLUS') {
+      methodLabel = 'Retrait Cash Plus';
+      destinationSummary = `Bénéficiaire: ${payoutDetails.recipientName || profile.full_name || ''} • CIN: ${payoutDetails.cin || 'N/A'} • Tél: ${payoutDetails.phone || ''}`;
+    } else if (cleanMethod === 'WAFACASH') {
+      methodLabel = 'Retrait Wafacash';
+      destinationSummary = `Bénéficiaire: ${payoutDetails.recipientName || profile.full_name || ''} • CIN: ${payoutDetails.cin || 'N/A'} • Tél: ${payoutDetails.phone || ''}`;
+    } else if (cleanMethod === 'BINANCE_PAY' || cleanMethod === 'BINANCE' || cleanMethod === 'USDT') {
+      methodLabel = 'Binance Pay (USDT)';
       destinationSummary = `Binance Pay ID: ${payoutDetails.binancePayId || ''}`;
-    } else if (payoutMethod === 'USDT') {
-      methodLabel = 'Virement Crypto USDT';
-      destinationSummary = `USDT (${payoutDetails.network || 'TRC20'}): ${payoutDetails.usdtAddress ? `${payoutDetails.usdtAddress.slice(0, 6)}...${payoutDetails.usdtAddress.slice(-4)}` : ''}`;
+    } else {
+      methodLabel = 'Remitly';
+      destinationSummary = `Bénéficiaire: ${payoutDetails.recipientName || profile.full_name || ''} (${payoutDetails.phoneOrEmail || ''}, ${payoutDetails.country || 'Maroc'})`;
     }
 
-    const txDescription = `Retrait ${methodLabel} - Net: ${feeCalculation.netAmountDH} DH (Frais: ${feeCalculation.feeDH} DH) ${destinationSummary ? `• ${destinationSummary}` : ''}`;
+    const txDescription = `Retrait ${methodLabel} - Net: ${feeCalculation.netAmountDH} DH • ${destinationSummary}`;
 
     // 4. Deduct balance from profile
     const newAvailableEur = Math.max(0, currentBalanceEur - feeCalculation.requestedAmountEur);
@@ -122,14 +130,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       transaction: txData,
-      feeCalculation,
-      estimatedDeliveryTime: speedTier === 'EXPRESS' ? 'Moins de 2 heures' : 'Sous 24 heures ouvrées',
-      status: 'PENDING',
+      withdrawnAmountDH: Number(amountDH),
+      netAmountDH: feeCalculation.netAmountDH,
+      feeDH: feeCalculation.feeDH,
+      newBalanceAvailableEur: newAvailableEur,
+      method: payoutMethod,
     });
   } catch (err: any) {
-    console.error('Withdrawal POST error:', err);
+    console.error('Withdraw POST error:', err);
     return NextResponse.json(
-      { success: false, error: err.message || 'Erreur serveur lors du retrait.' },
+      { success: false, error: err.message || 'Erreur lors du traitement du retrait.' },
       { status: 500 }
     );
   }

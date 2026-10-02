@@ -3,6 +3,8 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
 
+import { filterOffPlatformContact } from '@/lib/antiCircumvention';
+
 export async function GET(req: NextRequest) {
   try {
     const taskId = req.nextUrl.searchParams.get('taskId');
@@ -112,6 +114,10 @@ export async function POST(req: NextRequest) {
     const senderName = senderProf?.full_name || 'Utilisateur';
     const senderAvatar = senderProf?.avatar_url || '';
 
+    // Workzilla & Upwork-grade Anti-circumvention filter
+    const securityCheck = filterOffPlatformContact(content.trim());
+    const finalContent = securityCheck.sanitizedText;
+
     const { data, error } = await supabase
       .from('messages')
       .insert({
@@ -120,7 +126,7 @@ export async function POST(req: NextRequest) {
         sender_name: senderName,
         sender_avatar: senderAvatar,
         receiver_id: receiverId || null,
-        content: content.trim(),
+        content: finalContent,
         attachment_url: attachmentUrl || null,
       })
       .select()
@@ -132,6 +138,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      hasCircumventionWarning: securityCheck.hasViolation,
+      warningMessage: securityCheck.warningMessage,
       message: {
         id: data.id,
         taskId: data.task_id,

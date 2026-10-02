@@ -171,18 +171,86 @@ export async function POST(req: NextRequest) {
         description: `Commission Tâches.ma arbitrage (15%)`,
         status: 'COMPLETED',
       });
+    } else if (ruling === 'SPLIT_50_50') {
+      // Workzilla Compromis Arbitrage: 50% client refund, 50% performer payment
+      const halfBudgetEur = Number((budgetEur * 0.5).toFixed(2));
+      const halfCommissionEur = Number((halfBudgetEur * 0.15).toFixed(2));
+      const netPerformerHalfEur = Number((halfBudgetEur - halfCommissionEur).toFixed(2));
+
+      if (clientProfile) {
+        const newEscrow = Math.max(0, Number(clientProfile.balance_escrow || 0) - budgetEur);
+        const newAvailable = Number(clientProfile.balance_available || 0) + halfBudgetEur;
+        await supabase
+          .from('profiles')
+          .update({
+            balance_escrow: newEscrow,
+            balance_available: newAvailable,
+          })
+          .eq('id', clientProfile.id);
+      }
+
+      if (performerProfile) {
+        const newAvailable = Number(performerProfile.balance_available || 0) + netPerformerHalfEur;
+        await supabase
+          .from('profiles')
+          .update({ balance_available: newAvailable })
+          .eq('id', performerProfile.id);
+      }
+
+      await supabase
+        .from('tasks')
+        .update({
+          status: 'COMPLETED',
+          completed_at: new Date().toISOString(),
+          final_payout_percentage: 50,
+          final_performer_amount_dh: Math.round(netPerformerHalfEur * 10),
+          final_client_refund_dh: Math.round(halfBudgetEur * 10),
+        })
+        .eq('id', taskId);
+
+      // Ledger: Refund 50% to client
+      await supabase.from('transactions').insert({
+        user_id: task.client_id,
+        type: 'REFUND',
+        amount: halfBudgetEur,
+        currency: 'EUR',
+        description: `Remboursement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(halfBudgetEur * 10)} DH)`,
+        status: 'COMPLETED',
+      });
+
+      // Ledger: Payout 50% to performer
+      await supabase.from('transactions').insert({
+        user_id: task.assigned_to_id,
+        type: 'ESCROW_RELEASE',
+        amount: halfBudgetEur,
+        currency: 'EUR',
+        description: `Paiement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(halfBudgetEur * 10)} DH)`,
+        status: 'COMPLETED',
+      });
+
+      await supabase.from('transactions').insert({
+        user_id: task.assigned_to_id,
+        type: 'COMMISSION',
+        amount: -halfCommissionEur,
+        currency: 'EUR',
+        description: `Commission Tâches.ma 50% arbitrage (15%)`,
+        status: 'COMPLETED',
+      });
     }
 
     // 3. Post system message into task chat
+    let decisionText = "Partage équitable 50% Client / 50% Prestataire.";
+    if (ruling === 'REFUND_CLIENT') {
+      decisionText = 'Remboursement intégral en faveur du client.';
+    } else if (ruling === 'RELEASE_PERFORMER') {
+      decisionText = 'Paiement débloqué en faveur du prestataire.';
+    }
+
     await supabase.from('messages').insert({
       task_id: taskId,
       sender_id: authResult.user!.id,
       sender_name: 'Arbitrage Officiel Tâches.ma',
-      content: `⚖️ Décision finale d'arbitrage : ${
-        ruling === 'REFUND_CLIENT'
-          ? 'Remboursement intégral en faveur du client.'
-          : 'Paiement débloqué en faveur du prestataire.'
-      } Motif : ${arbitrationNotes || 'Conformité avec les règles de la plateforme.'}`,
+      content: `⚖️ Décision finale d'arbitrage : ${decisionText} Motif : ${arbitrationNotes || 'Conformité avec les règles de la plateforme.'}`,
     });
 
     return NextResponse.json({

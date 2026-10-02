@@ -4,6 +4,7 @@ import React from 'react';
 import { Task, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { formatRelativeTime } from '@/lib/dateUtils';
+import { getTaskSlug } from '@/lib/slug';
 import {
   FiClock,
   FiUsers,
@@ -21,7 +22,7 @@ interface TaskRowProps {
   task: Task;
   userRole?: UserRole;
   isMyTaskView?: boolean;
-  onSelectTask: (task: Task) => void;
+  onSelectTask?: (task: Task) => void;
   onActionClick?: (task: Task) => void;
   onOpenChat?: (task: Task) => void;
 }
@@ -37,6 +38,16 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const { t, locale, isRTL, getCategoryLabel } = useLanguage();
   const rewardDH = Math.round(task.reward * 10);
   const isUrgent = task.timeLimitHours <= 6;
+  const slug = getTaskSlug(task);
+  const taskUrl = `/${locale}/task/${slug}`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (onSelectTask) {
+      e.preventDefault();
+      onSelectTask(task);
+    }
+  };
 
   // Status Badge Helper
   const getStatusBadge = () => {
@@ -88,9 +99,12 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   };
 
   return (
-    <div
-      onClick={() => onSelectTask(task)}
-      className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 bg-white hover:bg-amber-50/40 border border-slate-200 hover:border-brand-500 rounded-xl transition-all cursor-pointer shadow-2xs"
+    <a
+      href={taskUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleClick}
+      className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 bg-white hover:bg-amber-50/40 border border-slate-200 hover:border-brand-500 rounded-xl transition-all cursor-pointer shadow-2xs block no-underline text-inherit"
     >
       {/* Left: Task Info */}
       <div className="flex-1 min-w-0">
@@ -184,7 +198,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               e.stopPropagation();
               if (onActionClick) {
                 onActionClick(task);
-              } else {
+              } else if (onSelectTask) {
                 onSelectTask(task);
               }
             }}
@@ -195,6 +209,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </a>
   );
 };
