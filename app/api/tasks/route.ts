@@ -205,11 +205,42 @@ export async function POST(req: NextRequest) {
       client_hire_rate: 100,
     };
 
-    const { data, error } = await supabase
+    // Filter out undefined keys
+    let insertPayload: Record<string, any> = {};
+    for (const [k, v] of Object.entries(dbPayload)) {
+      if (v !== undefined) {
+        insertPayload[k] = v;
+      }
+    }
+
+    let insertResult = await supabase
       .from('tasks')
-      .insert(dbPayload)
+      .insert(insertPayload)
       .select()
       .single();
+
+    // Resilient schema cache fallback: if any column is missing in the database table schema cache,
+    // strip the missing column and retry inserting seamlessly.
+    let retryCount = 0;
+    while (insertResult.error && retryCount < 10) {
+      const errMsg = insertResult.error.message || '';
+      const match = errMsg.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && match[1] in insertPayload) {
+        const missingCol = match[1];
+        console.warn(`Column '${missingCol}' not found in Supabase schema cache. Retrying insert without it...`);
+        delete insertPayload[missingCol];
+        retryCount++;
+        insertResult = await supabase
+          .from('tasks')
+          .insert(insertPayload)
+          .select()
+          .single();
+      } else {
+        break;
+      }
+    }
+
+    const { data, error } = insertResult;
 
     if (error) {
       console.error('Could not insert task into Supabase tasks table:', error);
@@ -244,11 +275,12 @@ export async function POST(req: NextRequest) {
       title: data.title,
       description: data.description,
       category: data.category,
-      subCategory: data.sub_category || undefined,
-      city: data.city || 'Casablanca',
-      taskMode: data.task_mode || 'single',
-      unitPriceDH: data.unit_price_dh ? Number(data.unit_price_dh) : undefined,
-      targetExecutionsCount: data.target_executions_count ? Number(data.target_executions_count) : undefined,
+      subCategory: data.sub_category || body.subCategory || undefined,
+      city: data.city || body.city || 'Casablanca',
+      taskMode: data.task_mode || body.taskMode || 'single',
+      unitPriceDH: data.unit_price_dh ? Number(data.unit_price_dh) : (body.unitPriceDH ? Number(body.unitPriceDH) : undefined),
+      targetExecutionsCount: data.target_executions_count ? Number(data.target_executions_count) : (body.targetExecutionsCount ? Number(body.targetExecutionsCount) : 1),
+      antiSpamKeyword: data.anti_spam_keyword || body.antiSpamKeyword || undefined,
       status: data.status,
       reward: Number(data.reward),
       platformFee: Number(data.platform_fee || 0),

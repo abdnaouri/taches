@@ -294,12 +294,35 @@ export async function PATCH(
       if (body.finalClientRefundDH !== undefined) updates.final_client_refund_dh = body.finalClientRefundDH;
     }
 
-    const { data, error } = await supabase
+    let updatePayload: Record<string, any> = { ...updates };
+    let updateResult = await supabase
       .from('tasks')
-      .update(updates)
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();
+
+    let patchAttempts = 0;
+    while (updateResult.error && patchAttempts < 10) {
+      const errMsg = updateResult.error.message || '';
+      const match = errMsg.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && match[1] in updatePayload) {
+        const missingCol = match[1];
+        console.warn(`Column '${missingCol}' not found in Supabase schema cache for PATCH. Retrying without it...`);
+        delete updatePayload[missingCol];
+        patchAttempts++;
+        updateResult = await supabase
+          .from('tasks')
+          .update(updatePayload)
+          .eq('id', id)
+          .select()
+          .single();
+      } else {
+        break;
+      }
+    }
+
+    const { data, error } = updateResult;
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });

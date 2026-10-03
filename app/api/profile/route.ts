@@ -152,12 +152,35 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (Object.keys(dbUpdates).length > 0) {
-      const { data, error } = await supabase
+      let profilePayload: Record<string, any> = { ...dbUpdates };
+      let profileResult = await supabase
         .from('profiles')
-        .update(dbUpdates)
+        .update(profilePayload)
         .eq('id', targetId)
         .select()
         .single();
+
+      let profAttempts = 0;
+      while (profileResult.error && profAttempts < 20) {
+        const errMsg = profileResult.error.message || '';
+        const match = errMsg.match(/Could not find the '([^']+)' column/i);
+        if (match && match[1] && match[1] in profilePayload) {
+          const missingCol = match[1];
+          console.warn(`Column '${missingCol}' not found in Supabase schema cache for profiles. Retrying without it...`);
+          delete profilePayload[missingCol];
+          profAttempts++;
+          profileResult = await supabase
+            .from('profiles')
+            .update(profilePayload)
+            .eq('id', targetId)
+            .select()
+            .single();
+        } else {
+          break;
+        }
+      }
+
+      const { data, error } = profileResult;
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });

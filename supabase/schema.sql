@@ -119,6 +119,7 @@ create table if not exists public.tasks (
   title text not null,
   description text not null,
   category task_category not null default 'assistance',
+  sub_category text,
   status task_status not null default 'OPEN',
   reward numeric(10, 2) not null check (reward > 0),
   platform_fee numeric(10, 2) not null default 0.00,
@@ -151,11 +152,16 @@ create table if not exists public.tasks (
 );
 
 -- Idempotent column additions for existing tasks table
+alter table public.tasks add column if not exists sub_category text;
 alter table public.tasks add column if not exists task_mode text default 'single';
 alter table public.tasks add column if not exists unit_price_dh numeric(10, 2);
 alter table public.tasks add column if not exists target_executions_count integer default 1;
 alter table public.tasks add column if not exists city text default 'Casablanca';
 alter table public.tasks add column if not exists anti_spam_keyword text;
+alter table public.tasks add column if not exists settlement_proposal jsonb;
+alter table public.tasks add column if not exists final_payout_percentage numeric(5, 2);
+alter table public.tasks add column if not exists final_performer_amount_dh numeric(10, 2);
+alter table public.tasks add column if not exists final_client_refund_dh numeric(10, 2);
 
 -- 5. BIDS / APPLICATIONS TABLE
 create table if not exists public.bids (
