@@ -132,7 +132,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             )}
           </div>
           <span className="text-[10px] mt-0.5 tracking-tight font-bold">
-            {locale === 'ar' ? 'الرسائل' : 'Chat'}
+            {locale === 'ar' ? 'الرسائل' : 'Messages'}
           </span>
         </button>
 

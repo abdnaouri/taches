@@ -10,7 +10,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'taskId required' }, { status: 400 });
     }
 
+    const authResult = await getAuthenticatedUser(req);
+    const callerId = authResult.user?.id;
+    const isAdmin = authResult.isAdmin;
+
     const supabase = getAdminClient();
+
+    // Check task ownership
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('client_id, status, task_mode')
+      .eq('id', taskId)
+      .single();
+
+    const isClient = task?.client_id === callerId;
 
     // Fetch executions
     const { data: executions, error } = await supabase
@@ -37,8 +50,13 @@ export async function GET(req: NextRequest) {
       (profiles || []).forEach((p: any) => profileMap.set(p.id, p));
     }
 
+    // Workzilla & UNU Privacy Isolation:
+    // Only the task Client, an Admin, or the submitting Performer can view their own deliverables and report text.
+    // Competitors only see slot status, not competitor proofs.
     const formatted = (executions || []).map((e: any) => {
       const prof = profileMap.get(e.performer_id) || {};
+      const canViewFull = isClient || isAdmin || (callerId && e.performer_id === callerId);
+
       return {
         id: e.id,
         taskId: e.task_id,
@@ -50,12 +68,13 @@ export async function GET(req: NextRequest) {
         reservedAt: e.reserved_at,
         reservedUntil: e.reserved_until,
         submittedAt: e.submitted_at,
-        reportText: e.report_text,
-        proofUrls: e.proof_urls || [],
-        antiSpamEntered: e.anti_spam_entered,
+        reportText: canViewFull ? e.report_text : '🔒 Livrable confidentiel soumis par le prestataire.',
+        proofUrls: canViewFull ? (e.proof_urls || []) : [],
+        antiSpamEntered: canViewFull ? e.anti_spam_entered : undefined,
         clientFeedback: e.client_feedback,
         reviewedAt: e.reviewed_at,
         unitRewardDH: Number(e.unit_reward_dh || 0),
+        isOwnExecution: callerId ? e.performer_id === callerId : false,
       };
     });
 
@@ -87,21 +106,39 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'taskId required' }, { status: 400 });
       }
 
-      // Check qualification & subscription
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('passed_qualification, subscription_active_until, free_tasks_remaining, is_admin')
-        .eq('id', userId)
+      // Check task permissions & mode
+      const { data: task, error: taskErr } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
         .single();
 
-      if (!profile?.is_admin) {
-        if (!profile?.passed_qualification) {
-          return NextResponse.json(
-            { success: false, error: 'Vous devez réussir le test de qualification pour participer aux missions.' },
-            { status: 403 }
-          );
-        }
+      if (taskErr || !task) {
+        return NextResponse.json({ success: false, error: 'Mission introuvable.' }, { status: 404 });
       }
+
+      if (task.client_id === userId) {
+        return NextResponse.json(
+          { success: false, error: 'Le donneur d\'ordre ne peut pas réserver une place sur sa propre mission.' },
+          { status: 400 }
+        );
+      }
+
+      if (task.task_mode !== 'multi') {
+        return NextResponse.json(
+          { success: false, error: 'Cette mission n\'est pas en mode multi-exécutions.' },
+          { status: 400 }
+        );
+      }
+
+      if (task.status !== 'OPEN') {
+        return NextResponse.json(
+          { success: false, error: 'Cette mission n\'accepte plus de nouvelles réservations.' },
+          { status: 400 }
+        );
+      }
+
+
 
       // Call atomic RPC
       const { data: rpcRes, error: rpcErr } = await supabase.rpc('reserve_task_slot', {
@@ -123,11 +160,6 @@ export async function POST(req: NextRequest) {
       }
 
       // Fallback reservation logic
-      const { data: task } = await supabase.from('tasks').select('*').eq('id', taskId).single();
-      if (!task || task.task_mode !== 'multi') {
-        return NextResponse.json({ success: false, error: 'Mission multi-exécutions introuvable.' }, { status: 404 });
-      }
-
       const unitDH = Number(task.unit_price_dh || (task.reward * 10) / Math.max(1, task.target_executions_count || 1));
       const reservedUntil = new Date(Date.now() + 45 * 60 * 1000).toISOString();
 
@@ -172,7 +204,7 @@ export async function POST(req: NextRequest) {
         .eq('id', executionId)
         .single();
 
-      if (!execution || execution.performer_id !== userId) {
+      if (!execution || (execution.performer_id !== userId && !authResult.isAdmin)) {
         return NextResponse.json({ success: false, error: 'Réservation introuvable ou non autorisée.' }, { status: 404 });
       }
 
@@ -235,7 +267,7 @@ export async function POST(req: NextRequest) {
         .eq('id', executionId)
         .single();
 
-      if (!execution || execution.tasks?.client_id !== userId) {
+      if (!execution || (execution.tasks?.client_id !== userId && !authResult.isAdmin)) {
         return NextResponse.json({ success: false, error: 'Non autorisé à valider cette exécution.' }, { status: 403 });
       }
 
@@ -244,10 +276,10 @@ export async function POST(req: NextRequest) {
       const netEur = unitEur - commissionEur;
 
       // Update client escrow
-      const { data: clientProf } = await supabase.from('profiles').select('balance_escrow').eq('id', userId).single();
+      const { data: clientProf } = await supabase.from('profiles').select('balance_escrow').eq('id', execution.tasks.client_id).single();
       await supabase.from('profiles').update({
         balance_escrow: Math.max(0, (clientProf?.balance_escrow || 0) - unitEur),
-      }).eq('id', userId);
+      }).eq('id', execution.tasks.client_id);
 
       // Update performer available
       const { data: perfProf } = await supabase.from('profiles').select('balance_available, performer_completed_tasks').eq('id', execution.performer_id).single();
@@ -267,6 +299,70 @@ export async function POST(req: NextRequest) {
       }).eq('id', execution.task_id);
 
       return NextResponse.json({ success: true, message: 'Exécution validée et rémunération débloquée !' });
+    }
+
+    // 4. ACTION: REWORK REQUESTED (Client requests rework on execution)
+    if (action === 'rework') {
+      if (!executionId) {
+        return NextResponse.json({ success: false, error: 'executionId requis' }, { status: 400 });
+      }
+
+      const { data: execution } = await supabase
+        .from('task_executions')
+        .select('*, tasks!inner(*)')
+        .eq('id', executionId)
+        .single();
+
+      if (!execution || (execution.tasks?.client_id !== userId && !authResult.isAdmin)) {
+        return NextResponse.json({ success: false, error: 'Non autorisé à modifier cette exécution.' }, { status: 403 });
+      }
+
+      await supabase
+        .from('task_executions')
+        .update({
+          status: 'REWORK_REQUESTED',
+          client_feedback: clientFeedback || 'Consignes non conformes. Veuillez corriger le livrable.',
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', executionId);
+
+      return NextResponse.json({ success: true, message: 'Demande de retouche transmise au prestataire.' });
+    }
+
+    // 5. ACTION: REJECT EXECUTION (Client rejects non-compliant execution)
+    if (action === 'reject') {
+      if (!executionId) {
+        return NextResponse.json({ success: false, error: 'executionId requis' }, { status: 400 });
+      }
+
+      const { data: execution } = await supabase
+        .from('task_executions')
+        .select('*, tasks!inner(*)')
+        .eq('id', executionId)
+        .single();
+
+      if (!execution || (execution.tasks?.client_id !== userId && !authResult.isAdmin)) {
+        return NextResponse.json({ success: false, error: 'Non autorisé à rejeter cette exécution.' }, { status: 403 });
+      }
+
+      await supabase
+        .from('task_executions')
+        .update({
+          status: 'REJECTED',
+          client_feedback: clientFeedback || 'Livrable rejeté pour non-conformité.',
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', executionId);
+
+      // Decrement reserved count to free slot for others
+      await supabase
+        .from('tasks')
+        .update({
+          executions_reserved_count: Math.max(0, (execution.tasks.executions_reserved_count || 0) - 1),
+        })
+        .eq('id', execution.task_id);
+
+      return NextResponse.json({ success: true, message: 'Exécution rejetée et place libérée.' });
     }
 
     return NextResponse.json({ success: false, error: 'Action non reconnue.' }, { status: 400 });

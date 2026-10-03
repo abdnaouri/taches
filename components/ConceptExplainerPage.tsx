@@ -368,7 +368,7 @@ export const ConceptExplainerPage: React.FC = () => {
 
                 {/* Architecture Diagram Box */}
                 <div className="bg-slate-900 text-slate-200 rounded-xl p-5 font-mono text-xs overflow-x-auto">
-                  <div className="text-slate-400 mb-2">// Flux des Données et Traitement Sécurisé</div>
+                  <div className="text-slate-400 mb-2">{'// Flux des Données et Traitement Sécurisé'}</div>
                   <pre className="text-[11px] leading-relaxed">
 {`[Client / Navigateur] 
        │ (1) Création Tâche + Verrouillage Budget
@@ -470,7 +470,7 @@ export const ConceptExplainerPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="p-4 rounded-xl bg-slate-900 text-slate-200 font-mono">
-                    <div className="text-emerald-400 font-bold mb-2">// Table users (Profils & Soldes)</div>
+                    <div className="text-emerald-400 font-bold mb-2">{'// Table users (Profils & Soldes)'}</div>
                     <pre className="text-[11px] overflow-x-auto">{`CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
   full_name TEXT NOT NULL,
@@ -486,7 +486,7 @@ export const ConceptExplainerPage: React.FC = () => {
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-900 text-slate-200 font-mono">
-                    <div className="text-cyan-400 font-bold mb-2">// Table tasks (Missions & États)</div>
+                    <div className="text-cyan-400 font-bold mb-2">{'// Table tasks (Missions & États)'}</div>
                     <pre className="text-[11px] overflow-x-auto">{`CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID REFERENCES users(id),
@@ -592,7 +592,7 @@ export const ConceptExplainerPage: React.FC = () => {
 
                 {/* Calculation Example Box */}
                 <div className="p-5 rounded-xl bg-slate-900 text-slate-200 text-xs font-mono">
-                  <div className="text-amber-400 font-bold mb-2">// Exemple de Répartition d'une Tâche de 100 DH</div>
+                  <div className="text-amber-400 font-bold mb-2">{"// Exemple de Répartition d'une Tâche de 100 DH"}</div>
                   <div className="space-y-1 text-slate-300">
                     <div>1. Dépôt client : <span className="text-white font-bold">100.00 DH</span> (bloqué en séquestre)</div>
                     <div>2. Livraison et validation par le client</div>

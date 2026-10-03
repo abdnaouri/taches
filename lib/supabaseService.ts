@@ -113,14 +113,15 @@ export async function submitDynamicProof(
   taskId: string,
   performerId: string,
   reportText: string,
-  proofUrls: string[]
+  proofUrls: string[],
+  antiSpamEntered?: string
 ): Promise<boolean> {
   try {
     const headers = await getAuthHeaders(true);
     const res = await fetch('/api/submissions', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ taskId, performerId, reportText, proofUrls }),
+      body: JSON.stringify({ taskId, performerId, reportText, proofUrls, antiSpamEntered }),
     });
     return res.ok;
   } catch (err: any) {

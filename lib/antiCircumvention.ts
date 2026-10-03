@@ -7,8 +7,10 @@
 // Moroccan phone regexes: 06, 07, 05, +212, 00212 with various separators
 const MOROCCAN_PHONE_REGEX = /(?:\+?212|00212|0)[-\s.]*[5-7](?:[-\s.]*\d){8}\b/gi;
 
-// General international phone sequences (7 to 14 consecutive digits with spaces/dots/dashes)
-const GENERIC_PHONE_REGEX = /(?:\+\d{1,3}[-.\s]*)?\(?\d{2,4}\)?[-.\s]*\d{2,4}[-.\s]*\d{2,4}[-.\s]*\d{0,4}/g;
+// International phone numbers with explicit country code prefix (e.g. +33, +1, +49...).
+// Restrictive enough to avoid false-positives on prices like "100 DH" or years like "2024".
+// Must start with a '+' followed by a non-212 country code (Moroccan already handled above).
+const INTERNATIONAL_PHONE_REGEX = /\+(?!212)\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{0,4}\b/g;
 
 // Standard email regex
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
@@ -35,7 +37,7 @@ export function filterOffPlatformContact(text: string): AntiCircumventionResult 
   let sanitized = text;
   const detected: string[] = [];
 
-  // 1. Detect and mask Moroccan and general phones
+  // 1. Detect and mask Moroccan phones
   const phoneMatches = text.match(MOROCCAN_PHONE_REGEX);
   if (phoneMatches && phoneMatches.length > 0) {
     phoneMatches.forEach((match) => {
@@ -48,7 +50,19 @@ export function filterOffPlatformContact(text: string): AntiCircumventionResult 
     });
   }
 
-  // 2. Detect and mask email addresses
+  // 2. Detect and mask international phone numbers (non-Moroccan, with explicit '+CC' prefix)
+  const intlPhoneMatches = sanitized.match(INTERNATIONAL_PHONE_REGEX);
+  if (intlPhoneMatches && intlPhoneMatches.length > 0) {
+    intlPhoneMatches.forEach((match) => {
+      const digitsOnly = match.replace(/\D/g, '');
+      if (digitsOnly.length >= 8) {
+        detected.push(`Numéro international (${match.trim()})`);
+        sanitized = sanitized.replace(match, '🛡️ [Numéro masqué par sécurité Daman]');
+      }
+    });
+  }
+
+  // 3. Detect and mask email addresses
   const emailMatches = text.match(EMAIL_REGEX);
   if (emailMatches && emailMatches.length > 0) {
     emailMatches.forEach((match) => {
@@ -57,7 +71,7 @@ export function filterOffPlatformContact(text: string): AntiCircumventionResult 
     });
   }
 
-  // 3. Detect bypass direct keywords (e.g. WhatsApp, Telegram, CashPlus direct)
+  // 4. Detect bypass direct keywords (e.g. WhatsApp, Telegram, CashPlus direct)
   const keywordMatches = text.match(PROHIBITED_KEYWORDS_REGEX);
   if (keywordMatches && keywordMatches.length > 0) {
     keywordMatches.forEach((match) => {

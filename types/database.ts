@@ -199,6 +199,7 @@ export interface Task {
   finalPayoutPercentage?: number;
   finalPerformerAmountDH?: number;
   finalClientRefundDH?: number;
+  submission?: TaskProofSubmission;
   createdAt: string;
 }
 
@@ -248,6 +249,8 @@ export interface TaskBid {
   pitch: string;
   proposedHours: number;
   createdAt: string;
+  isVerified?: boolean;
+  isOwnBid?: boolean;
 }
 
 export interface TaskProofSubmission {

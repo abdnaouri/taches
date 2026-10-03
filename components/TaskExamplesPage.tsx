@@ -141,19 +141,14 @@ export const TaskExamplesPage: React.FC<TaskExamplesPageProps> = ({
         '@type': 'ListItem',
         position: index + 1,
         item: {
-          '@type': 'Order',
-          orderNumber: task.orderNumber,
-          orderDate: task.completedDate,
-          orderedItem: {
-            '@type': 'Service',
-            name: task.title[locale] || task.title.fr,
-            description: task.description[locale] || task.description.fr,
-            provider: {
-              '@type': 'Person',
-              name: task.executor.name,
-            },
+          '@type': 'Service',
+          name: task.title[locale] || task.title.fr,
+          description: task.description[locale] || task.description.fr,
+          provider: {
+            '@type': 'Person',
+            name: task.executor.name,
           },
-          acceptedOffer: {
+          offers: {
             '@type': 'Offer',
             price: task.priceDH,
             priceCurrency: 'MAD',

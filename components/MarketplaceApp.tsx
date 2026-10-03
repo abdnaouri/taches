@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { getLocalizedTask } from '@/lib/mockData';
-import { Task, UserProfile, UserRole, WalletTransaction } from '@/types/database';
+import { Task, UserProfile, UserRole, WalletTransaction, TaskProofSubmission } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { Locale } from '@/lib/i18n/types';
 import { getTaskSlug, extractTaskIdFromSlug } from '@/lib/slug';
@@ -33,7 +33,6 @@ import { ProofSubmissionDrawer } from '@/components/ProofSubmissionDrawer';
 import { WalletModal } from '@/components/WalletModal';
 import { WalletPageContent } from '@/components/WalletPageContent';
 import { QualificationModal } from '@/components/QualificationModal';
-import { PerformerSubscriptionModal } from '@/components/PerformerSubscriptionModal';
 import { TaskExamplesPage } from '@/components/TaskExamplesPage';
 import { TaskExample } from '@/lib/taskExamplesData';
 import { ConceptExplainerPage } from '@/components/ConceptExplainerPage';
@@ -124,8 +123,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const user: UserProfile = profile || defaultGuestUser;
   const isCustomer = user.activeRole === 'CUSTOMER';
 
-  // Toggle between personalized dashboard (default for logged-in users) and public presentation
-  const [homeViewPreference, setHomeViewPreference] = useState<'dashboard' | 'landing'>('dashboard');
+  // Toggle between personalized dashboard and public landing presentation
+  // Default: landing page (shown for all users, authenticated or not)
+  const [homeViewPreference, setHomeViewPreference] = useState<'dashboard' | 'landing'>('landing');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -208,7 +208,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const proofTaskId = searchParams.get('proof') || null;
   const isWalletOpen = searchParams.get('wallet') === 'true';
   const isQualificationOpen = searchParams.get('test') === 'true';
-  const isSubscriptionOpen = searchParams.get('pass') === 'true' || searchParams.get('subscription') === 'true';
 
   // Guard ?create=true if not authenticated
   useEffect(() => {
@@ -420,19 +419,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // 1. Check if qualification passed
-    if (!profile.passedQualification) {
-      updateQuery({ test: 'true' });
-      return;
-    }
-
-    // 2. Check if Workzilla Pass subscription or free trial tasks are available
-    const hasActiveSub = profile.subscriptionExpiresAt && new Date(profile.subscriptionExpiresAt) > new Date();
-    const freeRemaining = Number(profile.freeTasksRemaining ?? 3);
-    if (!hasActiveSub && freeRemaining <= 0) {
-      updateQuery({ pass: 'true' });
-      return;
-    }
 
     // GA4 & GTM tracking: Bid submitted
     track.bidSubmitted(
@@ -632,23 +618,31 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
     }
   };
 
-  const handleSubmitProof = async (taskId: string, reportText: string, proofUrls: string[]) => {
+  const handleSubmitProof = async (taskId: string, reportText: string, proofUrls: string[], antiSpamEntered?: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
     // GA4 & GTM tracking: Proof Submitted
-    track.proofSubmitted(taskId, task.category || 'micro', proofUrls.length, reportText.length);
+    const newSubmission: TaskProofSubmission = {
+      id: 'sub-' + Date.now(),
+      taskId,
+      performerId: profile?.id || user.id,
+      reportText: reportText.trim(),
+      proofUrls,
+      submittedAt: new Date().toISOString(),
+    };
 
     const updated: Task = {
       ...task,
       status: 'UNDER_REVIEW',
+      submission: newSubmission,
     };
 
     setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
     showToast(t('toastProofSubmitted'));
 
     // Supabase Persistence
-    await submitDynamicProof(taskId, profile?.id || user.id, reportText, proofUrls);
+    await submitDynamicProof(taskId, profile?.id || user.id, reportText, proofUrls, antiSpamEntered);
     await updateDynamicTask(taskId, { status: 'UNDER_REVIEW' });
   };
 
@@ -1467,7 +1461,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                       Dernières tâches publiées au Maroc
                     </h2>
                     <p className="mt-1.5 text-xs sm:text-sm text-slate-600">
-                      Consultez les dernières micro-tâches ou accédez au tableau de bord complet avec messagerie intégrée.
+                      Consultez les missions récentes et découvrez les besoins des donneurs d’ordre au Maroc.
                     </p>
                   </div>
 
@@ -1488,7 +1482,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
                       task={task}
                       userRole={user.activeRole}
                       onSelectTask={handleOpenTask}
-                      onOpenChat={handleOpenChatForTask}
                     />
                   ))}
                 </div>
@@ -1568,18 +1561,6 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
             updateProfile({ passedQualification: true });
           }
           showToast(t('toastQualificationPassed'));
-        }}
-      />
-
-      {/* Performer Subscription Pass Modal */}
-      <PerformerSubscriptionModal
-        isOpen={isSubscriptionOpen}
-        onClose={() => updateQuery({ pass: null, subscription: null })}
-        onSuccess={() => {
-          showToast('Pass Prestataire activé avec succès !');
-        }}
-        onOpenDeposit={() => {
-          updateQuery({ pass: null, subscription: null, wallet: 'true' });
         }}
       />
 

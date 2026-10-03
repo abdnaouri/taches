@@ -52,12 +52,19 @@ export async function POST(req: NextRequest) {
       let userId: string | null = null;
       if (customerTrns.startsWith('DEP-')) {
         const parts = customerTrns.split('-');
-        if (parts.length >= 2) {
-          userId = parts[1];
+        if (parts.length >= 6) {
+          // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 parts when split by '-', but parts[1..5])
+          // CustomerTrns format: DEP-{uuid}-{timestamp}, UUID itself contains 4 dashes
+          // Reconstruct UUID from parts[1] through parts[5]
+          const potentialUuid = parts.slice(1, 6).join('-');
+          const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (UUID_REGEX.test(potentialUuid)) {
+            userId = potentialUuid;
+          }
         }
       }
 
-      if (userId && userId.includes('-')) {
+      if (userId) {
         // Credit the customer's balance
         const { data: profile } = await supabase
           .from('profiles')

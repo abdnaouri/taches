@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       minLevelRequired: Number(t.min_level_required || 1),
       requiredProofs: t.required_proofs || [],
       applicantsCount: Number(t.applicants_count || 0),
+      antiSpamKeyword: t.anti_spam_keyword || undefined,
       clientId: t.client_id || '',
       clientName: t.client_name || 'Client',
       clientAvatar: t.client_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60',
@@ -156,6 +157,29 @@ export async function POST(req: NextRequest) {
     const sanitizedTitle = filterOffPlatformContact(body.title.trim()).sanitizedText;
     const sanitizedDesc = filterOffPlatformContact((body.description || '').trim()).sanitizedText;
 
+    // CRITICAL: Lock escrow BEFORE inserting the task to prevent TOCTOU race condition.
+    // If balance update fails, we return an error before the task is created.
+    const newAvailable = Math.max(0, currentBalance - totalBudget);
+    const newEscrow = Number(profile.balance_escrow || 0) + totalBudget;
+    const newPosted = Number(profile.customer_tasks_posted || 0) + 1;
+
+    const { error: escrowErr } = await supabase
+      .from('profiles')
+      .update({
+        balance_available: newAvailable,
+        balance_escrow: newEscrow,
+        customer_tasks_posted: newPosted,
+      })
+      .eq('id', clientId);
+
+    if (escrowErr) {
+      console.error('Could not lock escrow balance before task creation:', escrowErr);
+      return NextResponse.json({
+        success: false,
+        error: 'Impossible de bloquer le séquestre. Veuillez réessayer.',
+      }, { status: 500 });
+    }
+
     const dbPayload: Record<string, any> = {
       title: sanitizedTitle,
       description: sanitizedDesc,
@@ -189,25 +213,20 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Could not insert task into Supabase tasks table:', error);
+      // Rollback escrow lock on task insert failure
+      await supabase
+        .from('profiles')
+        .update({
+          balance_available: currentBalance,
+          balance_escrow: Number(profile.balance_escrow || 0),
+          customer_tasks_posted: Number(profile.customer_tasks_posted || 0),
+        })
+        .eq('id', clientId);
       return NextResponse.json({
         success: false,
         error: error.message,
       }, { status: 400 });
     }
-
-    // Lock Escrow atomically
-    const newAvailable = Math.max(0, currentBalance - totalBudget);
-    const newEscrow = Number(profile.balance_escrow || 0) + totalBudget;
-    const newPosted = Number(profile.customer_tasks_posted || 0) + 1;
-
-    await supabase
-      .from('profiles')
-      .update({
-        balance_available: newAvailable,
-        balance_escrow: newEscrow,
-        customer_tasks_posted: newPosted,
-      })
-      .eq('id', clientId);
 
     await supabase
       .from('transactions')

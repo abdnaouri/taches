@@ -221,7 +221,7 @@ export const TASK_CATEGORIES: CategoryInfo[] = [
         templateDesc: 'Récupération d’un pli fermé et dépôt physique avec obtention d’un récépissé officiel tamponné et daté.',
         suggestedDeliverables: [
           'Photo nette du récépissé avec cachet officiel et date',
-          'Confirmation immédiate par WhatsApp ou chat',
+          'Confirmation immédiate via la messagerie',
         ],
       },
       {

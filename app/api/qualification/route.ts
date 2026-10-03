@@ -11,7 +11,7 @@ const QUALIFICATION_QUESTIONS = [
     questionFr: "Que devez-vous faire si un client vous demande d'échanger des coordonnées hors plateforme (WhatsApp/Numéro personnel) avant l'attribution ?",
     questionAr: "ماذا تفعل إذا طلب منك العميل التواصل خارج المنصة (واتساب أو هاتف شخصي) قبل تعيين المهمة؟",
     optionsFr: [
-      "Refuser poliment et continuer la communication via le chat sécurisé de tâches.ma pour garantir la protection du séquestre Daman.",
+      "Refuser poliment et continuer la communication via la messagerie sécurisée de tâches.ma pour garantir la protection du séquestre Daman.",
       "Lui envoyer immédiatement mon numéro WhatsApp personnel.",
       "Accepter uniquement s'il propose un paiement par Cash Plus ou virement direct hors plateforme."
     ],

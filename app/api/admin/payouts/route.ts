@@ -42,11 +42,29 @@ export async function GET(req: NextRequest) {
 
       const grossEur = Math.abs(Number(tx.amount || 0));
       const grossDH = Math.round(grossEur * 10);
-      const isBinance = (tx.description || '').toLowerCase().includes('binance');
+      const desc = tx.description || '';
+      const isBinance = desc.toLowerCase().includes('binance');
+      const isCashPlus = desc.toLowerCase().includes('cash plus') || desc.toLowerCase().includes('cashplus');
+      const isWafacash = desc.toLowerCase().includes('wafacash');
+      const isRib = desc.toLowerCase().includes('virement') || desc.toLowerCase().includes('rib');
 
-      const feeDH = 0; // Free / direct
-      const method: 'REMITLY' | 'BINANCE_PAY' = isBinance ? 'BINANCE_PAY' : 'REMITLY';
-      const netDH = grossDH;
+      let method: 'RIB' | 'CASHPLUS' | 'WAFACASH' | 'BINANCE_PAY' | 'REMITLY' = 'REMITLY';
+      if (isBinance) method = 'BINANCE_PAY';
+      else if (isRib) method = 'RIB';
+      else if (isCashPlus) method = 'CASHPLUS';
+      else if (isWafacash) method = 'WAFACASH';
+
+      let netDH = grossDH;
+      let feeDH = 0;
+      const netMatch = desc.match(/Net:\s*(\d+)\s*DH/i);
+      const feeMatch = desc.match(/Frais:\s*(\d+)\s*DH/i);
+      if (netMatch) {
+        netDH = parseInt(netMatch[1], 10);
+        feeDH = Math.max(0, grossDH - netDH);
+      } else if (feeMatch) {
+        feeDH = parseInt(feeMatch[1], 10);
+        netDH = Math.max(0, grossDH - feeDH);
+      }
 
       return {
         id: tx.id,
@@ -194,15 +212,36 @@ export async function POST(req: NextRequest) {
     if (profile && profile.email) {
       const grossEur = Math.abs(Number(tx.amount || 0));
       const grossDH = Math.round(grossEur * 10);
-      const isBinance = (tx.description || '').toLowerCase().includes('binance');
-      const method = isBinance ? 'BINANCE_PAY' : 'REMITLY';
+      const desc = tx.description || '';
+      const isBinance = desc.toLowerCase().includes('binance');
+      const isCashPlus = desc.toLowerCase().includes('cash plus') || desc.toLowerCase().includes('cashplus');
+      const isWafacash = desc.toLowerCase().includes('wafacash');
+      const isRib = desc.toLowerCase().includes('virement') || desc.toLowerCase().includes('rib');
+
+      let method = 'REMITLY';
+      if (isBinance) method = 'BINANCE_PAY';
+      else if (isRib) method = 'RIB';
+      else if (isCashPlus) method = 'CASHPLUS';
+      else if (isWafacash) method = 'WAFACASH';
+
+      let netDH = grossDH;
+      let feeDH = 0;
+      const netMatch = desc.match(/Net:\s*(\d+)\s*DH/i);
+      const feeMatch = desc.match(/Frais:\s*(\d+)\s*DH/i);
+      if (netMatch) {
+        netDH = parseInt(netMatch[1], 10);
+        feeDH = Math.max(0, grossDH - netDH);
+      } else if (feeMatch) {
+        feeDH = parseInt(feeMatch[1], 10);
+        netDH = Math.max(0, grossDH - feeDH);
+      }
 
       await sendPayoutNotification({
         recipientEmail: profile.email,
         recipientName: profile.full_name || 'Prestataire',
         amountDH: grossDH,
-        netAmountDH: grossDH,
-        feeDH: 0,
+        netAmountDH: netDH,
+        feeDH: feeDH,
         payoutMethod: method,
         maskedDestination: 'Compte vérifié',
         trackingReference: trackingReference || `REF-${Date.now().toString().slice(-6)}`,

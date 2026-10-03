@@ -32,7 +32,7 @@ export default {
 
     try {
       const payload = await request.json();
-      const { to, subject, template, data } = payload;
+      const { to, recipientName, subject, html, text, template, data } = payload;
 
       if (!to || !subject) {
         return new Response(JSON.stringify({ error: "Recipient 'to' and 'subject' required" }), {
@@ -41,35 +41,74 @@ export default {
         });
       }
 
-      console.log(`[Tâches.ma Email Dispatcher] Sending ${template} to ${to}: "${subject}"`);
+      console.log(`[Tâches.ma Email Dispatcher] Sending ${template || 'notification'} to ${to}: "${subject}"`);
 
-      // If MailChannels or API token is configured, send actual SMTP
-      if (env && env.DKIM_PRIVATE_KEY) {
-        const mailResponse = await fetch("https://api.mailchannels.net/tx/v1/send", {
+      // 1. If Resend API key is available in worker env
+      if (env && env.RESEND_API_KEY) {
+        const resendRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
-            personalizations: [{ to: [{ email: to, name: data?.recipientName || "Utilisateur Tâches.ma" }] }],
-            from: { email: "notifications@taches.ma", name: "Tâches.ma Daman" },
+            from: env.EMAIL_FROM || "Tâches.ma <notifications@taches.ma>",
+            to: [to],
             subject,
-            content: [
-              {
-                type: "text/plain",
-                value: `Notification Tâches.ma : ${subject}\n\nConsultez votre espace : https://taches.ma`,
-              },
-            ],
+            html: html || `<p>${subject}</p>`,
+            text: text || subject,
           }),
         });
 
-        const mailResText = await mailResponse.text();
-        return new Response(JSON.stringify({ success: true, provider: "mailchannels", result: mailResText }), {
-          status: 200,
+        const resendData = await resendRes.json();
+        return new Response(JSON.stringify({ success: resendRes.ok, provider: "resend", data: resendData }), {
+          status: resendRes.ok ? 200 : 500,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      // Default acknowledgement
-      return new Response(JSON.stringify({ success: true, queued: true, to, subject }), {
+      // 2. If MailChannels DKIM is configured on Cloudflare
+      if (env && env.DKIM_PRIVATE_KEY) {
+        const contentParts = [];
+        if (text) {
+          contentParts.push({ type: "text/plain", value: text });
+        }
+        if (html) {
+          contentParts.push({ type: "text/html", value: html });
+        }
+        if (contentParts.length === 0) {
+          contentParts.push({
+            type: "text/plain",
+            value: `Notification Tâches.ma : ${subject}\n\nConsultez votre espace : https://taches.ma`,
+          });
+        }
+
+        const mailResponse = await fetch("https://api.mailchannels.net/tx/v1/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: to, name: recipientName || data?.recipientName || "Utilisateur Tâches.ma" }] }],
+            from: { email: "notifications@taches.ma", name: "Tâches.ma Daman" },
+            subject,
+            content: contentParts,
+          }),
+        });
+
+        const mailResText = await mailResponse.text();
+        return new Response(JSON.stringify({ success: mailResponse.ok, provider: "mailchannels", result: mailResText }), {
+          status: mailResponse.ok ? 200 : 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // 3. Fallback / Dev acknowledgement
+      return new Response(JSON.stringify({
+        success: true,
+        queued: true,
+        to,
+        subject,
+        htmlLength: html ? html.length : 0,
+      }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });

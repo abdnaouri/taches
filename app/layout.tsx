@@ -1,19 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import './globals.css';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
-import {
-  getOrganizationSchema,
-  getWebSiteSchema,
-  getSiteNavigationSchema,
-  getFAQSchema,
-  getServiceSchema,
-  getEmploymentAgencySchema,
-  getOnlineMarketplaceSchema,
-} from '@/lib/seoSchema';
+import { getRootGraphSchema } from '@/lib/seoSchema';
 import { GTMProvider } from '@/lib/analytics/GTMProvider';
 import { AnalyticsPageTracker } from '@/lib/analytics/AnalyticsPageTracker';
 
@@ -73,7 +66,7 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.webmanifest',
   alternates: {
-    canonical: 'https://taches.ma',
+    canonical: 'https://taches.ma/fr',
     languages: {
       'x-default': 'https://taches.ma/fr',
       'fr-MA': 'https://taches.ma/fr',
@@ -84,7 +77,7 @@ export const metadata: Metadata = {
     title: 'tâches.ma — Bourse de micro-tâches & services freelance au Maroc',
     description:
       'Déléguez vos tâches au Maroc en 1 minute à des prestataires vérifiés. Graphisme, saisie Excel, e-commerce, traduction. Paiement 100% garanti sous séquestre Daman.',
-    url: 'https://taches.ma',
+    url: 'https://taches.ma/fr',
     siteName: 'tâches.ma',
     locale: 'fr_MA',
     alternateLocale: ['ar_MA'],
@@ -128,18 +121,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const schemas = [
-    getWebSiteSchema(),
-    getOrganizationSchema(),
-    getSiteNavigationSchema(),
-    getEmploymentAgencySchema(),
-    getOnlineMarketplaceSchema(),
-    getFAQSchema(),
-    getServiceSchema(),
-  ];
+  const cookieStore = cookies();
+  const savedLocale = cookieStore.get('taches_locale')?.value;
+  const isArabic = savedLocale === 'ar';
+  const lang = isArabic ? 'ar' : (savedLocale || 'fr');
+  const dir = isArabic ? 'rtl' : 'ltr';
+
+  const rootGraphSchema = getRootGraphSchema();
 
   return (
-    <html lang="fr" dir="ltr" suppressHydrationWarning>
+    <html lang={lang} dir={dir} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -148,13 +139,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="tâches.ma" />
         <meta name="application-name" content="tâches.ma" />
         <meta name="theme-color" content="#1d4ed8" />
-        {schemas.map((schema, index) => (
-          <script
-            key={index}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-          />
-        ))}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(rootGraphSchema) }}
+        />
       </head>
       <body
         className={`${inter.variable} ${space.variable} font-sans antialiased text-slate-900 bg-surface-soft min-h-screen`}

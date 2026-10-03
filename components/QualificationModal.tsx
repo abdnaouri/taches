@@ -150,8 +150,8 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({
         </h2>
         <p className="mt-1 text-xs text-slate-600 leading-relaxed">
           {locale === 'ar'
-            ? 'أجب على 4 أسئلة بسيطة حول قواعد الأمان والضمان المالي (Daman) لتتمكن من إرسال العروض فوراً.'
-            : 'Répondez à 4 questions simples sur les règles de sécurité et le séquestre pour débloquer les candidatures instantanées.'}
+            ? 'أجب على 4 أسئلة بسيطة حول قواعد الأمان والضمان المالي (Daman) للحصول على شارة الموثوقية وتعزيز فرص اختيارك من قبل العملاء.'
+            : 'Répondez à 4 questions simples sur les règles de sécurité et le séquestre Daman pour obtenir votre badge officiel de Vérification & Confiance.'}
         </p>
 
         {isLoading ? (

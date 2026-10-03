@@ -152,17 +152,17 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-slate-600 text-center">
                 <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
                   <FiCheck className="text-brand-600 font-black" />
-                  <span>100% Gratuit à la publication</span>
+                  <span>Publication gratuite sans engagement</span>
                 </span>
                 <span className="text-slate-300">•</span>
                 <span className="inline-flex items-center gap-1 text-slate-700 font-bold">
                   <FiClock className="text-brand-600" />
-                  <span>Première offre en ~35 secondes</span>
+                  <span>Candidatures rapides de freelances</span>
                 </span>
                 <span className="text-slate-300">•</span>
                 <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
                   <FiLock className="text-brand-600" />
-                  <span>Paiement 100% sécurisé (Daman)</span>
+                  <span>Paiement sécurisé avec garantie Daman</span>
                 </span>
               </div>
 
@@ -179,7 +179,7 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
               Gagnez de l’argent en effectuant des missions
             </h1>
             <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-              Rejoignez plus de 890 000 prestataires au Maroc. Postulez à des micro-services (saisie, graphisme, traduction, web, terrain) et recevez vos virements bancaires garantis d’avance par séquestre.
+              Rejoignez les prestataires actifs au Maroc. Postulez aux missions (saisie, graphisme, traduction, web, terrain) et travaillez en toute sérénité avec des paiements garantis sous séquestre.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
@@ -211,10 +211,10 @@ export const WorkzillaProofBar: React.FC = () => {
   const { t } = useLanguage();
 
   const stats = [
-    { value: '890 000+', label: 'Prestataires et freelances au Maroc', icon: <FiUsers className="text-brand-600 text-2xl" /> },
-    { value: '35 secondes', label: 'Délai moyen de première réponse', icon: <FiClock className="text-brand-600 text-2xl" /> },
-    { value: '4.8 Millions', label: 'Tâches réalisées avec succès', icon: <FiCheckCircle className="text-brand-600 text-2xl" /> },
-    { value: '100% Garanti', label: 'Paiement sous séquestre Daman', icon: <FiShield className="text-brand-700 text-2xl" /> },
+    { value: 'Vérifiés', label: 'Prestataires et freelances au Maroc', icon: <FiUsers className="text-brand-600 text-2xl" /> },
+    { value: 'Rapide', label: 'Premières candidatures en quelques minutes', icon: <FiClock className="text-brand-600 text-2xl" /> },
+    { value: 'Contrôlé', label: 'Livrables vérifiés avant déblocage', icon: <FiCheckCircle className="text-brand-600 text-2xl" /> },
+    { value: 'Garanti', label: 'Fonds protégés sous séquestre Daman', icon: <FiShield className="text-brand-700 text-2xl" /> },
   ];
 
   return (
@@ -458,8 +458,8 @@ export const WorkzillaTrustSection: React.FC = () => {
 
   const trustItems = [
     {
-      title: 'Paiement 100% Sécurisé sous Séquestre (Daman)',
-      desc: 'Votre argent ne quitte jamais la plateforme avant votre validation finale. Aucun risque de payer pour un travail incomplet ou non conforme.',
+      title: 'Paiement sécurisé sous séquestre Daman',
+      desc: 'Votre argent reste protégé jusqu’à votre validation finale du travail remis. En cas de non-conformité, demandez des retouches ou un remboursement.',
       icon: <FiShield className="text-brand-700 text-2xl" />,
     },
     {
@@ -774,6 +774,22 @@ export const WorkzillaFooter: React.FC = () => {
             </ul>
           </div>
 
+        </div>
+
+        {/* Moroccan Cities Cluster Links Strip */}
+        <div className="py-6 border-b border-slate-800 text-xs text-slate-400">
+          <div className="font-bold text-slate-300 mb-2.5">
+            🇲🇦 Hubs Freelance par Ville au Maroc :
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <a href={`/${locale}/freelance-maroc/casablanca`} className="hover:text-brand-400 transition-colors">Freelance Casablanca</a>
+            <a href={`/${locale}/freelance-maroc/rabat`} className="hover:text-brand-400 transition-colors">Freelance Rabat</a>
+            <a href={`/${locale}/freelance-maroc/marrakech`} className="hover:text-brand-400 transition-colors">Freelance Marrakech</a>
+            <a href={`/${locale}/freelance-maroc/tanger`} className="hover:text-brand-400 transition-colors">Freelance Tanger</a>
+            <a href={`/${locale}/freelance-maroc/agadir`} className="hover:text-brand-400 transition-colors">Freelance Agadir</a>
+            <a href={`/${locale}/freelance-maroc/fes`} className="hover:text-brand-400 transition-colors">Freelance Fès</a>
+            <a href={`/${locale}/freelance-maroc#simulateur-tjm`} className="text-emerald-400 font-bold hover:underline">⚡ Simulateur TJM & Auto-Entrepreneur 2026</a>
+          </div>
         </div>
 
         {/* Bottom copyright */}

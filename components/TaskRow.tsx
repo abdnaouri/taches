@@ -184,7 +184,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 e.stopPropagation();
                 onOpenChat(task);
               }}
-              title="Discuter en direct"
+              title="Messagerie"
               className="p-2 rounded-lg bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-800 border border-slate-200 transition cursor-pointer"
             >
               <FiMessageSquare className="text-xs" />

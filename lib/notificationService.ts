@@ -1,11 +1,22 @@
 /**
  * Notification Service for Tâches.ma
- * Manages email, SMS, and in-app status alerts for payments, payouts, and task escrow events.
+ * Dispatches business-grade transactional HTML emails, SMS, and instant alerts.
+ * Parity with Workzilla, UNU, and Upwork workflows.
  */
+
+import { dispatchEmail } from './email/dispatcher';
+import {
+  buildTaskConfirmedClientEmail,
+  buildTaskCompletedPerformerEmail,
+  buildSubmissionReceivedClientEmail,
+  buildNewBidClientEmail,
+  buildPayoutStatusEmail,
+} from './email/templates';
 
 export interface PayoutNotificationParams {
   recipientEmail: string;
   recipientName: string;
+  recipientUserId?: string;
   amountDH: number;
   netAmountDH: number;
   feeDH: number;
@@ -20,6 +31,8 @@ export interface PayoutNotificationParams {
 export interface EscrowReleaseNotificationParams {
   recipientEmail: string;
   recipientName: string;
+  recipientUserId?: string;
+  clientName?: string;
   taskTitle: string;
   taskId: string;
   grossRewardDH: number;
@@ -27,40 +40,208 @@ export interface EscrowReleaseNotificationParams {
   netGainDH: number;
 }
 
+export interface TaskConfirmedClientParams {
+  clientEmail: string;
+  clientName: string;
+  clientUserId?: string;
+  contractorName: string;
+  taskTitle: string;
+  taskId: string;
+  amountDH: number;
+}
+
+export interface SubmissionReceivedParams {
+  clientEmail: string;
+  clientName: string;
+  clientUserId?: string;
+  performerName: string;
+  taskTitle: string;
+  taskId: string;
+  reportPreview?: string;
+  proofsCount?: number;
+}
+
+export interface NewBidNotificationParams {
+  clientEmail: string;
+  clientName: string;
+  clientUserId?: string;
+  performerName: string;
+  performerTier?: string;
+  performerRating?: number;
+  taskTitle: string;
+  taskId: string;
+  proposedHours?: number;
+  pitchPreview?: string;
+}
+
 /**
- * Sends a payout status update notification
+ * 1. Dispatches Client Task Confirmation & Escrow Transfer Email (Workzilla Parity)
  */
-export async function sendPayoutNotification(params: PayoutNotificationParams): Promise<boolean> {
+export async function sendTaskConfirmationClientNotification(
+  params: TaskConfirmedClientParams
+): Promise<boolean> {
   try {
-    const isCompleted = params.status === 'COMPLETED';
-    const isCancelled = params.status === 'CANCELLED';
+    const email = buildTaskConfirmedClientEmail({
+      clientName: params.clientName,
+      contractorName: params.contractorName,
+      taskTitle: params.taskTitle,
+      taskId: params.taskId,
+      amountDH: params.amountDH,
+    });
 
-    let subject = `[Tâches.ma] Virement de ${params.netAmountDH} DH en cours d'exécution`;
-    if (isCompleted) {
-      subject = `[Tâches.ma] Virement de ${params.netAmountDH} DH envoyé avec succès !`;
-    } else if (isCancelled) {
-      subject = `[Tâches.ma] Information concernant votre demande de retrait de ${params.amountDH} DH`;
-    }
+    const res = await dispatchEmail({
+      to: params.clientEmail,
+      recipientName: params.clientName,
+      recipientUserId: params.clientUserId,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      templateName: 'task_confirmed_client',
+      data: params,
+    });
 
-    console.log(`[Notification Engine] Dispatching payout email to ${params.recipientEmail}: "${subject}"`);
-    console.log(`[Notification Engine] Details: ${params.payoutMethod} -> ${params.maskedDestination}, Ref: ${params.trackingReference}`);
+    return res.success;
+  } catch (err: any) {
+    console.error('Failed to send task confirmation email to client:', err);
+    return false;
+  }
+}
 
-    // If Cloudflare Email Worker or Resend is configured, trigger HTTP call
-    const emailWorkerUrl = process.env.EMAIL_WORKER_URL;
-    if (emailWorkerUrl) {
-      await fetch(emailWorkerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: params.recipientEmail,
-          subject,
-          template: 'payout_status_update',
-          data: params,
-        }),
-      }).catch((e) => console.warn('Email worker dispatch failed (non-blocking):', e.message));
-    }
+/**
+ * 2. Dispatches Performer Escrow Release & Earnings Email
+ */
+export async function sendEscrowReleaseNotification(
+  params: EscrowReleaseNotificationParams
+): Promise<boolean> {
+  try {
+    const email = buildTaskCompletedPerformerEmail({
+      performerName: params.recipientName,
+      clientName: params.clientName || 'Donneur d\'ordre',
+      taskTitle: params.taskTitle,
+      taskId: params.taskId,
+      grossRewardDH: params.grossRewardDH,
+      platformFeeDH: params.platformFeeDH,
+      netGainDH: params.netGainDH,
+    });
 
-    return true;
+    const res = await dispatchEmail({
+      to: params.recipientEmail,
+      recipientName: params.recipientName,
+      recipientUserId: params.recipientUserId,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      templateName: 'task_escrow_released',
+      data: params,
+    });
+
+    return res.success;
+  } catch (err: any) {
+    console.error('Failed to dispatch escrow release notification to performer:', err);
+    return false;
+  }
+}
+
+/**
+ * 3. Dispatches Deliverable Submitted Notification to Client
+ */
+export async function sendSubmissionReceivedNotification(
+  params: SubmissionReceivedParams
+): Promise<boolean> {
+  try {
+    const email = buildSubmissionReceivedClientEmail({
+      clientName: params.clientName,
+      performerName: params.performerName,
+      taskTitle: params.taskTitle,
+      taskId: params.taskId,
+      reportPreview: params.reportPreview,
+      proofsCount: params.proofsCount,
+    });
+
+    const res = await dispatchEmail({
+      to: params.clientEmail,
+      recipientName: params.clientName,
+      recipientUserId: params.clientUserId,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      templateName: 'submission_received_client',
+      data: params,
+    });
+
+    return res.success;
+  } catch (err: any) {
+    console.error('Failed to dispatch submission notification to client:', err);
+    return false;
+  }
+}
+
+/**
+ * 4. Dispatches New Application / Bid Notification to Client
+ */
+export async function sendNewBidNotification(
+  params: NewBidNotificationParams
+): Promise<boolean> {
+  try {
+    const email = buildNewBidClientEmail({
+      clientName: params.clientName,
+      performerName: params.performerName,
+      performerTier: params.performerTier,
+      performerRating: params.performerRating,
+      taskTitle: params.taskTitle,
+      taskId: params.taskId,
+      proposedHours: params.proposedHours,
+      pitchPreview: params.pitchPreview,
+    });
+
+    const res = await dispatchEmail({
+      to: params.clientEmail,
+      recipientName: params.clientName,
+      recipientUserId: params.clientUserId,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      templateName: 'new_bid_client',
+      data: params,
+    });
+
+    return res.success;
+  } catch (err: any) {
+    console.error('Failed to dispatch new bid notification to client:', err);
+    return false;
+  }
+}
+
+/**
+ * 5. Dispatches Payout Status Update Notification to Performer
+ */
+export async function sendPayoutNotification(
+  params: PayoutNotificationParams
+): Promise<boolean> {
+  try {
+    const email = buildPayoutStatusEmail({
+      recipientName: params.recipientName,
+      amountDH: params.amountDH,
+      netAmountDH: params.netAmountDH,
+      feeDH: params.feeDH,
+      payoutMethod: params.payoutMethod,
+      trackingReference: params.trackingReference,
+      status: params.status,
+      rejectionReason: params.rejectionReason,
+    });
+
+    const res = await dispatchEmail({
+      to: params.recipientEmail,
+      recipientName: params.recipientName,
+      recipientUserId: params.recipientUserId,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      templateName: 'payout_status_update',
+      data: params,
+    });
+
+    return res.success;
   } catch (err: any) {
     console.error('Failed to dispatch payout notification:', err);
     return false;
@@ -68,38 +249,7 @@ export async function sendPayoutNotification(params: PayoutNotificationParams): 
 }
 
 /**
- * Sends an escrow release and earnings notification to performer
- */
-export async function sendEscrowReleaseNotification(
-  params: EscrowReleaseNotificationParams
-): Promise<boolean> {
-  try {
-    const subject = `[Tâches.ma] Félicitations ! Vos gains de ${params.netGainDH} DH sont débloqués`;
-    console.log(`[Notification Engine] Dispatching escrow release to ${params.recipientEmail}: "${subject}"`);
-
-    const emailWorkerUrl = process.env.EMAIL_WORKER_URL;
-    if (emailWorkerUrl) {
-      await fetch(emailWorkerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: params.recipientEmail,
-          subject,
-          template: 'task_escrow_released',
-          data: params,
-        }),
-      }).catch((e) => console.warn('Email worker dispatch failed (non-blocking):', e.message));
-    }
-
-    return true;
-  } catch (err: any) {
-    console.error('Failed to dispatch escrow notification:', err);
-    return false;
-  }
-}
-
-/**
- * Instant Telegram Bot Alert Dispatcher (Workzilla & UNU parity)
+ * 6. Instant Telegram Bot Alert Dispatcher (Workzilla & UNU parity)
  * Broadcasts newly published tasks to Telegram channels/subscribers in real-time.
  */
 export async function sendTelegramTaskAlert(params: {
@@ -146,4 +296,3 @@ export async function sendTelegramTaskAlert(params: {
     return false;
   }
 }
-

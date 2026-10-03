@@ -148,7 +148,7 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
       en: [
         'Source HD files, spreadsheets, links, or photo proofs',
         'Free revisions available if deliverables need adjustment',
-        'Direct chat in Moroccan Darija or French',
+        'Direct messaging in Moroccan Darija or French',
       ],
     },
     visualPreview: {

@@ -129,9 +129,10 @@ export async function POST(req: NextRequest) {
         status: 'COMPLETED',
       });
     } else if (ruling === 'RELEASE_PERFORMER') {
-      // Release 100% (minus 15% commission) to performer
-      const commissionEur = Number((budgetEur * 0.15).toFixed(2));
-      const netPerformerEur = Number((budgetEur - commissionEur).toFixed(2));
+      // Release 100% (minus 15% commission) to performer — based on task reward (not total_budget which includes platform fee)
+      const rewardEur = Number(task.reward || budgetEur);
+      const commissionEur = Number((rewardEur * 0.15).toFixed(2));
+      const netPerformerEur = Number((rewardEur - commissionEur).toFixed(2));
 
       if (clientProfile) {
         const newEscrow = Math.max(0, Number(clientProfile.balance_escrow || 0) - budgetEur);
@@ -157,9 +158,9 @@ export async function POST(req: NextRequest) {
       await supabase.from('transactions').insert({
         user_id: task.assigned_to_id,
         type: 'ESCROW_RELEASE',
-        amount: budgetEur,
+        amount: rewardEur,
         currency: 'EUR',
-        description: `Gains validés par arbitrage pour mission #${taskId.slice(0, 8)}`,
+        description: `Gains validés par arbitrage pour mission #${taskId.slice(0, 8)} (${Math.round(rewardEur * 10)} DH brut)`,
         status: 'COMPLETED',
       });
 
@@ -168,18 +169,22 @@ export async function POST(req: NextRequest) {
         type: 'COMMISSION',
         amount: -commissionEur,
         currency: 'EUR',
-        description: `Commission Tâches.ma arbitrage (15%)`,
+        description: `Commission Tâches.ma arbitrage (15%) = ${Math.round(commissionEur * 10)} DH`,
         status: 'COMPLETED',
       });
     } else if (ruling === 'SPLIT_50_50') {
-      // Workzilla Compromis Arbitrage: 50% client refund, 50% performer payment
-      const halfBudgetEur = Number((budgetEur * 0.5).toFixed(2));
-      const halfCommissionEur = Number((halfBudgetEur * 0.15).toFixed(2));
-      const netPerformerHalfEur = Number((halfBudgetEur - halfCommissionEur).toFixed(2));
+      // Compromis Arbitrage: 50% refund to client, 50% (minus 15% commission) to performer
+      // Split based on task reward, not total_budget (which includes platform escrow fee)
+      const rewardEur = Number(task.reward || budgetEur);
+      const halfRewardEur = Number((rewardEur * 0.5).toFixed(2));
+      const halfCommissionEur = Number((halfRewardEur * 0.15).toFixed(2));
+      const netPerformerHalfEur = Number((halfRewardEur - halfCommissionEur).toFixed(2));
+      // Client refund: 50% of reward + the entire platform fee portion
+      const clientRefundEur = Number((budgetEur - halfRewardEur).toFixed(2));
 
       if (clientProfile) {
         const newEscrow = Math.max(0, Number(clientProfile.balance_escrow || 0) - budgetEur);
-        const newAvailable = Number(clientProfile.balance_available || 0) + halfBudgetEur;
+        const newAvailable = Number(clientProfile.balance_available || 0) + clientRefundEur;
         await supabase
           .from('profiles')
           .update({
@@ -204,17 +209,17 @@ export async function POST(req: NextRequest) {
           completed_at: new Date().toISOString(),
           final_payout_percentage: 50,
           final_performer_amount_dh: Math.round(netPerformerHalfEur * 10),
-          final_client_refund_dh: Math.round(halfBudgetEur * 10),
+          final_client_refund_dh: Math.round(clientRefundEur * 10),
         })
         .eq('id', taskId);
 
-      // Ledger: Refund 50% to client
+      // Ledger: Refund to client
       await supabase.from('transactions').insert({
         user_id: task.client_id,
         type: 'REFUND',
-        amount: halfBudgetEur,
+        amount: clientRefundEur,
         currency: 'EUR',
-        description: `Remboursement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(halfBudgetEur * 10)} DH)`,
+        description: `Remboursement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(clientRefundEur * 10)} DH)`,
         status: 'COMPLETED',
       });
 
@@ -222,9 +227,9 @@ export async function POST(req: NextRequest) {
       await supabase.from('transactions').insert({
         user_id: task.assigned_to_id,
         type: 'ESCROW_RELEASE',
-        amount: halfBudgetEur,
+        amount: halfRewardEur,
         currency: 'EUR',
-        description: `Paiement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(halfBudgetEur * 10)} DH)`,
+        description: `Paiement 50% compromis arbitrage mission #${taskId.slice(0, 8)} (${Math.round(halfRewardEur * 10)} DH brut)`,
         status: 'COMPLETED',
       });
 
@@ -233,7 +238,7 @@ export async function POST(req: NextRequest) {
         type: 'COMMISSION',
         amount: -halfCommissionEur,
         currency: 'EUR',
-        description: `Commission Tâches.ma 50% arbitrage (15%)`,
+        description: `Commission Tâches.ma 50% arbitrage (15%) = ${Math.round(halfCommissionEur * 10)} DH`,
         status: 'COMPLETED',
       });
     }

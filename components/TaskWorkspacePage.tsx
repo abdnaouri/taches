@@ -28,7 +28,6 @@ import { useAnalytics } from '@/lib/analytics';
 import { Header } from '@/components/Header';
 import { ProofSubmissionDrawer } from '@/components/ProofSubmissionDrawer';
 import { QualificationModal } from '@/components/QualificationModal';
-import { PerformerSubscriptionModal } from '@/components/PerformerSubscriptionModal';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { WorkzillaFooter } from '@/components/WorkzillaLandingSections';
 import {
@@ -58,7 +57,9 @@ import {
   FiShare2,
   FiCheckSquare,
   FiPaperclip,
-  FiRefreshCw
+  FiRefreshCw,
+  FiX,
+  FiEye
 } from 'react-icons/fi';
 
 interface TaskWorkspacePageProps {
@@ -115,8 +116,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   const [isArbitrationInputOpen, setIsArbitrationInputOpen] = useState<boolean>(false);
   const [arbitrationReason, setArbitrationReason] = useState<string>('');
 
-  // Performer Qualification & Subscription Modals (Workzilla Parity)
-  const [isSubModalOpen, setIsSubModalOpen] = useState<boolean>(false);
+  // Performer Qualification Modal
   const [isQualModalOpen, setIsQualModalOpen] = useState<boolean>(false);
 
   // Multi-Execution Campaign Slots State (UNU Parity)
@@ -215,6 +215,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
               performerCompletedCount: Number(row.performer_completed_tasks ?? 0),
               proposedHours: Number(row.proposed_hours ?? 24),
               pitch: row.pitch || '',
+              isVerified: Boolean(row.is_verified || row.isVerified),
               createdAt: row.created_at || new Date().toISOString(),
             };
             setBids((prev) => (prev.some((b) => b.id === newBid.id) ? prev : [newBid, ...prev]));
@@ -293,6 +294,10 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   useEffect(() => {
     if (!task?.id) return;
 
+    if (task.submission) {
+      setSubmission(task.submission);
+    }
+
     getAuthHeaders(false).then((authHeaders) => {
       fetch(`/api/submissions?taskId=${task.id}`, { headers: authHeaders })
         .then((res) => res.json())
@@ -369,10 +374,22 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
 
   const localized = getLocalizedTask(task, locale);
   const rewardDH = Math.round(task.reward * 10);
-  const isOwner = Boolean(profile && task.clientId && (profile.id === task.clientId || task.clientName?.includes('Vous')));
+  // isOwner: must be the actual task creator (by ID) AND currently in CLIENT role.
+  // The old `clientName?.includes('Vous')` heuristic was dangerously broad — any user
+  // whose own task shows "Vous" in the name would be treated as owner even in Freelance mode.
+  const isOwner = Boolean(
+    profile &&
+    task.clientId &&
+    profile.id === task.clientId &&
+    profile.activeRole === 'CUSTOMER'
+  );
   const isAssignedToMe = Boolean(profile && task.assignedToId && profile.id === task.assignedToId);
   const isAssigned = Boolean(task.assignedToId || task.status !== 'OPEN');
   const isUrgent = task.timeLimitHours <= 6;
+  // isOwnTask: user is the task author, regardless of current active role.
+  const isOwnTask = Boolean(profile && task.clientId && profile.id === task.clientId);
+  // isPerformerRole: user is currently in Worker/Freelance mode (PERFORMER role).
+  const isPerformerRole = Boolean(profile && profile.activeRole === 'PERFORMER');
 
   // Send message in chat
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -487,17 +504,8 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         showToast('Candidature transmise avec succès au donneur d’ordre !');
         setPitch('');
       } else {
-        if (data.requiresQualification) {
-          sounds.playAlert();
-          showToast(data.error || 'Test de qualification requis pour postuler.');
-          setIsQualModalOpen(true);
-        } else if (data.requiresSubscription) {
-          sounds.playAlert();
-          showToast(data.error || 'Pass Prestataire requis pour continuer à postuler.');
-          setIsSubModalOpen(true);
-        } else {
-          showToast(data.error || 'Erreur lors de la candidature.');
-        }
+        sounds.playAlert();
+        showToast(data.error || 'Erreur lors de la candidature.');
       }
     } catch (err) {
       console.warn('Bid error:', err);
@@ -543,11 +551,21 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   // Submit Deliverable Proofs
   const handleSubmitProof = async (reportText: string, proofUrls: string[], antiSpamEntered?: string) => {
     if (!task) return;
+    const newSubmission: TaskProofSubmission = {
+      id: 'sub-' + Date.now(),
+      taskId: task.id,
+      performerId: profile?.id || task.assignedToId || '',
+      reportText: reportText.trim(),
+      proofUrls,
+      submittedAt: new Date().toISOString(),
+    };
     const updated: Task = {
       ...task,
       status: 'UNDER_REVIEW',
+      submission: newSubmission,
     };
     setTask(updated);
+    setSubmission(newSubmission);
     showToast('Livrables et preuves soumis avec succès ! Le client a été notifié.');
     setIsProofDrawerOpen(false);
 
@@ -588,10 +606,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   const handleReserveSlot = async () => {
     if (!isAuthenticated || !profile) {
       openAuthModal('login', 'Connectez-vous pour réserver une place');
-      return;
-    }
-    if (!profile.passedQualification) {
-      setIsQualModalOpen(true);
       return;
     }
 
@@ -704,6 +718,200 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
           senderName: profile.fullName || 'Client',
           senderAvatar: profile.avatarUrl || '',
           content: `⚠️ Demande de retouche : ${revisionFeedback.trim()}`,
+        }),
+      });
+    }
+  };
+
+  // Cancel Open Task (Client 100% Refund)
+  const handleCancelOpenTask = async () => {
+    if (!task) return;
+    if (!confirm('Confirmez-vous l’annulation de cette mission ? Le montant total consigné sous séquestre sera immédiatement restitué à votre solde disponible.')) {
+      return;
+    }
+    const updated: Task = { ...task, status: 'CANCELLED' };
+    setTask(updated);
+    showToast(`Mission annulée : ${rewardDH} DH restitués à votre solde disponible.`);
+    await updateDynamicTask(task.id, { status: 'CANCELLED' });
+
+    if (profile) {
+      const budgetEur = Number(task.totalBudget || task.reward);
+      await updateProfile({
+        balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - budgetEur),
+        balanceAvailable: (profile.balanceAvailable || 0) + budgetEur,
+      });
+      refreshProfile();
+    }
+  };
+
+  // Propose Partial Settlement (Client)
+  const handleProposePartialSettlement = async () => {
+    if (!task) return;
+    const amountDH = Math.round(rewardDH * (partialPercentage / 100));
+    const proposal = {
+      percentage: partialPercentage,
+      amountDH,
+      reason: partialReason.trim(),
+      status: 'PENDING' as const,
+      proposedBy: 'CUSTOMER' as const,
+      createdAt: new Date().toISOString(),
+      rating: partialRating,
+      reviewComment: partialReviewComment.trim(),
+    };
+
+    const updated: Task = {
+      ...task,
+      settlementProposal: proposal,
+    };
+    setTask(updated);
+    setIsPartialModalOpen(false);
+    showToast(`Proposition de ${partialPercentage}% (${amountDH} DH) transmise au prestataire.`);
+
+    await updateDynamicTask(task.id, {
+      settlementProposal: proposal,
+    } as any);
+
+    if (profile) {
+      const authHeaders = await getAuthHeaders(true);
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          taskId: task.id,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Client',
+          senderAvatar: profile.avatarUrl || '',
+          content: `⚖️ Proposition de règlement partiel : ${partialPercentage}% (${amountDH} DH) pour le travail rendu. Motif : « ${partialReason} »`,
+        }),
+      });
+    }
+  };
+
+  // Accept Partial Settlement (Performer)
+  const handleAcceptPartialSettlement = async () => {
+    if (!task || !task.settlementProposal) return;
+    const proposal = task.settlementProposal;
+    const percentage = proposal.percentage;
+    const totalGrossEur = task.reward;
+    const performerGrossEur = Number((totalGrossEur * (percentage / 100)).toFixed(2));
+    const clientRefundEur = Number((totalGrossEur - performerGrossEur).toFixed(2));
+    const commissionEur = Number((performerGrossEur * 0.15).toFixed(2));
+    const performerNetEur = Number((performerGrossEur - commissionEur).toFixed(2));
+
+    const performerGrossDH = Math.round(performerGrossEur * 10);
+    const performerNetDH = Math.round(performerNetEur * 10);
+    const clientRefundDH = Math.round(clientRefundEur * 10);
+
+    const updatedProposal = {
+      ...proposal,
+      status: 'ACCEPTED' as const,
+    };
+
+    const updated: Task = {
+      ...task,
+      status: 'COMPLETED',
+      completedAt: new Date().toISOString(),
+      settlementProposal: updatedProposal,
+      finalPayoutPercentage: percentage,
+      finalPerformerAmountDH: performerGrossDH,
+      finalClientRefundDH: clientRefundDH,
+    };
+    setTask(updated);
+
+    if (profile) {
+      if (isOwner) {
+        await updateProfile({
+          balanceEscrow: Math.max(0, (profile.balanceEscrow || 0) - (task.totalBudget || task.reward)),
+          balanceAvailable: (profile.balanceAvailable || 0) + clientRefundEur,
+        });
+      } else {
+        await updateProfile({
+          balanceAvailable: (profile.balanceAvailable || 0) + performerNetEur,
+          performerCompletedTasks: (profile.performerCompletedTasks || 0) + 1,
+        });
+      }
+      refreshProfile();
+    }
+
+    showToast(`Accord amiable validé : ${performerNetDH} DH débloqués, ${clientRefundDH} DH remboursés au client.`);
+
+    await updateDynamicTask(task.id, {
+      status: 'COMPLETED',
+      completedAt: updated.completedAt,
+      settlementProposal: updatedProposal,
+      finalPayoutPercentage: percentage,
+      finalPerformerAmountDH: performerGrossDH,
+      finalClientRefundDH: clientRefundDH,
+    } as any);
+
+    if (profile) {
+      const authHeaders = await getAuthHeaders(true);
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          taskId: task.id,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Prestataire',
+          senderAvatar: profile.avatarUrl || '',
+          content: `✅ Accord amiable accepté : ${percentage}% (${performerGrossDH} DH) versés au freelance, ${clientRefundDH} DH restitués au client. Mission clôturée.`,
+        }),
+      });
+    }
+  };
+
+  // Reject Partial Settlement
+  const handleRejectPartialSettlement = async () => {
+    if (!task || !task.settlementProposal) return;
+    const updatedProposal = {
+      ...task.settlementProposal,
+      status: 'REJECTED' as const,
+    };
+    setTask({ ...task, settlementProposal: updatedProposal });
+    showToast('Proposition de règlement partiel déclinée.');
+
+    await updateDynamicTask(task.id, {
+      settlementProposal: updatedProposal,
+    } as any);
+
+    if (profile) {
+      const authHeaders = await getAuthHeaders(true);
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          taskId: task.id,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Utilisateur',
+          senderAvatar: profile.avatarUrl || '',
+          content: `❌ Proposition de règlement partiel refusée. Les échanges se poursuivent ou l'arbitrage Daman peut être sollicité.`,
+        }),
+      });
+    }
+  };
+
+  // Escalate to Arbitration
+  const handleSendArbitration = async () => {
+    if (!task || !arbitrationReason.trim()) return;
+    const reason = arbitrationReason.trim();
+    const updated: Task = { ...task, status: 'ARBITRATION' };
+    setTask(updated);
+    setIsArbitrationInputOpen(false);
+    showToast('Litige ouvert : dossier transmis aux arbitres Daman.');
+
+    await updateDynamicTask(task.id, { status: 'ARBITRATION' });
+
+    if (profile) {
+      const authHeaders = await getAuthHeaders(true);
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          taskId: task.id,
+          senderId: profile.id,
+          senderName: profile.fullName || 'Utilisateur',
+          senderAvatar: profile.avatarUrl || '',
+          content: `⚖️ Litige ouvert en arbitrage officiel Daman. Motif : ${reason}`,
         }),
       });
     }
@@ -1084,16 +1292,16 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-base sm:text-lg font-black text-slate-900">
-                        {isOwner ? `Offres reçues (${bids.length})` : 'Postuler à cette mission'}
+                        {isOwnTask ? `Offres reçues (${bids.length})` : 'Postuler à cette mission'}
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {isOwner
+                        {isOwnTask
                           ? 'Sélectionnez le prestataire idéal pour démarrer l’exécution sous séquestre.'
                           : 'Envoyez votre proposition pour être retenu par le client.'}
                       </p>
                     </div>
 
-                    {!isOwner && !isAssigned && (
+                    {!isOwnTask && !isAssigned && isPerformerRole && (
                       <div className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
                         Gain net : {Math.round(rewardDH * 0.85)} DH
                       </div>
@@ -1101,59 +1309,119 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                   </div>
 
                   {/* Performer Application Box */}
-                  {!isOwner && !isAssigned && (
+                  {!isAssigned && (
                     <div className="space-y-4 pt-2">
-                      {appliedSuccess ? (
-                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                          <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
-                            <FiCheck />
+                      {/* Guard 1: Cannot apply to own task */}
+                      {isOwnTask && !isOwner && (
+                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                          <FiAlertTriangle className="text-amber-500 text-base shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-extrabold text-amber-900">
+                              Vous êtes l&apos;auteur de cette mission
+                            </p>
+                            <p className="text-[11px] text-amber-700 mt-0.5">
+                              Vous ne pouvez pas postuler à votre propre mission. Passez en mode <strong>Client</strong> pour gérer les candidatures.
+                            </p>
                           </div>
-                          <h4 className="text-sm font-extrabold text-emerald-900">
-                            Candidature transmise avec succès !
-                          </h4>
-                          <p className="text-xs text-emerald-700">
-                            Le client consultera votre profil et pourra vous attribuer la mission instantanément.
-                          </p>
                         </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-700">
-                              Votre message de motivation / pitch :
-                            </label>
-                            <textarea
-                              rows={3}
-                              value={pitch}
-                              onChange={(e) => setPitch(e.target.value)}
-                              placeholder="Expliquez en 1-2 phrases pourquoi vous êtes le freelance idéal pour cette mission..."
-                              className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-brand-700 focus:outline-hidden focus:ring-1 focus:ring-brand-700 bg-white"
-                            />
-                          </div>
+                      )}
 
-                          {/* Quick pitch templates */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {quickPitches.map((qp, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setPitch(qp)}
-                                className="rounded-lg bg-slate-100 hover:bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700 transition cursor-pointer"
-                              >
-                                {qp}
-                              </button>
-                            ))}
+                      {/* Guard 2: Must be in PERFORMER (Freelance) role to apply */}
+                      {!isOwnTask && !isPerformerRole && isAuthenticated && (
+                        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <FiUser className="text-indigo-500 text-base shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-extrabold text-indigo-900">
+                                Mode Freelance requis pour postuler
+                              </p>
+                              <p className="text-[11px] text-indigo-700 mt-0.5">
+                                Vous êtes actuellement en mode <strong>Client</strong>. Passez en mode <strong>Freelance (Prestataire)</strong> pour envoyer une candidature.
+                              </p>
+                            </div>
                           </div>
-
                           <button
                             type="button"
-                            onClick={() => handleApplyBid()}
-                            disabled={!pitch.trim()}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold py-3 text-xs shadow-md transition cursor-pointer"
+                            onClick={() => toggleRole('PERFORMER')}
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
                           >
-                            <FiSend />
-                            <span>Envoyer ma candidature ({rewardDH} DH)</span>
+                            <FiRepeat />
+                            <span>Passer en Freelance</span>
                           </button>
                         </div>
+                      )}
+
+                      {/* Guard 3: Not authenticated */}
+                      {!isOwnTask && !isAuthenticated && (
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                          <FiUser className="text-slate-400 text-base shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-extrabold text-slate-800">
+                              Connectez-vous pour postuler
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Créez un compte ou connectez-vous, puis activez le mode Freelance pour envoyer votre candidature.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actual apply form — only shown to eligible non-owner performers */}
+                      {!isOwnTask && isPerformerRole && !isOwner && (
+                        <>
+                          {appliedSuccess ? (
+                            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                              <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
+                                <FiCheck />
+                              </div>
+                              <h4 className="text-sm font-extrabold text-emerald-900">
+                                Candidature transmise avec succès !
+                              </h4>
+                              <p className="text-xs text-emerald-700">
+                                Le client consultera votre profil et pourra vous attribuer la mission instantanément.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-700">
+                                  Votre message de motivation / pitch :
+                                </label>
+                                <textarea
+                                  rows={3}
+                                  value={pitch}
+                                  onChange={(e) => setPitch(e.target.value)}
+                                  placeholder="Expliquez en 1-2 phrases pourquoi vous êtes le freelance idéal pour cette mission..."
+                                  className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-brand-700 focus:outline-hidden focus:ring-1 focus:ring-brand-700 bg-white"
+                                />
+                              </div>
+
+                              {/* Quick pitch templates */}
+                              <div className="flex flex-wrap gap-1.5">
+                                {quickPitches.map((qp, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setPitch(qp)}
+                                    className="rounded-lg bg-slate-100 hover:bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700 transition cursor-pointer"
+                                  >
+                                    {qp}
+                                  </button>
+                                ))}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleApplyBid()}
+                                disabled={!pitch.trim()}
+                                className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold py-3 text-xs shadow-md transition cursor-pointer"
+                              >
+                                <FiSend />
+                                <span>Envoyer ma candidature ({rewardDH} DH)</span>
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -1182,8 +1450,24 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                 className="h-10 w-10 rounded-xl object-cover border border-slate-300 shrink-0"
                               />
                               <div>
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="font-extrabold text-xs text-slate-900">{b.performerName}</span>
+                                  {b.isVerified ? (
+                                    <span
+                                      className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700 shadow-2xs"
+                                      title="Prestataire Vérifié : Rigueur et compétences validées (Confiance & Autorité)"
+                                    >
+                                      <FiCheckCircle className="text-emerald-600 text-xs shrink-0" />
+                                      <span>Vérifié</span>
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-1.5 py-0.2 text-[9px] font-medium text-slate-500"
+                                      title="Prestataire membre"
+                                    >
+                                      Nouveau
+                                    </span>
+                                  )}
                                   <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5">
                                     <FiStar className="fill-amber-400 text-amber-500 text-[10px]" />
                                     {b.performerRating || 5.0} ({b.performerCompletedCount || 0} missions)
@@ -1209,10 +1493,24 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         ))}
                       </div>
                     )}
+
+                    {/* Client Cancellation in OPEN state */}
+                    {isOwner && (
+                      <div className="pt-3 border-t border-slate-200 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleCancelOpenTask}
+                          className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
+                        >
+                          <FiX />
+                          <span>Annuler la mission & Débloquer {rewardDH} DH</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
-                /* IN_PROGRESS / UNDER_REVIEW / COMPLETED / REVISION STATUS */
+                /* IN_PROGRESS / UNDER_REVIEW / COMPLETED / REVISION / ARBITRATION STATUS */
                 <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1248,8 +1546,141 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   )}
 
-                  {/* Client Approval & Revision Area */}
-                  {isOwner && (task.status === 'UNDER_REVIEW' || task.status === 'IN_PROGRESS' || task.status === 'REVISION_REQUESTED') && (
+                  {/* Settlement Proposal Banner */}
+                  {task.settlementProposal && task.settlementProposal.status === 'PENDING' && (
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-amber-900 font-black text-xs">
+                          <FiPercent className="text-amber-600 text-base" />
+                          <span>Proposition d'accord partiel : {task.settlementProposal.percentage}% ({task.settlementProposal.amountDH} DH)</span>
+                        </div>
+                        <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">
+                          En attente
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-800 leading-snug">
+                        Motif : « {task.settlementProposal.reason} »
+                      </p>
+                      {isAssignedToMe ? (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleAcceptPartialSettlement}
+                            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 text-xs transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <FiCheck />
+                            <span>Accepter {task.settlementProposal.percentage}% ({task.settlementProposal.amountDH} DH)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRejectPartialSettlement}
+                            className="rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 text-xs transition cursor-pointer"
+                          >
+                            Refuser
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-amber-700 italic">
+                          Votre proposition a été transmise au prestataire. S'il accepte, {task.settlementProposal.amountDH} DH lui seront versés et le restant ({Math.round(rewardDH - task.settlementProposal.amountDH)} DH) vous sera automatiquement restitué.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delivered Deliverables & Proofs Display */}
+                  {(task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED' || submission) && (
+                    <div className="rounded-2xl bg-purple-50/80 border border-purple-200 p-4 sm:p-5 space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-200 text-purple-800">
+                            <FiFileText className="text-sm" />
+                          </span>
+                          <div>
+                            <h3 className="text-xs sm:text-sm font-black text-slate-900">
+                              Livrables déposés par {task.assignedToName || 'le prestataire'}
+                            </h3>
+                            <p className="text-[11px] text-slate-500">
+                              {submission?.submittedAt
+                                ? `Remis le ${new Date(submission.submittedAt).toLocaleDateString(locale === 'ar' ? 'ar-MA' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                                : 'Travail soumis pour inspection et validation'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full ${
+                          task.status === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : task.status === 'REVISION_REQUESTED'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-purple-100 text-purple-800 border border-purple-200'
+                        }`}>
+                          {task.status === 'COMPLETED'
+                            ? '✓ Livrables approuvés'
+                            : task.status === 'REVISION_REQUESTED'
+                            ? 'Retouche en cours'
+                            : 'Prêt pour vérification'}
+                        </span>
+                      </div>
+
+                      {/* Report / Message Text */}
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                          Rapport d&apos;exécution / Message :
+                        </span>
+                        <div className="p-3.5 rounded-xl bg-white border border-purple-200 text-xs sm:text-sm text-slate-800 whitespace-pre-line leading-relaxed shadow-2xs">
+                          {submission?.reportText || (
+                            <span className="text-slate-500 italic">
+                              Livrables finaux remis par le freelance. Fichiers et preuves disponibles ci-dessous.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Attachments / Files / Proof Links */}
+                      {submission?.proofUrls && submission.proofUrls.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <FiPaperclip className="text-purple-700" />
+                            Fichiers & Liens de preuve ({submission.proofUrls.length}) :
+                          </span>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {submission.proofUrls.map((url, idx) => {
+                              const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url) || url.startsWith('data:image');
+                              const fileName = url.split('/').pop()?.split('?')[0] || `Fichier ${idx + 1}`;
+                              return (
+                                <a
+                                  key={idx}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group flex items-center justify-between p-3 rounded-xl bg-white border border-purple-200 hover:border-purple-400 hover:bg-purple-50/50 transition shadow-2xs cursor-pointer text-xs"
+                                >
+                                  <div className="flex items-center gap-2.5 truncate pr-2">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-700 group-hover:bg-purple-200 shrink-0 transition">
+                                      {isImage ? <FiEye className="text-xs" /> : <FiLink className="text-xs" />}
+                                    </span>
+                                    <div className="truncate">
+                                      <span className="font-bold text-slate-800 group-hover:text-purple-900 truncate block">
+                                        {fileName.length > 28 ? `${fileName.slice(0, 25)}...` : fileName}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400">
+                                        {isImage ? 'Aperçu image' : 'Lien / Document'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <FiExternalLink className="text-xs text-slate-400 group-hover:text-purple-700 shrink-0" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Client Approval & Revision Area — only shown AFTER proof is submitted */}
+                  {isOwner && (task.status === 'UNDER_REVIEW' || task.status === 'REVISION_REQUESTED') && (
                     <div className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                       {task.status === 'UNDER_REVIEW' && (
                         <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 flex items-center gap-2.5 text-xs text-purple-900">
@@ -1270,7 +1701,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setIsReviewModalOpen(true)}
@@ -1287,6 +1718,15 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         >
                           <FiRepeat />
                           <span>Demander une retouche</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsPartialModalOpen(true)}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold py-3 text-xs transition cursor-pointer"
+                        >
+                          <FiPercent />
+                          <span>Proposer un accord partiel (%)</span>
                         </button>
                       </div>
 
@@ -1316,6 +1756,80 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   )}
 
+                  {/* Dispute / Arbitration Trigger for Participants */}
+                  {(isOwner || isAssignedToMe) && (task.status === 'UNDER_REVIEW' || task.status === 'IN_PROGRESS' || task.status === 'REVISION_REQUESTED') && (
+                    <div className="pt-2 border-t border-slate-200">
+                      {!isArbitrationInputOpen ? (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsArbitrationInputOpen(true)}
+                            className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
+                          >
+                            <FiShield />
+                            <span>Ouvrir un litige / Demander l'arbitrage Daman</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                              <FiShield className="text-rose-600" />
+                              <span>Saisir l'arbitrage officiel Daman</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsArbitrationInputOpen(false)}
+                              className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              Fermer
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-rose-700 leading-snug">
+                            En cas de désaccord persistant sur la conformité du livrable ou les délais, nos arbitres interviennent pour analyser les preuves et ordonner un règlement équitable (100% remboursement, 100% paiement ou compromis 50/50).
+                          </p>
+                          <textarea
+                            rows={2}
+                            value={arbitrationReason}
+                            onChange={(e) => setArbitrationReason(e.target.value)}
+                            placeholder="Motif précis du litige (ex: travail non conforme au cahier des charges, absence de réponse)..."
+                            className="w-full rounded-xl border border-rose-300 p-2.5 text-xs bg-white focus:outline-hidden focus:border-rose-600"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsArbitrationInputOpen(false)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSendArbitration}
+                              disabled={!arbitrationReason.trim()}
+                              className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                            >
+                              Transmettre aux arbitres Daman
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Arbitration Status Banner */}
+                  {task.status === 'ARBITRATION' && (
+                    <div className="p-5 rounded-2xl bg-orange-50 border border-orange-200 space-y-2.5">
+                      <div className="flex items-center gap-2 text-orange-900 font-black text-sm">
+                        <FiShield className="text-orange-600 text-lg" />
+                        <span>Mission en cours d'arbitrage officiel Daman</span>
+                      </div>
+                      <p className="text-xs text-orange-800 leading-relaxed">
+                        Un médiateur assermenté examine actuellement les échanges, les livrables déposés et le cahier des charges initial. Les fonds séquestre sont sous protection Daman. Une décision équitable (remboursement intégral, paiement intégrale ou partage 50/50 Workzilla) sera rendue sous 24h.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Completed Banner */}
                   {task.status === 'COMPLETED' && (
                     <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1.5">
@@ -1327,6 +1841,19 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                       </h4>
                       <p className="text-xs text-emerald-700">
                         Les fonds ont été versés au freelance et le séquestre a été clôturé.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Cancelled Banner */}
+                  {task.status === 'CANCELLED' && (
+                    <div className="p-5 rounded-2xl bg-slate-100 border border-slate-200 text-center space-y-2">
+                      <div className="h-10 w-10 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center mx-auto text-lg">
+                        <FiX />
+                      </div>
+                      <h4 className="text-sm font-extrabold text-slate-800">Mission Annulée</h4>
+                      <p className="text-xs text-slate-600 max-w-md mx-auto">
+                        Cette mission a été annulée. Si des fonds avaient été consignés sous séquestre, ils ont été automatiquement et intégralement restitués au solde disponible du donneur d'ordre.
                       </p>
                     </div>
                   )}
@@ -1350,14 +1877,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         Messagerie de la mission
                       </h3>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        Échanges en direct sous protection Daman
+                        Échanges sécurisés sous garantie Daman
                       </p>
                     </div>
                   </div>
 
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Direct
+                    En ligne
                   </span>
                 </div>
 
@@ -1368,7 +1895,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                       <FiMessageSquare className="text-3xl mb-2 text-slate-300" />
                       <p className="text-xs font-bold text-slate-600">Aucun message pour le moment</p>
                       <p className="text-[11px] text-slate-400 mt-1">
-                        Utilisez ce chat pour poser vos questions, affiner le besoin ou transmettre des fichiers.
+                        Posez vos questions, précisez vos consignes ou transmettez vos fichiers.
                       </p>
                     </div>
                   ) : (
@@ -1535,7 +2062,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       <ProofSubmissionDrawer
         task={isProofDrawerOpen ? task : null}
         onClose={() => setIsProofDrawerOpen(false)}
-        onSubmitProof={(taskId, reportText, urls) => handleSubmitProof(reportText, urls)}
+        onSubmitProof={(taskId, reportText, urls, antiSpam) => handleSubmitProof(reportText, urls, antiSpam)}
       />
 
       {/* Review Modal on Approval */}
@@ -1595,17 +2122,102 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         </div>
       )}
 
-      {/* Performer Subscription Pass Modal (Workzilla Paid Access Model) */}
-      <PerformerSubscriptionModal
-        isOpen={isSubModalOpen}
-        onClose={() => setIsSubModalOpen(false)}
-        onSuccess={() => {
-          showToast('Pass activé avec succès ! Vous pouvez maintenant postuler.');
-        }}
-        onOpenDeposit={() => {
-          router.push(`/${locale}/wallet`);
-        }}
-      />
+      {/* Partial Settlement Modal */}
+      {isPartialModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+                <FiPercent className="text-amber-600" />
+                <span>Proposer une répartition financière partielle</span>
+              </h3>
+              <span className="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200">
+                {partialPercentage}% ({Math.round(rewardDH * (partialPercentage / 100))} DH)
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Si le travail n'est que partiellement exploitable, convenez d'un compromis financier amiable. Le restant sera automatiquement restitué à votre solde disponible dès accord du prestataire.
+            </p>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[25, 50, 70, 80].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => setPartialPercentage(pct)}
+                  className={`py-2 text-xs font-extrabold rounded-xl border transition cursor-pointer ${
+                    partialPercentage === pct
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {pct}%
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <div className="flex justify-between text-xs font-bold text-slate-700">
+                <span>Ajuster : {partialPercentage}%</span>
+                <span className="text-amber-700 font-extrabold">{Math.round(rewardDH * (partialPercentage / 100))} DH</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="90"
+                step="5"
+                value={partialPercentage}
+                onChange={(e) => setPartialPercentage(Number(e.target.value))}
+                className="w-full accent-amber-600 cursor-pointer"
+              />
+              <div className="grid grid-cols-2 gap-2 pt-2 text-[11px]">
+                <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
+                  <span className="text-slate-500 block">Freelance perçoit :</span>
+                  <strong className="text-emerald-700 font-black text-xs">
+                    {Math.round(rewardDH * (partialPercentage / 100))} DH
+                  </strong>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-blue-200">
+                  <span className="text-slate-500 block">Vous récupérez :</span>
+                  <strong className="text-brand-700 font-black text-xs">
+                    {Math.round(rewardDH * (1 - partialPercentage / 100))} DH
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700">Motif de la proposition :</label>
+              <textarea
+                rows={2}
+                value={partialReason}
+                onChange={(e) => setPartialReason(e.target.value)}
+                placeholder="Explication claire et constructive pour le freelance..."
+                className="w-full rounded-xl border border-slate-300 p-2.5 text-xs bg-white focus:outline-hidden focus:border-brand-700"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsPartialModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleProposePartialSettlement}
+                disabled={!partialReason.trim()}
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+              >
+                Envoyer la proposition ({partialPercentage}%)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Performer Qualification Onboarding Test Modal */}
       <QualificationModal

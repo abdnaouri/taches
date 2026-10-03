@@ -14,6 +14,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // SECURITY: Manual deposit endpoint is admin-only in production.
+    // Real user deposits come through the Viva Smart Checkout webhook (/api/webhooks/viva).
+    // This endpoint is reserved for admin top-ups and customer support credits.
+    // To allow self-deposits (e.g. simulated environment), set ALLOW_SELF_DEPOSIT=true in env.
+    const allowSelfDeposit = process.env.ALLOW_SELF_DEPOSIT === 'true';
+    if (!authResult.isAdmin && !allowSelfDeposit) {
+      return NextResponse.json(
+        { success: false, error: 'Les recharges manuelles sont traitées via le système de paiement Viva Smart Checkout. Contactez le support si votre paiement n\'est pas reflété.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       amountDH,

@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { SEO_SERVICES, getSeoServiceBySlug } from '@/lib/seoLandings';
+import { BASE_URL, WIKIDATA_ENTITIES } from '@/lib/seoSchema';
 import { Header } from '@/components/Header';
 import { WorkzillaFooter } from '@/components/WorkzillaLandingSections';
 import {
@@ -36,8 +37,7 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
     };
   }
 
-  const baseUrl = 'https://taches.ma';
-  const currentUrl = `${baseUrl}/${params.locale}/services/${service.slug}`;
+  const currentUrl = `${BASE_URL}/${params.locale}/services/${service.slug}`;
 
   return {
     title: service.metaTitle,
@@ -46,8 +46,9 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
     alternates: {
       canonical: currentUrl,
       languages: {
-        'fr-MA': `${baseUrl}/fr/services/${service.slug}`,
-        'ar-MA': `${baseUrl}/ar/services/${service.slug}`,
+        'x-default': `${BASE_URL}/fr/services/${service.slug}`,
+        'fr-MA': `${BASE_URL}/fr/services/${service.slug}`,
+        'ar-MA': `${BASE_URL}/ar/services/${service.slug}`,
       },
     },
     openGraph: {
@@ -82,17 +83,16 @@ export default function ServiceLandingPage({ params }: ServicePageProps) {
     '@graph': [
       {
         '@type': 'Service',
-        '@id': `https://taches.ma/${locale}/services/${service.slug}#service`,
+        '@id': `${BASE_URL}/${locale}/services/${service.slug}#service`,
         name: service.title,
         description: service.metaDescription,
         provider: {
-          '@type': 'Organization',
-          name: 'tâches.ma',
-          url: 'https://taches.ma',
+          '@id': `${BASE_URL}/#organization`,
         },
         areaServed: {
           '@type': 'Country',
           name: 'Morocco',
+          sameAs: WIKIDATA_ENTITIES.morocco,
         },
         offers: {
           '@type': 'Offer',

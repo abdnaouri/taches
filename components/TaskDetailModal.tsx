@@ -30,7 +30,10 @@ import {
   FiCheckSquare,
   FiSlash,
   FiShare2,
-  FiCopy
+  FiCopy,
+  FiEdit2,
+  FiPaperclip,
+  FiEye
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 
@@ -106,6 +109,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   // Arbitration State
   const [isArbitrationInputOpen, setIsArbitrationInputOpen] = useState(false);
   const [arbitrationReason, setArbitrationReason] = useState('');
+  // Bid Edit / Withdraw State
+  const [isEditingBid, setIsEditingBid] = useState(false);
+  const [editPitch, setEditPitch] = useState('');
+  const [isSavingBidEdit, setIsSavingBidEdit] = useState(false);
+  const [isWithdrawingBid, setIsWithdrawingBid] = useState(false);
+  const [bidActionError, setBidActionError] = useState<string | null>(null);
+
   const [copiedTaskLink, setCopiedTaskLink] = useState(false);
 
   const handleShareWhatsApp = () => {
@@ -174,12 +184,31 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               performerCompletedCount: Number(row.performer_completed_tasks ?? 0),
               proposedHours: Number(row.proposed_hours ?? 24),
               pitch: row.pitch || '',
+              isVerified: Boolean(row.is_verified || row.isVerified),
               createdAt: row.created_at || new Date().toISOString(),
             };
             setBids((prev) => {
               if (prev.some((b) => b.id === newBid.id)) return prev;
               return [newBid, ...prev];
             });
+          } else if (payload.eventType === 'UPDATE') {
+            const row = payload.new as any;
+            setBids((prev) =>
+              prev.map((b) =>
+                b.id === row.id
+                  ? {
+                      ...b,
+                      pitch: row.pitch !== undefined ? row.pitch : b.pitch,
+                      proposedHours: row.proposed_hours !== undefined ? Number(row.proposed_hours) : b.proposedHours,
+                    }
+                  : b
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const oldRow = payload.old as any;
+            if (oldRow?.id) {
+              setBids((prev) => prev.filter((b) => b.id !== oldRow.id));
+            }
           }
         }
       )
@@ -253,6 +282,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   // 4. Fetch Submissions if under review or completed
   useEffect(() => {
+    if (task?.submission) {
+      setSubmission(task.submission);
+    }
     if (task?.id && (task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED')) {
       getAuthHeaders(false).then((authHeaders) => {
         fetch(`/api/submissions?taskId=${task.id}`, { headers: authHeaders })
@@ -265,7 +297,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           .catch((err) => console.warn('Failed to fetch submission:', err));
       });
     }
-  }, [task?.id, task?.status]);
+  }, [task?.id, task?.status, task?.submission]);
 
   // 5. Fetch Reviews for this task
   useEffect(() => {
@@ -392,6 +424,82 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     if (onAcceptPartialSettlement) {
       onAcceptPartialSettlement(task.id);
       onClose();
+    }
+  };
+
+  const myBid = user ? bids.find((b) => b.performerId === user.id) : undefined;
+
+  const handleUpdateBid = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!myBid?.id || !editPitch.trim()) return;
+
+    setIsSavingBidEdit(true);
+    setBidActionError(null);
+
+    try {
+      const authHeaders = await getAuthHeaders(true);
+      const res = await fetch('/api/bids', {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          bidId: myBid.id,
+          pitch: editPitch.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBidActionError(data.error || 'Erreur lors de la mise à jour de la candidature.');
+        return;
+      }
+
+      setBids((prev) =>
+        prev.map((b) =>
+          b.id === myBid.id
+            ? { ...b, pitch: editPitch.trim() }
+            : b
+        )
+      );
+      setIsEditingBid(false);
+      sounds.playSuccess();
+    } catch (err: any) {
+      console.error('Failed to update bid:', err);
+      setBidActionError('Erreur de connexion.');
+    } finally {
+      setIsSavingBidEdit(false);
+    }
+  };
+
+  const handleWithdrawBid = async () => {
+    if (!myBid?.id) return;
+    if (!confirm('Voulez-vous vraiment retirer votre candidature pour cette mission ?')) return;
+
+    setIsWithdrawingBid(true);
+    setBidActionError(null);
+
+    try {
+      const authHeaders = await getAuthHeaders(true);
+      const res = await fetch(`/api/bids?bidId=${myBid.id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBidActionError(data.error || 'Erreur lors du retrait de la candidature.');
+        return;
+      }
+
+      setBids((prev) => prev.filter((b) => b.id !== myBid.id));
+      setAppliedSuccess(false);
+      setIsEditingBid(false);
+      setPitch('');
+      sounds.playSuccess();
+    } catch (err: any) {
+      console.error('Failed to withdraw bid:', err);
+      setBidActionError('Erreur de connexion.');
+    } finally {
+      setIsWithdrawingBid(false);
     }
   };
 
@@ -552,7 +660,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               }`}
             >
               <FiMessageSquare />
-              <span>Discussion en direct ({messages.length})</span>
+              <span>Messages ({messages.length})</span>
             </button>
           )}
 
@@ -623,6 +731,73 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               </div>
             )}
 
+            {/* Delivered Work Section directly in Details tab */}
+            {(task.status === 'UNDER_REVIEW' || task.status === 'COMPLETED' || task.status === 'REVISION_REQUESTED' || submission) && (
+              <div className="rounded-2xl bg-purple-50/80 border border-purple-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-200 text-purple-800">
+                      <FiFileText className="text-xs" />
+                    </span>
+                    <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider">
+                      Livrables remis par {task.assignedToName || 'le prestataire'}
+                    </h4>
+                  </div>
+                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                    task.status === 'COMPLETED'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : task.status === 'REVISION_REQUESTED'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-purple-200 text-purple-900 border border-purple-300'
+                  }`}>
+                    {task.status === 'COMPLETED'
+                      ? '✓ Validé'
+                      : task.status === 'REVISION_REQUESTED'
+                      ? 'Retouche'
+                      : 'Prêt pour vérification'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-purple-200 text-xs text-slate-800 leading-relaxed whitespace-pre-line shadow-2xs">
+                  {submission?.reportText || (
+                    <span className="text-slate-500 italic">
+                      Livrables et compte-rendu remis par le prestataire.
+                    </span>
+                  )}
+                </div>
+
+                {submission?.proofUrls && submission.proofUrls.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-purple-950 flex items-center gap-1.5">
+                      <FiPaperclip className="text-purple-700" />
+                      Fichiers et preuves joints ({submission.proofUrls.length}) :
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {submission.proofUrls.map((url, idx) => {
+                        const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url) || url.startsWith('data:image');
+                        const fileName = url.split('/').pop()?.split('?')[0] || `Preuve ${idx + 1}`;
+                        return (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-purple-200 hover:bg-purple-100/50 hover:border-purple-300 text-xs font-bold text-brand-700 transition truncate shadow-2xs"
+                          >
+                            <span className="flex items-center gap-2 truncate pr-2">
+                              {isImage ? <FiEye className="shrink-0 text-xs text-purple-600" /> : <FiLink className="shrink-0 text-xs text-purple-600" />}
+                              <span className="truncate">{fileName}</span>
+                            </span>
+                            <FiExternalLink className="text-[10px] shrink-0 text-slate-400" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Client & Assigned Performer Details */}
             <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 border border-slate-200">
               <div className="flex items-center gap-3">
@@ -668,7 +843,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                 >
                   <FiMessageSquare />
-                  <span>Chat</span>
+                  <span>Messagerie</span>
                 </button>
               </div>
             )}
@@ -752,7 +927,25 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                         className="h-9 w-9 rounded-full object-cover border border-slate-300"
                       />
                       <div>
-                        <div className="text-xs font-bold text-slate-900">{bid.performerName}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-slate-900">{bid.performerName}</span>
+                          {bid.isVerified ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-bold text-emerald-700 shadow-2xs"
+                              title="Prestataire Vérifié (Compétences & Identité certifiées)"
+                            >
+                              <FiCheckCircle className="text-emerald-600 text-[10px] shrink-0" />
+                              <span>Vérifié</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-1.5 py-0.2 text-[9px] font-medium text-slate-500"
+                              title="Prestataire membre"
+                            >
+                              Nouveau
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-500 font-medium">
                           ★ {bid.performerRating} • {bid.performerCompletedCount} missions réussies
                         </div>
@@ -877,20 +1070,110 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           {/* Performer viewing open task to apply */}
           {!isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
             <div>
-              {appliedSuccess ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-800 text-xs font-semibold animate-in fade-in">
-                  <div className="flex items-center gap-2.5">
-                    <FiCheck className="text-lg text-emerald-600 shrink-0" />
-                    <span>Votre proposition a été transmise. Vous pouvez échanger en direct avec le client.</span>
+              {hasApplied ? (
+                <div className="rounded-2xl bg-emerald-50/80 p-4 border border-emerald-200 text-emerald-950 space-y-3 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <FiCheck className="text-lg text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="font-extrabold text-xs text-emerald-900 block">
+                          Vous avez déjà postulé à cette mission
+                        </span>
+                        <span className="text-[11px] text-emerald-700">
+                          {myBid?.proposedHours ? `Délai proposé : ~${myBid.proposedHours}h` : 'Votre offre est enregistrée'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPitch(myBid?.pitch || pitch || '');
+                          setIsEditingBid(!isEditingBid);
+                          setBidActionError(null);
+                        }}
+                        disabled={isWithdrawingBid}
+                        className="rounded-xl bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <FiEdit2 className="text-xs" />
+                        <span>{isEditingBid ? 'Annuler' : 'Modifier ma proposition'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleWithdrawBid}
+                        disabled={isWithdrawingBid}
+                        className="rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        title="Retirer ma candidature"
+                      >
+                        {isWithdrawingBid ? (
+                          <FiLoader className="animate-spin text-xs" />
+                        ) : (
+                          <FiTrash2 className="text-xs" />
+                        )}
+                        <span>Retirer</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveModalTab('chat')}
+                        className="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <FiMessageSquare className="text-xs" />
+                        <span>Messagerie</span>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveModalTab('chat')}
-                    className="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
-                  >
-                    <FiMessageSquare />
-                    <span>Discussion</span>
-                  </button>
+
+                  {bidActionError && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                      {bidActionError}
+                    </div>
+                  )}
+
+                  {/* Form to Edit Bid Pitch */}
+                  {isEditingBid ? (
+                    <form onSubmit={handleUpdateBid} className="pt-2 border-t border-emerald-200 space-y-2.5">
+                      <label className="block text-xs font-bold text-slate-800">
+                        Modifier votre message au client :
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editPitch}
+                        onChange={(e) => setEditPitch(e.target.value)}
+                        placeholder="Mettez à jour votre proposition..."
+                        className="w-full rounded-xl border border-emerald-300 bg-white p-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                        disabled={isSavingBidEdit}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingBid(false);
+                            setBidActionError(null);
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSavingBidEdit || !editPitch.trim()}
+                          className="px-4 py-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingBidEdit ? <FiLoader className="animate-spin text-xs" /> : <FiCheck className="text-xs" />}
+                          <span>Enregistrer la modification</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    myBid?.pitch && (
+                      <div className="bg-white/80 p-3 rounded-xl border border-emerald-200/80 text-xs text-slate-700 italic">
+                        « {myBid.pitch} »
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1025,7 +1308,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   Travail livré par le prestataire
                 </span>
                 <p className="text-slate-600">
-                  Vérifiez les livrables dans l'onglet Livrables. Si tout est parfait validez le montant total, ou proposez une répartition partielle (ex: 50%) si le travail est incomplet.
+                  Vérifiez les livrables affichés ci-dessus (ou dans l'onglet <strong>Livrables remis</strong>). Si tout est conforme, validez le montant total pour libérer la rémunération sous séquestre ({rewardDH} DH), ou demandez une retouche si des ajustements sont nécessaires.
                 </p>
               </div>
 

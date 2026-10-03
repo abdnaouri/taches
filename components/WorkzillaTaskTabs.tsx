@@ -57,17 +57,14 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
   onRequestRevision,
   onCancelTask,
 }) => {
-  const { t, locale, isRTL, getCategoryLabel } = useLanguage();
+  const { t, locale, isRTL } = useLanguage();
   const isCustomer = user?.activeRole === 'CUSTOMER';
   const myId = user?.id || '';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [filterUrgent, setFilterUrgent] = useState(false);
   const [customerScope, setCustomerScope] = useState<'all' | 'my_orders'>('all');
-
-  const categories = ['all', 'development', 'design', 'assistance', 'copywriting', 'marketing', 'micro'] as const;
 
   // Helper to check if task was created by current user
   const isMyTask = (t: Task) => {
@@ -150,13 +147,9 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
     }
   }, [activeTab, newTasks, openTasks, historyTasks]);
 
-  // Filtered by Search & Category
+  // Filtered by Search & Urgency
   const filteredList = useMemo(() => {
     let list = currentList;
-
-    if (selectedCategory !== 'all') {
-      list = list.filter((t) => t.category === selectedCategory);
-    }
 
     if (filterUrgent) {
       list = list.filter((t) => t.timeLimitHours <= 6);
@@ -172,7 +165,7 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
     }
 
     return list;
-  }, [currentList, selectedCategory, filterUrgent, searchQuery]);
+  }, [currentList, filterUrgent, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -291,35 +284,6 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
               </span>
             </button>
           </div>
-
-          {/* Action Button: Post Task */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={onOpenCreateTask}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold px-4 py-2.5 text-xs shadow-xs transition cursor-pointer"
-            >
-              <FiPlus className="text-sm font-black" />
-              <span>Publier une mission</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Category Pills Strip */}
-        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-              }`}
-            >
-              {getCategoryLabel(cat)}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -435,7 +399,6 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
                     userRole={user?.activeRole}
                     isMyTaskView={true}
                     onSelectTask={onSelectTask}
-                    onOpenChat={onOpenChatForTask}
                   />
 
                   {/* Multi-execution spots progress bar if multi-task */}
@@ -464,18 +427,18 @@ export const WorkzillaTaskTabs: React.FC<WorkzillaTaskTabsProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Direct Chat Button */}
-                      {onOpenChatForTask && (
+                      {/* Messaging button for active task in progress or review */}
+                      {onOpenChatForTask && (task.status === 'IN_PROGRESS' || task.status === 'UNDER_REVIEW') && (
                         <button
                           type="button"
                           onClick={() => {
                             sounds.playMessage();
                             onOpenChatForTask(task);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-800 text-slate-700 px-2.5 py-1 text-[11px] font-bold border border-slate-200 transition cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 text-[11px] font-bold border border-slate-200 transition cursor-pointer"
                         >
-                          <FiMessageSquare className="text-xs text-brand-700" />
-                          <span>Chat direct</span>
+                          <FiMessageSquare className="text-xs text-slate-600" />
+                          <span>Messagerie</span>
                         </button>
                       )}
 

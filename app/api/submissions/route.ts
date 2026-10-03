@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getAuthenticatedUser } from '@/lib/auth/serverAuth';
+import { sendSubmissionReceivedNotification } from '@/lib/notificationService';
 
 export async function GET(req: NextRequest) {
   try {
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
     // Verify caller is assigned to task
     const { data: task, error: taskErr } = await supabase
       .from('tasks')
-      .select('client_id, assigned_to_id, status, task_mode, anti_spam_keyword')
+      .select('title, client_id, assigned_to_id, status, task_mode, anti_spam_keyword')
       .eq('id', taskId)
       .single();
 
@@ -123,6 +124,20 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+    }
+
+    if (task.client_id === performerId) {
+      return NextResponse.json(
+        { success: false, error: 'Le donneur d\'ordre ne peut pas soumettre de livrable sur sa propre mission.' },
+        { status: 400 }
+      );
+    }
+
+    if (!['IN_PROGRESS', 'ASSIGNED', 'REVISION_REQUESTED', 'UNDER_REVIEW'].includes(task.status) && !authResult.isAdmin) {
+      return NextResponse.json(
+        { success: false, error: `Impossible de soumettre un livrable pour une mission au statut ${task.status}.` },
+        { status: 400 }
+      );
     }
 
     const isAssigned = task.assigned_to_id === performerId || task.task_mode === 'multi';
@@ -154,6 +169,40 @@ export async function POST(req: NextRequest) {
       .from('tasks')
       .update({ status: 'UNDER_REVIEW' })
       .eq('id', taskId);
+
+    // Notify client by transactional email (non-blocking)
+    if (task.client_id) {
+      (async () => {
+        try {
+          const { data: clientInfo } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', task.client_id)
+            .single();
+
+          const { data: performerInfo } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', performerId)
+            .single();
+
+          if (clientInfo?.email) {
+            await sendSubmissionReceivedNotification({
+              clientEmail: clientInfo.email,
+              clientName: clientInfo.full_name || 'Client',
+              clientUserId: task.client_id,
+              performerName: performerInfo?.full_name || 'Prestataire',
+              taskTitle: task.title || 'Mission',
+              taskId,
+              reportPreview: reportText.trim(),
+              proofsCount: (proofUrls || []).length,
+            });
+          }
+        } catch (notifErr: any) {
+          console.warn('[Submissions] Failed to dispatch email notification:', notifErr.message);
+        }
+      })();
+    }
 
     return NextResponse.json({
       success: true,

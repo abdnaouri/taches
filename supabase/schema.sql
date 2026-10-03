@@ -263,10 +263,21 @@ drop policy if exists "Clients can update their tasks" on public.tasks;
 create policy "Clients can update their tasks" on public.tasks
   for update using (auth.uid() = client_id or auth.uid() = assigned_to_id);
 
--- Bids Policies
+-- Bids Policies (Workzilla Sealed Bids Isolation)
 drop policy if exists "Bids viewable by everyone" on public.bids;
-create policy "Bids viewable by everyone" on public.bids
-  for select using (true);
+drop policy if exists "Bids viewable by participants and author" on public.bids;
+create policy "Bids viewable by participants and author" on public.bids
+  for select using (
+    auth.uid() = performer_id or
+    exists (
+      select 1 from public.tasks t
+      where t.id = bids.task_id and t.client_id = auth.uid()
+    ) or
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 drop policy if exists "Performers can place bids" on public.bids;
 create policy "Performers can place bids" on public.bids
@@ -276,7 +287,7 @@ drop policy if exists "Performers can update their own bids" on public.bids;
 create policy "Performers can update their own bids" on public.bids
   for update using (auth.uid() = performer_id);
 
--- Submissions Policies
+-- Submissions Policies (Participant & Admin Isolation)
 drop policy if exists "Submissions viewable by everyone" on public.submissions;
 drop policy if exists "Submissions viewable by participants" on public.submissions;
 create policy "Submissions viewable by participants" on public.submissions
@@ -294,9 +305,17 @@ create policy "Submissions viewable by participants" on public.submissions
 
 drop policy if exists "Performers can place submissions" on public.submissions;
 create policy "Performers can place submissions" on public.submissions
-  for insert with check (auth.uid() = performer_id);
+  for insert with check (
+    auth.uid() = performer_id and
+    exists (
+      select 1 from public.tasks t
+      where t.id = submissions.task_id and
+            (t.assigned_to_id = auth.uid() or t.task_mode = 'multi') and
+            t.status in ('IN_PROGRESS', 'ASSIGNED', 'REVISION_REQUESTED', 'UNDER_REVIEW')
+    )
+  );
 
--- Messages Policies (Strict Chat Privacy)
+-- Messages Policies (Strict Chat Privacy & Anti-Spam Authorization)
 drop policy if exists "Messages viewable by participants" on public.messages;
 create policy "Messages viewable by participants" on public.messages
   for select using (
@@ -314,16 +333,42 @@ create policy "Messages viewable by participants" on public.messages
 
 drop policy if exists "Messages can be inserted" on public.messages;
 create policy "Messages can be inserted" on public.messages
-  for insert with check (auth.uid() = sender_id);
+  for insert with check (
+    auth.uid() = sender_id and (
+      exists (
+        select 1 from public.tasks t
+        where t.id = messages.task_id and (
+          t.client_id = auth.uid() or
+          t.assigned_to_id = auth.uid() or
+          exists (
+            select 1 from public.bids b
+            where b.task_id = t.id and b.performer_id = auth.uid()
+          )
+        )
+      ) or
+      exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid() and p.is_admin = true
+      )
+    )
+  );
 
--- Reviews Policies
+-- Reviews Policies (Completed Mission Verification)
 drop policy if exists "Reviews viewable by everyone" on public.reviews;
 create policy "Reviews viewable by everyone" on public.reviews
   for select using (true);
 
 drop policy if exists "Reviews can be inserted" on public.reviews;
 create policy "Reviews can be inserted" on public.reviews
-  for insert with check (auth.uid() = author_id);
+  for insert with check (
+    auth.uid() = author_id and
+    exists (
+      select 1 from public.tasks t
+      where t.id = reviews.task_id and
+            t.status = 'COMPLETED' and
+            (t.client_id = auth.uid() or t.assigned_to_id = auth.uid())
+    )
+  );
 
 -- Transactions Policies (Strict Ledger Isolation)
 drop policy if exists "Transactions are viewable" on public.transactions;
@@ -338,6 +383,14 @@ create policy "Users view own transactions" on public.transactions
   );
 
 drop policy if exists "Transactions can be inserted" on public.transactions;
+drop policy if exists "Transactions can be inserted by admins only" on public.transactions;
+create policy "Transactions can be inserted by admins only" on public.transactions
+  for insert with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 
 -- 12. ATOMIC FINANCIAL PROCEDURES (RPCs) FOR SECURE ESCROW

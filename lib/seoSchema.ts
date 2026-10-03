@@ -1,17 +1,58 @@
 /**
- * Google Rich Snippets & Structured Data (Schema.org JSON-LD)
- * Fully compliant with Google Search Best Practices & Authority Signals
+ * Google Rich Snippets, Structured Data & Wikidata Knowledge Graph (Schema.org JSON-LD)
+ * Fully compliant with Google Search Best Practices, Wikidata Knowledge Graph & GEO Standards.
  */
 
 export const BASE_URL = 'https://taches.ma';
 
+/**
+ * Authoritative Wikidata Entity Identifiers for High-Precision Entity Grounding
+ */
+export const WIKIDATA_ENTITIES = {
+  // Platform Entity
+  taches: 'https://www.wikidata.org/wiki/Q141629849',
+
+  // Geographic Entities (Morocco & Major Cities)
+  morocco: 'https://www.wikidata.org/wiki/Q1028',
+  casablanca: 'https://www.wikidata.org/wiki/Q34647',
+  rabat: 'https://www.wikidata.org/wiki/Q3551',
+  marrakech: 'https://www.wikidata.org/wiki/Q34167',
+  tanger: 'https://www.wikidata.org/wiki/Q126148',
+  fes: 'https://www.wikidata.org/wiki/Q80985',
+  agadir: 'https://www.wikidata.org/wiki/Q170560',
+
+  // Concept & Industry Entities
+  freelancing: 'https://www.wikidata.org/wiki/Q562771',
+  microwork: 'https://www.wikidata.org/wiki/Q6840428',
+  crowdsourcing: 'https://www.wikidata.org/wiki/Q275969',
+  escrow: 'https://www.wikidata.org/wiki/Q678648',
+  darija: 'https://www.wikidata.org/wiki/Q56428',
+  ecommerce: 'https://www.wikidata.org/wiki/Q484876',
+  webDevelopment: 'https://www.wikidata.org/wiki/Q386275',
+  graphicDesign: 'https://www.wikidata.org/wiki/Q185925',
+
+  // Negative Disambiguation Target (Dermatological hyperpigmentation)
+  hyperpigmentation: 'https://www.wikidata.org/wiki/Q3144865',
+} as const;
+
+/**
+ * Root Organization Schema with Full Wikidata Grounding & Disambiguation
+ */
 export function getOrganizationSchema() {
   return {
-    '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': `${BASE_URL}/#organization`,
     name: 'tâches.ma',
-    alternateName: ['taches.ma', 'Tâches Maroc', 'Taches Maroc', 'Taches.ma', 'Freelance Maroc Tâches'],
+    alternateName: [
+      'taches.ma',
+      'Tâches Maroc',
+      'Taches Maroc',
+      'Taches.ma',
+      'Freelance Maroc Tâches',
+      'منصة المهام المصغرة المغرب',
+      'مهام.ما',
+      'تاش.ما',
+    ],
     url: BASE_URL,
     logo: {
       '@type': 'ImageObject',
@@ -22,8 +63,17 @@ export function getOrganizationSchema() {
       height: 512,
     },
     image: `${BASE_URL}/og-image.png`,
-    description: '1ère bourse marocaine de micro-tâches, missions locales et services freelance avec paiement garanti sous séquestre Daman.',
-    disambiguatingDescription: 'Plateforme marocaine de travail freelance, services numériques et micro-tâches rémunérées sous séquestre. Ne concerne aucun produit cosmétique anti-taches ou parapharmacie.',
+    description:
+      '1ère bourse marocaine de micro-tâches, missions locales et services freelance avec paiement garanti sous séquestre Daman.',
+    disambiguatingDescription:
+      'Plateforme marocaine de travail freelance, services numériques et micro-tâches rémunérées sous séquestre Daman (Wikidata: Q141629849, Q562771, Q6840428, Q678648). Ne concerne aucun produit cosmétique anti-taches, dermatologique ou traitement d’hyperpigmentation (Wikidata: Q3144865).',
+    sameAs: [
+      WIKIDATA_ENTITIES.taches,
+      'https://twitter.com/tachesma',
+      'https://www.linkedin.com/company/tachesma',
+      'https://www.facebook.com/tachesma',
+      'https://www.instagram.com/taches.ma',
+    ],
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'MA',
@@ -31,25 +81,23 @@ export function getOrganizationSchema() {
       addressRegion: 'Casablanca-Settat',
     },
     areaServed: [
-      { '@type': 'Country', name: 'Morocco' },
-      { '@type': 'City', name: 'Casablanca' },
-      { '@type': 'City', name: 'Rabat' },
-      { '@type': 'City', name: 'Marrakech' },
-      { '@type': 'City', name: 'Tanger' },
-      { '@type': 'City', name: 'Fès' },
-      { '@type': 'City', name: 'Agadir' },
+      { '@type': 'Country', name: 'Morocco', sameAs: WIKIDATA_ENTITIES.morocco },
+      { '@type': 'City', name: 'Casablanca', sameAs: WIKIDATA_ENTITIES.casablanca },
+      { '@type': 'City', name: 'Rabat', sameAs: WIKIDATA_ENTITIES.rabat },
+      { '@type': 'City', name: 'Marrakech', sameAs: WIKIDATA_ENTITIES.marrakech },
+      { '@type': 'City', name: 'Tanger', sameAs: WIKIDATA_ENTITIES.tanger },
+      { '@type': 'City', name: 'Fès', sameAs: WIKIDATA_ENTITIES.fes },
+      { '@type': 'City', name: 'Agadir', sameAs: WIKIDATA_ENTITIES.agadir },
     ],
     knowsAbout: [
-      'Freelance Maroc',
-      'Micro-tâches au Maroc',
-      'Plateforme freelance Casablanca',
-      'E-commerce et Boutiques Shopify',
-      'Saisie de données et Excel',
-      'Graphiste et Création de Logos',
-      'Développeur web et mobile Maroc',
-      'Traduction Darija et Arabe',
-      'Séquestre Daman Maroc',
-      'Enquêtes et Visites Mystères',
+      { '@type': 'DefinedTerm', name: 'Freelance Maroc', sameAs: WIKIDATA_ENTITIES.freelancing },
+      { '@type': 'DefinedTerm', name: 'Micro-tâches au Maroc', sameAs: WIKIDATA_ENTITIES.microwork },
+      { '@type': 'DefinedTerm', name: 'Crowdsourcing & Travail collaboratif', sameAs: WIKIDATA_ENTITIES.crowdsourcing },
+      { '@type': 'DefinedTerm', name: 'Paiement sous séquestre Daman', sameAs: WIKIDATA_ENTITIES.escrow },
+      { '@type': 'DefinedTerm', name: 'Traduction Darija Marocaine', sameAs: WIKIDATA_ENTITIES.darija },
+      { '@type': 'DefinedTerm', name: 'E-commerce & Shopify Maroc', sameAs: WIKIDATA_ENTITIES.ecommerce },
+      { '@type': 'DefinedTerm', name: 'Développement Web & Mobile Maroc', sameAs: WIKIDATA_ENTITIES.webDevelopment },
+      { '@type': 'DefinedTerm', name: 'Graphisme & Design de Logo', sameAs: WIKIDATA_ENTITIES.graphicDesign },
     ],
     contactPoint: [
       {
@@ -57,21 +105,24 @@ export function getOrganizationSchema() {
         telephone: '+212-600-000000',
         contactType: 'customer service',
         areaServed: 'MA',
-        availableLanguage: ['French', 'Arabic'],
+        availableLanguage: ['French', 'Arabic', 'English'],
       },
     ],
   };
 }
 
+/**
+ * Root WebSite Schema
+ */
 export function getWebSiteSchema() {
   return {
-    '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': `${BASE_URL}/#website`,
     url: BASE_URL,
     name: 'tâches.ma',
-    alternateName: ['taches.ma', 'Tâches Maroc', 'Taches Maroc'],
+    alternateName: ['taches.ma', 'Tâches Maroc', 'Taches Maroc', 'مهام.ما', 'تاش.ما'],
     description: 'Bourse de micro-tâches & services freelance au Maroc sous séquestre Daman',
+    sameAs: [WIKIDATA_ENTITIES.taches],
     inLanguage: ['fr-MA', 'ar-MA', 'en-US'],
     publisher: {
       '@id': `${BASE_URL}/#organization`,
@@ -87,10 +138,13 @@ export function getWebSiteSchema() {
   };
 }
 
+/**
+ * Primary Site Navigation Schema
+ */
 export function getSiteNavigationSchema() {
   return {
-    '@context': 'https://schema.org',
     '@type': 'ItemList',
+    '@id': `${BASE_URL}/#navigation`,
     name: 'Catégories de Services Freelance & Micro-Tâches au Maroc',
     description: 'Explorez nos catégories phares de missions et prestations au Maroc',
     itemListElement: [
@@ -140,126 +194,161 @@ export function getSiteNavigationSchema() {
   };
 }
 
-export function getFAQSchema() {
+/**
+ * Employment Agency Schema
+ */
+export function getEmploymentAgencySchema() {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'Comment fonctionne le paiement sécurisé sous séquestre Daman sur tâches.ma ?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Sur tâches.ma, lorsque vous commandez un service ou postez une micro-tâche, le montant convenu est consigné sous séquestre Daman. Le prestataire commence la mission immédiatement, et les fonds ne lui sont reversés qu’après votre vérification et validation complète du travail livré.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Quels types de micro-tâches et services peut-on déléguer au Maroc ?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Vous pouvez déléguer des tâches digitales : graphisme, création de logo, saisie Excel de factures, configuration de boutique e-commerce Shopify / WooCommerce, traduction en Darija marocaine, marketing digital et développement web.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Comment les freelances et prestataires marocains reçoivent-ils leurs gains ?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Dès validation de la mission par le client, les fonds sont instantanément crédités sur le solde du prestataire. Le retrait se fait simplement via Remitly ou instantanément en USDT via Binance Pay.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'En combien de temps une mission est-elle prise en charge ?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Grâce à notre communauté de freelances et exécutants qualifiés disponibles à Casablanca, Rabat, Marrakech, Tanger, Fès, Agadir et partout au Royaume, les premières propositions arrivent généralement en moins de 5 minutes.',
-        },
-      },
-    ],
-  };
-}
-
-export function getServiceSchema() {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Service',
-    serviceType: 'Bourse de Micro-tâches et Services Freelance au Maroc',
-    provider: {
+    '@type': 'EmploymentAgency',
+    '@id': `${BASE_URL}/#employment-agency`,
+    name: 'tâches.ma — Plateforme Freelance & Travail Indépendant Maroc',
+    url: `${BASE_URL}/fr/freelance-maroc`,
+    description:
+      'Mise en relation directe entre donneurs d’ordre, entreprises marocaines et prestataires freelances indépendants sous paiement garanti.',
+    disambiguatingDescription:
+      'Bourse d’emploi freelance et de micro-travail au Maroc, sans rapport avec la dermocosmétique.',
+    sameAs: [WIKIDATA_ENTITIES.taches],
+    parentOrganization: {
       '@id': `${BASE_URL}/#organization`,
     },
     areaServed: {
       '@type': 'Country',
       name: 'Morocco',
-    },
-    hasOfferCatalog: {
-      '@type': 'OfferCatalog',
-      name: 'Services Freelance & Micro-Missions Maroc',
-      itemListElement: [
-        {
-          '@type': 'Offer',
-          itemOffered: {
-            '@type': 'Service',
-            name: 'Micro-tâches & Saisie de données',
-          },
-          priceCurrency: 'MAD',
-          price: '15.00',
-        },
-        {
-          '@type': 'Offer',
-          itemOffered: {
-            '@type': 'Service',
-            name: 'Création Logo & Identité Visuelle',
-          },
-          priceCurrency: 'MAD',
-          price: '150.00',
-        },
-        {
-          '@type': 'Offer',
-          itemOffered: {
-            '@type': 'Service',
-            name: 'Paramétrage E-commerce Shopify Maroc',
-          },
-          priceCurrency: 'MAD',
-          price: '250.00',
-        },
-      ],
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '1420',
-      bestRating: '5',
-      worstRating: '1',
+      sameAs: WIKIDATA_ENTITIES.morocco,
     },
   };
 }
 
-export function getEmploymentAgencySchema() {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'EmploymentAgency',
-    '@id': `${BASE_URL}/#employment-agency`,
-    name: 'tâches.ma — Plateforme Freelance & Travail Indépendant Maroc',
-    url: `${BASE_URL}/fr/freelance-maroc`,
-    description: 'Mise en relation directe entre donneurs d’ordre, entreprises marocaines et prestataires freelances indépendants sous paiement garanti.',
-    disambiguatingDescription: 'Bourse d’emploi freelance et de micro-travail au Maroc, sans rapport avec la dermocosmétique.',
-    areaServed: {
-      '@type': 'Country',
-      name: 'Morocco',
-    },
-  };
-}
-
+/**
+ * Online Marketplace Schema
+ */
 export function getOnlineMarketplaceSchema() {
   return {
-    '@context': 'https://schema.org',
     '@type': 'OnlineMarketplace',
     '@id': `${BASE_URL}/#marketplace`,
     name: 'tâches.ma Marketplace Freelance Maroc',
     url: BASE_URL,
-    description: 'Marketplace marocaine de services numériques, graphisme, développement, e-commerce et micro-tâches sous séquestre Daman.',
+    description:
+      'Marketplace marocaine de services numériques, graphisme, développement, e-commerce et micro-tâches sous séquestre Daman.',
+    sameAs: [WIKIDATA_ENTITIES.taches],
+    parentOrganization: {
+      '@id': `${BASE_URL}/#organization`,
+    },
   };
 }
 
+/**
+ * Consolidated Root Knowledge Graph Schema
+ */
+export function getRootGraphSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      getWebSiteSchema(),
+      getOrganizationSchema(),
+      getSiteNavigationSchema(),
+      getEmploymentAgencySchema(),
+      getOnlineMarketplaceSchema(),
+    ],
+  };
+}
+
+/**
+ * Daman Escrow & HowTo Schema for the Escrow Protection Page
+ */
+export function getDamanEscrowSchema(locale: string = 'fr') {
+  const isAr = locale === 'ar';
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'FinancialService',
+        '@id': `${BASE_URL}/#daman-escrow`,
+        name: isAr ? 'ضمان Séquestre Daman — tâches.ma' : 'Séquestre Daman — tâches.ma',
+        serviceType: 'Escrow Service',
+        description: isAr
+          ? 'نظام الضمان المالي وسيكستر Daman لحماية صفقات العمل الحر والمصغر في المغرب.'
+          : 'Service marocain de consignation financière et séquestre sous garantie pour prestations freelance et micro-tâches.',
+        provider: {
+          '@id': `${BASE_URL}/#organization`,
+        },
+        areaServed: {
+          '@type': 'Country',
+          name: 'Morocco',
+          sameAs: WIKIDATA_ENTITIES.morocco,
+        },
+        sameAs: [WIKIDATA_ENTITIES.escrow],
+        feesAndCommissionsSpecification: 'Commission de 15% couvrant la protection sous séquestre Daman, l’arbitrage et le support 7j/7.',
+      },
+      {
+        '@type': 'HowTo',
+        '@id': `${BASE_URL}/${locale}/daman#howto`,
+        name: isAr
+          ? 'كيف يعمل الضمان المالي Séquestre Daman في 3 خطوات'
+          : 'Comment fonctionne la garantie sous séquestre Daman en 3 étapes',
+        description: isAr
+          ? 'دليل تفصيلي خطوة بخطوة حول كيفية حماية المعاملات والمدفوعات على منصة tâches.ma بالمغرب.'
+          : 'Guide étape par étape du fonctionnement de la protection des paiements par séquestre sur tâches.ma au Maroc.',
+        totalTime: 'PT5M',
+        step: [
+          {
+            '@type': 'HowToStep',
+            position: 1,
+            name: isAr ? '1. إيداع المبلغ المالي' : '1. Dépôt Garanti',
+            text: isAr
+              ? 'يقوم صاحب العمل بإيداع الميزانية المتفق عليها بالدرهم المغربي (MAD). تبقى الأموال محفوظة بأمان تحت الضمان المحايد ولا تُحول للمنفذ.'
+              : 'Le donneur d’ordre dépose le budget en Dirhams (MAD). Les fonds sont conservés sous séquestre neutre et ne sont pas débités vers le prestataire.',
+            url: `${BASE_URL}/${locale}/daman#step-1`,
+          },
+          {
+            '@type': 'HowToStep',
+            position: 2,
+            name: isAr ? '2. تنفيذ العمل بثقة' : '2. Exécution Sereine',
+            text: isAr
+              ? 'يبدأ المستقل في إنجاز المهمة وهو مطمئن بأن مستحقاته المالية محجوزة وجاهزة للصرف.'
+              : 'Le freelance commence le travail avec la certitude que la rémunération est réservée et disponible.',
+            url: `${BASE_URL}/${locale}/daman#step-2`,
+          },
+          {
+            '@type': 'HowToStep',
+            position: 3,
+            name: isAr ? '3. التحقق وتحرير الدفع' : '3. Validation & Déblocage',
+            text: isAr
+              ? 'بعد فحص الملفات والنتائج المسلمة، يضغط العميل على "تأكيد واستلام" ليتم تحويل الأرباح فوراً لمحفظة المنفذ.'
+              : 'Après examen des preuves et fichiers livrés, le client clique sur "Valider" et les fonds sont débloqués immédiatement.',
+            url: `${BASE_URL}/${locale}/daman#step-3`,
+          },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: isAr
+              ? 'ماذا يحدث إذا لم يتم تسليم العمل في الوقت المحدد؟'
+              : 'Que se passe-t-il si le travail n’est pas livré dans les temps ?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: isAr
+                ? 'يمكن لصاحب العمل إلغاء الطلب واستعادة 100% من المبلغ المودع مباشرة إلى رصيده المتاح بدون أي اقتطاعات.'
+                : 'Le client peut annuler la commande et récupérer 100% de son dépôt directement sur son solde disponible sans frais.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: isAr
+              ? 'ماذا يحدث إذا كان العمل غير مطابق للشروط المتفق عليها؟'
+              : 'Que se passe-t-il si le travail est non conforme au brief ?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: isAr
+                ? 'يمكن للعميل طلب تعديل مجاني، أو فتح نزاع للتحكيم. يقوم وسطاؤنا بفحص الأدلة والبت في النزاع خلال 24 ساعة.'
+                : 'Le client peut d’abord demander une retouche gratuite, ou ouvrir un arbitrage. Nos médiateurs examinent les preuves et tranchent sous 24h.',
+            },
+          },
+        ],
+      },
+    ],
+  };
+}

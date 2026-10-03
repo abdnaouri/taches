@@ -353,7 +353,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
           className={`fixed bottom-5 ${
             isRTL ? 'left-5' : 'right-5'
           } z-40 flex items-center gap-2.5 rounded-full bg-slate-900 hover:bg-brand-700 text-white px-4 py-3 shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer border border-slate-700`}
-          title="Messagerie en direct Tâches.ma"
+          title="Messagerie"
         >
           <div className="relative">
             <FiMessageSquare className="text-lg" />
@@ -361,7 +361,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
             <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </div>
           <span className="text-xs font-black tracking-wide hidden sm:inline">
-            Discussions en direct
+            Messagerie
           </span>
           {userTasks.length > 0 && (
             <span className="rounded-full bg-brand-600 text-white text-[10px] font-black px-1.5 py-0.2">
@@ -389,7 +389,7 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                     setSelectedTaskId(null);
                   }}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
-                  title="Retour aux discussions"
+                  title="Retour aux conversations"
                 >
                   <FiChevronLeft className="text-base" />
                 </button>
@@ -402,14 +402,14 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                     {activeTab === 'dialogue' && selectedTask
                       ? selectedTask.title.slice(0, 26) +
                         (selectedTask.title.length > 26 ? '...' : '')
-                      : 'Messagerie Tâches.ma'}
+                      : 'Messagerie'}
                   </h3>
                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
                     {activeTab === 'dialogue' && selectedTask
                       ? `Mission #${selectedTask.id.slice(0, 8)} • ${Math.round(
                           selectedTask.reward * 10
                         )} DH`
-                      : 'Discussions en direct avec vos freelances & clients'}
+                      : 'Échanges liés à vos missions'}
                   </p>
                 </div>
               </div>

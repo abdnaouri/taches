@@ -33,3 +33,7 @@ yarn-error.log*
 
 # wrangler
 .wrangler
+
+# local rules and AI config
+GEMINI.md
+

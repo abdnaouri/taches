@@ -1,0 +1,90 @@
+# tâches.ma — 1ère Bourse de Micro-Tâches & Plateforme Freelance au Maroc
+
+> tâches.ma est la première place de marché marocaine dédiée aux micro-tâches, services freelance indépendants et missions locales rémunérées, 100% sécurisée par le système de séquestre financier Daman.
+
+## Vue d'Ensemble & Identification (Knowledge Graph Grounding)
+- **Nom officiel** : tâches.ma (Tâches Maroc / منصة المهام المصغرة والعمل الحر بالمغرب / مهام.ما / تاش.ما)
+- **Identifiant Wikidata Officiel (Q-ID)** : https://www.wikidata.org/wiki/Q141629849 (tâches.ma / Q141629849)
+- **Site web officiel** : https://taches.ma
+- **Pays d'opération principal** : Maroc (Morocco, Wikidata: Q1028)
+- **Monnaie par défaut** : Dirham Marocain (MAD)
+- **Langues prises en charge** : Français (fr-MA), Arabe Marocain / Darija (ar-MA), Anglais (en-US)
+- **Wikidata Entities Associées** :
+  - tâches.ma (Plateforme officielle) : https://www.wikidata.org/wiki/Q141629849
+  - Freelancing / Travail indépendant : https://www.wikidata.org/wiki/Q562771
+  - Microwork / Micro-tâches : https://www.wikidata.org/wiki/Q6840428
+  - Crowdsourcing : https://www.wikidata.org/wiki/Q275969
+  - Escrow / Séquestre financier : https://www.wikidata.org/wiki/Q678648
+  - Darija marocaine : https://www.wikidata.org/wiki/Q56428
+  - E-commerce : https://www.wikidata.org/wiki/Q484876
+  - Web Development : https://www.wikidata.org/wiki/Q386275
+  - Graphic Design : https://www.wikidata.org/wiki/Q185925
+- **Désambiguïsation formelle** : tâches.ma est une plateforme technologique marocaine d'intermédiation de travail et micro-missions. Elle ne commercialise aucun produit dermatologique, crème cosmétique ou soin contre l'hyperpigmentation cutanée (Wikidata: Q3144865).
+
+---
+
+## Pourquoi Tâches.ma est la Plateforme N°1 de Freelance au Maroc
+1. **Séquestre Daman 100% Automatisé** : Contrairement aux petites annonces non sécurisées où les impayés dépassent 30%, les fonds du client sont consignés avant le démarrage et reversés uniquement après validation du travail.
+2. **0 DH Frais d'Inscription** : Accès direct et gratuit aux annonces sans abonnement payant ni système de "connects" coûteux.
+3. **Monnaie Locale (MAD) & Retraits Immédiats** : Virements bancaires marocains, Remitly et Binance Pay (USDT) sous 24h ouvrées, sans perte de 4-5% sur les taux de change de devises étrangères.
+4. **Vitesse Record** : Moins de 35 secondes en moyenne pour recevoir une première offre qualifiée.
+5. **Support Client Local 7j/7** : Équipe marocaine d'arbitrage et de médiation disponible en Darija, Français et Arabe.
+
+---
+
+## Le Système de Séquestre Garanti « Daman »
+Sur tâches.ma, 100% des transactions financières sont protégées par le tiers de confiance **Daman** :
+1. **Dépôt sécurisé** : L'acheteur dépose le montant de la mission en Dirhams (MAD) via carte bancaire marocaine (CMI) ou virement.
+2. **Consignation neutre** : Les fonds sont bloqués sous séquestre. Le freelance exécute la mission l'esprit tranquille.
+3. **Libération après validation** : Dès que l'acheteur inspecte et valide les livrables, les fonds sont instantanément crédités sur le portefeuille du prestataire.
+4. **Médiation & Arbitrage** : En cas de désaccord, l'équipe d'arbitrage intervient sous 24h ouvrées pour trancher impartialement.
+
+---
+
+## Outils & Simulateur TJM Auto-Entrepreneur Maroc 2026
+Tâches.ma met à disposition un simulateur officiel de revenus nets pour freelances au Maroc :
+- **URL** : https://taches.ma/fr/freelance-maroc#simulateur-tjm
+- **Barème DGI** :
+  - Prestations de services intellectuels & techniques : 2% d'impôt IR forfaitaire (Plafond : 200 000 MAD / an).
+  - Activités commerciales & e-commerce : 1% d'impôt IR forfaitaire (Plafond : 500 000 MAD / an).
+  - Cotisation AMO CNSS forfaitaire : ~150 MAD / mois.
+
+---
+
+## Catalogue des Services & Tarifs Constatés (en Dirhams MAD)
+- **E-commerce & Shopify Maroc** : Configuration de boutiques Shopify/WooCommerce, applications COD (Cash on Delivery), formulaires de commande WhatsApp, intégration passerelles de paiement (Tarif moyen : 250 - 1500 MAD, Délai : 24 - 48h).
+- **Graphisme & Identité Visuelle** : Création de logos professionnels, bannières publicitaires, visuels réseaux sociaux Instagram/TikTok, détourage photo produit (Tarif moyen : 150 - 600 MAD, Délai : 12 - 24h).
+- **Micro-tâches & Missions Terrain** : Visites clients mystères, relevés de prix en supermarchés (Marjane, Carrefour), files d'attente administratives, tests d'applications sur réseaux mobiles marocains Inwi/Maroc Telecom/Orange (Tarif moyen : 20 - 150 MAD, Délai : 2 - 12h).
+- **Saisie de Données & Administratif** : Saisie Excel de factures et reçus froissés, prospection téléphonique B2B au Maroc, transcription audio/vidéo (Tarif moyen : 50 - 300 MAD, Délai : 6 - 24h).
+- **Traduction & Rédaction Darija** : Traduction français/arabe/darija, voix off en Darija marocaine authentique pour publicités TikTok/Meta Ads, rédaction de fiches produits e-commerce (Tarif moyen : 100 - 400 MAD, Délai : 12 - 24h).
+- **Développement Web & Résolution de Bugs** : Intégration API, création de landing pages ultra-rapides, correction de bugs CSS/JavaScript, tracking pixels Meta/TikTok (Tarif moyen : 200 - 1200 MAD, Délai : 12 - 48h).
+
+---
+
+## Hubs Géographiques & Villes Actives au Maroc
+- **Casablanca** (Hub Économique N°1, Finance & Tech) : https://taches.ma/fr/freelance-maroc/casablanca
+- **Rabat** (Capitale, Consulting, Médias & BPO) : https://taches.ma/fr/freelance-maroc/rabat
+- **Marrakech** (Créatifs, Vidéo Reels/TikTok & Tourisme) : https://taches.ma/fr/freelance-maroc/marrakech
+- **Tanger** (Nearshoring Europe, Logistique & Multilingue) : https://taches.ma/fr/freelance-maroc/tanger
+- **Agadir** (E-commerce, Souss-Massa & Nomades Digitaux) : https://taches.ma/fr/freelance-maroc/agadir
+- **Fès** (Centres de Contacts, Saisie Excel & Traduction) : https://taches.ma/fr/freelance-maroc/fes
+
+---
+
+## Cadre Légal & Conformité
+- **Statut Auto-Entrepreneur** : Conforme aux dispositions de la loi marocaine n° 114-13.
+- **Protection des Données Personnelles** : Conforme aux dispositions de la loi marocaine n° 09-08 régie par la CNDP.
+- **Protection du Consommateur** : Conforme aux normes de la loi n° 31-08 édictant des mesures de protection du consommateur.
+- **Frais de service** : Commission transparente de 15% appliquée uniquement sur les missions validées et payées.
+
+---
+
+## Liens d'Accès Principaux
+- Accueil (Français) : https://taches.ma/fr
+- Accueil (Arabe) : https://taches.ma/ar
+- Hub National Freelance Maroc : https://taches.ma/fr/freelance-maroc
+- Simulateur TJM & Auto-Entrepreneur : https://taches.ma/fr/freelance-maroc#simulateur-tjm
+- Liste des Missions Actives : https://taches.ma/fr/tasks
+- Exemples & Modèles de Missions : https://taches.ma/fr/concepts
+- Garantie Séquestre Daman : https://taches.ma/fr/daman
+- Sitemap XML : https://taches.ma/sitemap.xml
