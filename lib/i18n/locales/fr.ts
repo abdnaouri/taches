@@ -29,7 +29,7 @@ export const fr = {
   menuDamanSecurity: 'Garantie Séquestre (Daman)',
   menuWallet: 'Mon Portefeuille & Retraits',
   menuQualification: 'Certification du profil',
-  menuSupportWhatsApp: 'Assistance WhatsApp (+212)',
+  menuSupportWhatsApp: 'Support & Assistance (contact@taches.ma)',
   menuClose: 'Fermer le menu',
   menuOpen: 'Ouvrir le menu',
   menuProfile: 'Mon Compte',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import {
   FiShield,
@@ -37,14 +37,36 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
   const [taskQuery, setTaskQuery] = useState('');
   const [heroAudience, setHeroAudience] = useState<'customer' | 'performer'>('customer');
 
-  const popularTasks = [
-    { title: 'Conception Logo & Identité', price: '150 DH', icon: '🎨' },
-    { title: 'Traduction Arabe / Français', price: '100 DH', icon: '📄' },
-    { title: 'Saisie factures sous Excel', price: '80 DH', icon: '📊' },
-    { title: 'Boutique Shopify & E-commerce', price: '250 DH', icon: '🛍️' },
-    { title: 'Montage vidéo TikTok / Reels', price: '120 DH', icon: '📱' },
-    { title: 'Démarches & Dépôt de plis', price: '70 DH', icon: '🚚' },
-  ];
+  const popularTasks = useMemo(() => {
+    if (locale === 'ar') {
+      return [
+        { title: 'تصميم شعار وهوية بصرية', price: '150 درهم', icon: '🎨' },
+        { title: 'ترجمة عربي / فرنسي', price: '100 درهم', icon: '📄' },
+        { title: 'إدخال فواتير في إكسيل', price: '80 درهم', icon: '📊' },
+        { title: 'متجر شوبيفاي وتجارة إلكترونية', price: '250 درهم', icon: '🛍️' },
+        { title: 'مونتاج فيديو تيك توك / ريلز', price: '120 درهم', icon: '📱' },
+        { title: 'معاملات وتوصيل وثائق', price: '70 درهم', icon: '🚚' },
+      ];
+    }
+    if (locale === 'en') {
+      return [
+        { title: 'Logo Design & Brand Identity', price: '150 DH', icon: '🎨' },
+        { title: 'Arabic / French Translation', price: '100 DH', icon: '📄' },
+        { title: 'Excel Invoice Data Entry', price: '80 DH', icon: '📊' },
+        { title: 'Shopify Store & E-commerce', price: '250 DH', icon: '🛍️' },
+        { title: 'TikTok / Reels Video Editing', price: '120 DH', icon: '📱' },
+        { title: 'Errands & Document Delivery', price: '70 DH', icon: '🚚' },
+      ];
+    }
+    return [
+      { title: 'Conception Logo & Identité', price: '150 DH', icon: '🎨' },
+      { title: 'Traduction Arabe / Français', price: '100 DH', icon: '📄' },
+      { title: 'Saisie factures sous Excel', price: '80 DH', icon: '📊' },
+      { title: 'Boutique Shopify & E-commerce', price: '250 DH', icon: '🛍️' },
+      { title: 'Montage vidéo TikTok / Reels', price: '120 DH', icon: '📱' },
+      { title: 'Démarches & Dépôt de plis', price: '70 DH', icon: '🚚' },
+    ];
+  }, [locale]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +150,9 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
 
               {/* Popular Task Quick Chips */}
               <div className="mt-4 flex items-center justify-center gap-2 flex-wrap text-xs">
-                <span className="font-bold text-slate-500 mr-1 hidden sm:inline">Exemples rapides :</span>
+                <span className="font-bold text-slate-500 mr-1 hidden sm:inline">
+                  {locale === 'ar' ? 'أمثلة سريعة :' : locale === 'en' ? 'Quick examples:' : 'Exemples rapides :'}
+                </span>
                 {popularTasks.map((pt, idx) => (
                   <button
                     key={idx}
@@ -246,56 +270,162 @@ interface WorkzillaCategoryGridProps {
 export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ onSelectCategory }) => {
   const { isRTL, locale } = useLanguage();
 
-  const categories = [
-    {
-      key: 'design',
-      title: 'Graphisme & Design',
-      desc: 'Logos, cartes de visite, affiches, flyers, retouche photo, menus café/resto',
-      price: 'Dès 100 DH',
-      icon: '🎨',
-      color: 'bg-rose-50 text-rose-700 border-rose-200',
-    },
-    {
-      key: 'copywriting',
-      title: 'Traduction & Rédaction',
-      desc: 'Arabe classique, Darija, Français, Anglais, contrats, mémoires, correction',
-      price: 'Dès 50 DH',
-      icon: '📄',
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
-    {
-      key: 'assistance',
-      title: 'Saisie & Bureautique Excel',
-      desc: 'Saisie de factures, tableaux Excel, mise en page Word, archivage de données',
-      price: 'Dès 50 DH',
-      icon: '📊',
-      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    },
-    {
-      key: 'development',
-      title: 'Boutiques Shopify & Sites Web',
-      desc: 'Création boutique en ligne, ajout de fiches produits, dépannage WordPress',
-      price: 'Dès 200 DH',
-      icon: '🛍️',
-      color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    },
-    {
-      key: 'marketing',
-      title: 'Vidéos, Reels & Marketing',
-      desc: 'Montage TikTok / Reels, sous-titrage, animation de réseaux sociaux, pub',
-      price: 'Dès 120 DH',
-      icon: '📱',
-      color: 'bg-purple-50 text-purple-700 border-purple-200',
-    },
-    {
-      key: 'micro',
-      title: 'Démarches & Services Terrain',
-      desc: 'Dépôt de plis, démarches administratives, visites et photos sur place',
-      price: 'Dès 70 DH',
-      icon: '🚚',
-      color: 'bg-amber-50 text-amber-700 border-amber-200',
-    },
-  ];
+  const categories = useMemo(() => {
+    if (locale === 'ar') {
+      return [
+        {
+          key: 'design',
+          title: 'التصميم والغرافيك',
+          desc: 'شعارات، بطاقات عمل، ملصقات، إعلانات، تعديل صور، قوائم مقاهي ومطاعم',
+          price: 'ابتداءً من 100 درهم',
+          icon: '🎨',
+          color: 'bg-rose-50 text-rose-700 border-rose-200',
+        },
+        {
+          key: 'copywriting',
+          title: 'الترجمة والتحرير',
+          desc: 'عربية فصحى، دارجة، فرنسية، إنجليزية، عقود، بحوث، تدقيق لغوي',
+          price: 'ابتداءً من 50 درهم',
+          icon: '📄',
+          color: 'bg-blue-50 text-blue-700 border-blue-200',
+        },
+        {
+          key: 'assistance',
+          title: 'إدخال البيانات والأوفيس',
+          desc: 'إدخال فواتير، جداول إكسيل، تنسيق وورد، أرشفة بيانات',
+          price: 'ابتداءً من 50 درهم',
+          icon: '📊',
+          color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        },
+        {
+          key: 'development',
+          title: 'متاجر شوبيفاي ومواقع الويب',
+          desc: 'إنشاء متجر إلكتروني، إضافة منتجات، صيانة ووردبريس',
+          price: 'ابتداءً من 200 درهم',
+          icon: '🛍️',
+          color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        },
+        {
+          key: 'marketing',
+          title: 'الفيديو والتسويق الرقمي',
+          desc: 'مونتاج تيك توك / ريلز، ترجمة الفيديوهات، إدارة شبكات التواصل',
+          price: 'ابتداءً من 120 درهم',
+          icon: '📱',
+          color: 'bg-purple-50 text-purple-700 border-purple-200',
+        },
+        {
+          key: 'micro',
+          title: 'المعاملات والخدمات الميدانية',
+          desc: 'إيداع مراسلات، إجراءات إدارية، زيارات وتصوير في عين المكان',
+          price: 'ابتداءً من 70 درهم',
+          icon: '🚚',
+          color: 'bg-amber-50 text-amber-700 border-amber-200',
+        },
+      ];
+    }
+    if (locale === 'en') {
+      return [
+        {
+          key: 'design',
+          title: 'Design & Graphics',
+          desc: 'Logos, business cards, flyers, photo retouching, restaurant menus',
+          price: 'From 100 DH',
+          icon: '🎨',
+          color: 'bg-rose-50 text-rose-700 border-rose-200',
+        },
+        {
+          key: 'copywriting',
+          title: 'Translation & Copywriting',
+          desc: 'Arabic, Darija, French, English, contracts, dissertations, proofreading',
+          price: 'From 50 DH',
+          icon: '📄',
+          color: 'bg-blue-50 text-blue-700 border-blue-200',
+        },
+        {
+          key: 'assistance',
+          title: 'Excel & Data Entry',
+          desc: 'Invoice data entry, Excel sheets, Word formatting, data archiving',
+          price: 'From 50 DH',
+          icon: '📊',
+          color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        },
+        {
+          key: 'development',
+          title: 'Shopify & Web Development',
+          desc: 'Online store setup, product listings, WordPress support',
+          price: 'From 200 DH',
+          icon: '🛍️',
+          color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        },
+        {
+          key: 'marketing',
+          title: 'Video & Digital Marketing',
+          desc: 'TikTok / Reels editing, subtitling, social media management, ads',
+          price: 'From 120 DH',
+          icon: '📱',
+          color: 'bg-purple-50 text-purple-700 border-purple-200',
+        },
+        {
+          key: 'micro',
+          title: 'Field Tasks & Local Errands',
+          desc: 'Document delivery, administrative errands, on-site photos',
+          price: 'From 70 DH',
+          icon: '🚚',
+          color: 'bg-amber-50 text-amber-700 border-amber-200',
+        },
+      ];
+    }
+    return [
+      {
+        key: 'design',
+        title: 'Graphisme & Design',
+        desc: 'Logos, cartes de visite, affiches, flyers, retouche photo, menus café/resto',
+        price: 'Dès 100 DH',
+        icon: '🎨',
+        color: 'bg-rose-50 text-rose-700 border-rose-200',
+      },
+      {
+        key: 'copywriting',
+        title: 'Traduction & Rédaction',
+        desc: 'Arabe classique, Darija, Français, Anglais, contrats, mémoires, correction',
+        price: 'Dès 50 DH',
+        icon: '📄',
+        color: 'bg-blue-50 text-blue-700 border-blue-200',
+      },
+      {
+        key: 'assistance',
+        title: 'Saisie & Bureautique Excel',
+        desc: 'Saisie de factures, tableaux Excel, mise en page Word, archivage de données',
+        price: 'Dès 50 DH',
+        icon: '📊',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      },
+      {
+        key: 'development',
+        title: 'Boutiques Shopify & Sites Web',
+        desc: 'Création boutique en ligne, ajout de fiches produits, dépannage WordPress',
+        price: 'Dès 200 DH',
+        icon: '🛍️',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      },
+      {
+        key: 'marketing',
+        title: 'Vidéos, Reels & Marketing',
+        desc: 'Montage TikTok / Reels, sous-titrage, animation de réseaux sociaux, pub',
+        price: 'Dès 120 DH',
+        icon: '📱',
+        color: 'bg-purple-50 text-purple-700 border-purple-200',
+      },
+      {
+        key: 'micro',
+        title: 'Démarches & Services Terrain',
+        desc: 'Dépôt de plis, démarches administratives, visites et photos sur place',
+        price: 'Dès 70 DH',
+        icon: '🚚',
+        color: 'bg-amber-50 text-amber-700 border-amber-200',
+      },
+    ];
+  }, [locale]);
 
   return (
     <section className="bg-white py-14 sm:py-20 border-b border-line" id="categories">
@@ -303,12 +433,18 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
 
         {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="section-kicker mb-2">Catégories & Services</p>
+          <p className="section-kicker mb-2">
+            {locale === 'ar' ? 'التصنيفات والخدمات' : locale === 'en' ? 'Categories & Services' : 'Catégories & Services'}
+          </p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Des compétences pour chaque besoin
+            {locale === 'ar' ? 'مهارات لكل حاجة' : locale === 'en' ? 'Skills for every need' : 'Des compétences pour chaque besoin'}
           </h2>
           <p className="mt-2 text-sm sm:text-base text-slate-600">
-            Cliquez sur un domaine pour lancer votre tâche ou trouver les meilleurs prestataires.
+            {locale === 'ar'
+              ? 'انقر على أي مجال لإطلاق مهمتك أو العثور على أفضل المستقلين.'
+              : locale === 'en'
+              ? 'Click on any field to launch your task or discover the best freelancers.'
+              : 'Cliquez sur un domaine pour lancer votre tâche ou trouver les meilleurs prestataires.'}
           </p>
         </div>
 
@@ -343,7 +479,13 @@ export const WorkzillaCategoryGrid: React.FC<WorkzillaCategoryGridProps> = ({ on
               </div>
 
               <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-700 group-hover:underline">
-                <span>Commander ce service</span>
+                <span>
+                  {locale === 'ar'
+                    ? 'طلب هذه الخدمة'
+                    : locale === 'en'
+                    ? 'Order this service'
+                    : 'Commander ce service'}
+                </span>
                 {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
               </div>
             </a>
@@ -361,7 +503,7 @@ interface WorkzillaHowItWorksProps {
 }
 
 export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPostTask }) => {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, locale } = useLanguage();
 
   const steps = [
     {
@@ -430,7 +572,13 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-slate-400">
-                <span>Étape {st.num} sur 3</span>
+                <span>
+                  {locale === 'ar'
+                    ? `المرحلة ${st.num} من 3`
+                    : locale === 'en'
+                    ? `Step ${st.num} of 3`
+                    : `Étape ${st.num} sur 3`}
+                </span>
               </div>
             </div>
           ))}
@@ -442,7 +590,13 @@ export const WorkzillaHowItWorks: React.FC<WorkzillaHowItWorksProps> = ({ onPost
             onClick={onPostTask}
             className="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-8 py-3.5 text-sm sm:text-base shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
-            <span>Publier ma tâche gratuitement</span>
+            <span>
+              {locale === 'ar'
+                ? 'نشر مهمتي مجاناً'
+                : locale === 'en'
+                ? 'Post my task for free'
+                : 'Publier ma tâche gratuitement'}
+            </span>
             {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
           </button>
         </div>
@@ -607,7 +761,7 @@ export const WorkzillaCompletedFeed: React.FC = () => {
 
 /* Multi-Age Assistance & FAQ Section with WhatsApp Callout */
 export const WorkzillaHelpCenter: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const faqs = [
@@ -633,27 +787,40 @@ export const WorkzillaHelpCenter: React.FC = () => {
     <section className="bg-surface-soft py-14 sm:py-20 border-b border-line" id="help-faq">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
-        {/* WhatsApp Big Support Box */}
+        {/* Dedicated Support Box */}
         <div className="rounded-3xl bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 text-white p-6 sm:p-8 shadow-xl mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
             <span className="inline-flex items-center gap-1 rounded-full bg-brand-800/80 border border-brand-500/40 px-3 py-1 text-xs font-bold text-brand-200 mb-2">
-              <FiPhoneCall /> Assistance directe au Maroc 7j/7
+              <FiPhoneCall />
+              {locale === 'ar' ? 'مساعدة مباشرة في المغرب 7/7' : locale === 'en' ? 'Direct Support in Morocco 7/7' : 'Assistance directe au Maroc 7j/7'}
             </span>
             <h3 className="text-xl sm:text-2xl font-black tracking-tight">
-              Besoin d’aide pour déposer ou choisir un freelance ?
+              {locale === 'ar'
+                ? 'تحتاج مساعدة لنشر مهمة أو اختيار مستقل؟'
+                : locale === 'en'
+                ? 'Need help posting a task or hiring a freelancer?'
+                : 'Besoin d’aide pour déposer ou choisir un freelance ?'}
             </h3>
             <p className="mt-1.5 text-xs sm:text-sm text-brand-100 max-w-xl leading-relaxed">
-              Vous avez besoin d'assistance ou vous manquez de temps ? Un conseiller au Maroc vous répond sur WhatsApp en Darija ou Français.
+              {locale === 'ar'
+                ? 'تحتاج مساعدة أو وقتك ضيق؟ فريق الدعم بالمنصة يجيبكم بسرعة بالدارجة، الفرنسية أو الإنجليزية.'
+                : locale === 'en'
+                ? 'Need assistance or running short on time? Our support team in Morocco assists you promptly in English, French, or Darija.'
+                : 'Vous avez besoin d’assistance ou vous manquez de temps ? Notre équipe support au Maroc vous répond rapidement en Darija ou Français.'}
             </p>
           </div>
           <a
-            href="https://wa.me/212600000000?text=Bonjour,%20j%27ai%20besoin%20d%27aide%20sur%20Taches.ma"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="mailto:contact@taches.ma?subject=Demande%20d%27assistance%20Taches.ma"
             className="inline-flex items-center gap-2 rounded-2xl bg-white text-brand-900 hover:bg-brand-50 px-6 py-4 text-sm sm:text-base font-black shadow-lg shrink-0 transition-transform active:scale-95 cursor-pointer"
           >
             <FiMessageSquare className="text-xl text-brand-700" />
-            <span>Écrire sur WhatsApp (+212)</span>
+            <span>
+              {locale === 'ar'
+                ? 'تواصل مع الدعم (contact@taches.ma)'
+                : locale === 'en'
+                ? 'Contact Support (contact@taches.ma)'
+                : 'Contacter le support (contact@taches.ma)'}
+            </span>
           </a>
         </div>
 

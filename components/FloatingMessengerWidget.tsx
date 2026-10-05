@@ -451,6 +451,9 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 <div className="relative">
                   <FiSearch className="absolute left-3 top-2.5 text-slate-400 text-xs" />
                   <input
+                    id="floating-messenger-search"
+                    name="messengerSearch"
+                    aria-label="Rechercher une discussion"
                     type="text"
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
@@ -667,64 +670,87 @@ export const FloatingMessengerWidget: React.FC<FloatingMessengerWidgetProps> = (
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Quick Reply Chips */}
-              <div className="px-3 py-1.5 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                {quickReplies.map((qr, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(undefined, qr)}
-                    className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-700 font-semibold whitespace-nowrap transition cursor-pointer active:scale-95"
+              {/* Chat Input or Locked Notice */}
+              {!Boolean(
+                selectedTask.assignedToId ||
+                ['ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'COMPLETED', 'ARBITRATION'].includes(selectedTask.status)
+              ) ? (
+                <div className="p-4 bg-amber-50 border-t border-amber-200 text-center space-y-1">
+                  <div className="text-xs font-bold text-amber-900">
+                    🔒 Messagerie verrouillée
+                  </div>
+                  <div className="text-[11px] text-amber-700">
+                    Le chat s'ouvrira dès qu'un freelance aura été sélectionné pour cette mission.
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Quick Reply Chips */}
+                  <div className="px-3 py-1.5 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                    {quickReplies.map((qr, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSendMessage(undefined, qr)}
+                        className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-700 font-semibold whitespace-nowrap transition cursor-pointer active:scale-95"
+                      >
+                        {qr}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Chat Input Bar */}
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2"
                   >
-                    {qr}
-                  </button>
-                ))}
-              </div>
+                    {/* Hidden File Input */}
+                    <input
+                      type="file"
+                      id="floating-messenger-file"
+                      name="messengerFile"
+                      aria-label="Joindre un fichier ou document"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept="image/*,.pdf,.zip"
+                      className="hidden"
+                    />
 
-              {/* Chat Input Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2"
-              >
-                {/* Hidden File Input */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*,.pdf,.zip"
-                  className="hidden"
-                />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingFile}
+                      className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
+                      title="Joindre une image ou un document"
+                    >
+                      {isUploadingFile ? (
+                        <FiLoader className="animate-spin text-sm text-brand-700" />
+                      ) : (
+                        <FiPaperclip className="text-sm" />
+                      )}
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingFile}
-                  className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
-                  title="Joindre une image ou un document"
-                >
-                  {isUploadingFile ? (
-                    <FiLoader className="animate-spin text-sm text-brand-700" />
-                  ) : (
-                    <FiPaperclip className="text-sm" />
-                  )}
-                </button>
+                    <input
+                      type="text"
+                      id="floating-messenger-chat-input"
+                      name="chatMessage"
+                      aria-label="Écrivez votre message"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Écrivez votre message..."
+                      className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-brand-700"
+                    />
 
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Écrivez votre message..."
-                  className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-brand-700"
-                />
-
-                <button
-                  type="submit"
-                  disabled={isSending || !chatInput.trim()}
-                  className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
-                >
-                  <FiSend className="text-xs" />
-                </button>
-              </form>
+                    <button
+                      type="submit"
+                      disabled={isSending || !chatInput.trim()}
+                      className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <FiSend className="text-xs" />
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
           )}
         </div>

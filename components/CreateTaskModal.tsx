@@ -288,7 +288,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     setIsSubmitting(true);
 
     const clientId = profile?.id || authUser?.id || `usr_${Date.now()}`;
-    const clientName = profile?.fullName ? `${profile.fullName} (Vous)` : 'Vous';
+    const clientName = profile?.fullName || 'Client';
     const clientAvatar =
       profile?.avatarUrl ||
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
@@ -1041,31 +1041,73 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
             {/* Task Title */}
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Titre de la tâche : <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="modal-task-title" className="block text-xs font-bold text-slate-800">
+                  Titre de la tâche : <span className="text-red-500">*</span>
+                </label>
+                <span className={`text-[11px] font-mono font-bold ${title.trim().length >= 5 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {title.trim().length}/5 car. min
+                </span>
+              </div>
               <input
+                id="modal-task-title"
+                name="taskTitle"
+                aria-label="Titre de la tâche (minimum 5 caractères)"
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex: Avis Google Maps vérifié Casablanca, Conception logo café, Traduction 2 pages..."
-                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 font-medium outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700 shadow-2xs"
+                className={`w-full rounded-xl border bg-white p-2.5 text-xs sm:text-sm text-slate-900 font-medium outline-none transition shadow-2xs ${
+                  title.trim().length > 0 && title.trim().length < 5
+                    ? 'border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
+                    : 'border-slate-300 focus:border-brand-700 focus:ring-1 focus:ring-brand-700'
+                }`}
               />
+              <div className="text-[11px] mt-1 text-slate-500">
+                {title.trim().length === 0 ? (
+                  <span>Précisez l’objectif en au moins 5 caractères.</span>
+                ) : title.trim().length < 5 ? (
+                  <span className="text-amber-600 font-medium">Encore {5 - title.trim().length} caractère(s) pour valider le titre.</span>
+                ) : (
+                  <span className="text-emerald-600 font-medium">✓ Titre conforme</span>
+                )}
+              </div>
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Consignes détaillées & Brief :
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="modal-task-description" className="block text-xs font-bold text-slate-800">
+                  Consignes détaillées & Brief : <span className="text-red-500">*</span>
+                </label>
+                <span className={`text-[11px] font-mono font-bold ${description.trim().length >= 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {description.trim().length}/10 car. min
+                </span>
+              </div>
               <textarea
+                id="modal-task-description"
+                name="taskDescription"
+                aria-label="Consignes détaillées et brief (minimum 10 caractères)"
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Expliquez clairement les étapes à réaliser, les contraintes et ce que vous attendez..."
-                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none transition focus:border-brand-700 shadow-2xs font-mono"
+                className={`w-full rounded-xl border bg-white p-2.5 text-xs text-slate-900 outline-none transition shadow-2xs font-mono ${
+                  description.trim().length > 0 && description.trim().length < 10
+                    ? 'border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
+                    : 'border-slate-300 focus:border-brand-700 focus:ring-1 focus:ring-brand-700'
+                }`}
               />
+              <div className="text-[11px] mt-1 text-slate-500">
+                {description.trim().length === 0 ? (
+                  <span>Fournissez des consignes claires (au moins 10 caractères).</span>
+                ) : description.trim().length < 10 ? (
+                  <span className="text-amber-600 font-medium">Encore {10 - description.trim().length} caractère(s) pour valider le brief.</span>
+                ) : (
+                  <span className="text-emerald-600 font-medium">✓ Brief conforme</span>
+                )}
+              </div>
             </div>
 
             {/* Required Deliverables Checklist */}
@@ -1100,6 +1142,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               {/* Add Custom Deliverable */}
               <div className="flex gap-1.5 pt-1">
                 <input
+                  id="modal-new-deliverable"
+                  name="newDeliverable"
+                  aria-label="Ajouter un livrable"
                   type="text"
                   value={newDeliverableInput}
                   onChange={(e) => setNewDeliverableInput(e.target.value)}
@@ -1125,12 +1170,15 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             {/* Anti-spam Verification Keyword */}
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-800">
+                <label htmlFor="modal-antispam" className="block text-xs font-bold text-slate-800">
                   Mot-clé anti-spam (Vérification de lecture) :
                 </label>
                 <span className="text-[10px] text-slate-500 font-medium">Contrôle Tâches.ma</span>
               </div>
               <input
+                id="modal-antispam"
+                name="antiSpamKeyword"
+                aria-label="Mot-clé anti-spam pour valider la lecture du brief"
                 type="text"
                 value={antiSpamKeyword}
                 onChange={(e) => setAntiSpamKeyword(e.target.value)}
@@ -1156,7 +1204,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentStep(4)}
-                disabled={!title.trim()}
+                disabled={title.trim().length < 5 || description.trim().length < 10}
                 className="flex-2 flex items-center justify-center gap-2 rounded-2xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold py-3 text-xs sm:text-sm shadow-md transition cursor-pointer"
               >
                 <span>Finaliser le budget & Délais</span>

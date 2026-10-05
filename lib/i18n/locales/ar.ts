@@ -31,7 +31,7 @@ export const ar: Translations = {
   menuDamanSecurity: 'حساب الضمان (Daman)',
   menuWallet: 'محفظتي والسحب البنكي',
   menuQualification: 'توثيق الحساب والميثاق',
-  menuSupportWhatsApp: 'دعم واتساب المغرب (+212)',
+  menuSupportWhatsApp: 'الدعم والمساعدة (contact@taches.ma)',
   menuClose: 'إغلاق القائمة',
   menuOpen: 'فتح القائمة',
   menuProfile: 'حسابي الشخصي',

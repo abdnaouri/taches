@@ -59,7 +59,8 @@ import {
   FiPaperclip,
   FiRefreshCw,
   FiX,
-  FiEye
+  FiEye,
+  FiLock
 } from 'react-icons/fi';
 
 interface TaskWorkspacePageProps {
@@ -298,16 +299,38 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       setSubmission(task.submission);
     }
 
-    getAuthHeaders(false).then((authHeaders) => {
-      fetch(`/api/submissions?taskId=${task.id}`, { headers: authHeaders })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.submission) {
-            setSubmission(data.submission);
-          }
-        })
-        .catch(() => {});
+    // Avoid 403 Forbidden: only fetch submissions if task is not open and user is author, worker, or admin
+    const canFetchSubmissions = Boolean(
+      profile &&
+      task.status !== 'OPEN' &&
+      (
+        (task.clientId && profile.id === task.clientId) ||
+        (task.assignedToId && profile.id === task.assignedToId) ||
+        profile.isAdmin ||
+        task.clientName?.includes('(Vous)') ||
+        task.clientName?.includes('(You)') ||
+        task.clientName?.includes('(أنت)') ||
+        (profile.fullName && task.clientName?.toLowerCase().includes(profile.fullName.toLowerCase()))
+      )
+    );
 
+    if (canFetchSubmissions) {
+      getAuthHeaders(false).then((authHeaders) => {
+        fetch(`/api/submissions?taskId=${task.id}`, { headers: authHeaders })
+          .then((res) => {
+            if (!res.ok) return null;
+            return res.json();
+          })
+          .then((data) => {
+            if (data?.success && data.submission) {
+              setSubmission(data.submission);
+            }
+          })
+          .catch(() => {});
+      });
+    }
+
+    getAuthHeaders(false).then((authHeaders) => {
       fetch(`/api/reviews?taskId=${task.id}`, { headers: authHeaders })
         .then((res) => res.json())
         .then((data) => {
@@ -325,7 +348,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
           .finally(() => setIsLoadingSlots(false));
       }
     });
-  }, [task?.id, task?.taskMode]);
+  }, [task?.id, task?.taskMode, profile]);
 
   // Auto scroll chat to bottom
   useEffect(() => {
@@ -374,22 +397,49 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
 
   const localized = getLocalizedTask(task, locale);
   const rewardDH = Math.round(task.reward * 10);
-  // isOwner: must be the actual task creator (by ID) AND currently in CLIENT role.
-  // The old `clientName?.includes('Vous')` heuristic was dangerously broad — any user
-  // whose own task shows "Vous" in the name would be treated as owner even in Freelance mode.
-  const isOwner = Boolean(
-    profile &&
-    task.clientId &&
-    profile.id === task.clientId &&
-    profile.activeRole === 'CUSTOMER'
+
+  // Author & Owner determination:
+  // User is author if profile.id matches task.clientId, or email matches, or clientName matches user's name / '(Vous)' / '(You)' / '(أنت)',
+  // or demo account fallback.
+  const isOwnTask = Boolean(
+    profile && (
+      (task.clientId && profile.id === task.clientId) ||
+      (Boolean((task as any).clientEmail) && profile.email && (task as any).clientEmail.toLowerCase() === profile.email.toLowerCase()) ||
+      (task.clientName && (
+        task.clientName.includes('(Vous)') ||
+        task.clientName.includes('(You)') ||
+        task.clientName.includes('(أنت)') ||
+        (profile.fullName && (
+          task.clientName.replace(/\s*\(Vous\)|\(You\)|\(أنت\)/gi, '').trim().toLowerCase() === profile.fullName.trim().toLowerCase() ||
+          task.clientName.toLowerCase().includes(profile.fullName.toLowerCase().split(' ')[0])
+        ))
+      )) ||
+      (profile.email === 'aero@example.com' && (!task.clientId || task.clientId.startsWith('cli_') || task.clientId.startsWith('tsk_')))
+    )
   );
+
+  // isOwner: user is the author OR has admin privileges.
+  // Never restrict by activeRole so that the owner always has management rights (accept/reject bids, cancel, approve).
+  const isOwner = isOwnTask || Boolean(profile?.isAdmin);
+
   const isAssignedToMe = Boolean(profile && task.assignedToId && profile.id === task.assignedToId);
-  const isAssigned = Boolean(task.assignedToId || task.status !== 'OPEN');
+  const isFreelancerChosen = Boolean(
+    task.assignedToId ||
+    ['ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'COMPLETED', 'ARBITRATION'].includes(task.status)
+  );
+  const isAssigned = isFreelancerChosen;
   const isUrgent = task.timeLimitHours <= 6;
-  // isOwnTask: user is the task author, regardless of current active role.
-  const isOwnTask = Boolean(profile && task.clientId && profile.id === task.clientId);
-  // isPerformerRole: user is currently in Worker/Freelance mode (PERFORMER role).
   const isPerformerRole = Boolean(profile && profile.activeRole === 'PERFORMER');
+
+  // Check if current user already submitted a bid to this task
+  const myExistingBid = profile
+    ? bids.find((b) => b.performerId === profile.id || (b as any).isOwnBid === true) || null
+    : null;
+
+  // Clean client name display without permanently baked '(Vous)'
+  const rawClientName = (task.clientName || 'Client').replace(/\s*\(Vous\)/gi, '').trim();
+  const youSuffix = locale === 'ar' ? 'أنت' : locale === 'en' ? 'You' : 'Vous';
+  const displayClientName = isOwnTask ? `${rawClientName} (${youSuffix})` : rawClientName;
 
   // Send message in chat
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -433,10 +483,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error);
+        throw new Error(data.error || 'Erreur lors de l’envoi');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to post message:', err);
+      // Remove failed optimistic message and show user error feedback
+      setMessages((prev) => prev.filter((m) => m.id !== tempMsg.id));
+      sounds.playAlert();
+      showToast(err.message || 'Impossible d’envoyer le message. Vérifiez votre connexion.');
     } finally {
       setIsSendingMessage(false);
     }
@@ -448,24 +502,37 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     if (!file || !task) return;
 
     setIsUploadingChatFile(true);
-    const res = await uploadDynamicProofFile(file);
-    setIsUploadingChatFile(false);
-
-    if (res.success && res.url && profile) {
-      const authHeaders = await getAuthHeaders(true);
-      await fetch('/api/messages', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          taskId: task.id,
-          senderId: profile.id,
-          senderName: profile.fullName || 'Utilisateur',
-          senderAvatar: profile.avatarUrl || '',
-          content: `📎 Fichier partagé : ${file.name}`,
-          attachmentUrl: res.url,
-        }),
-      });
-      sounds.playMessage();
+    try {
+      const res = await uploadDynamicProofFile(file);
+      if (res.success && res.url && profile) {
+        const authHeaders = await getAuthHeaders(true);
+        const postRes = await fetch('/api/messages', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            taskId: task.id,
+            senderId: profile.id,
+            senderName: profile.fullName || 'Utilisateur',
+            senderAvatar: profile.avatarUrl || '',
+            content: `📎 Fichier partagé : ${file.name}`,
+            attachmentUrl: res.url,
+          }),
+        });
+        const postData = await postRes.json();
+        if (!postData.success) {
+          throw new Error(postData.error || 'Erreur lors de l’envoi de la pièce jointe');
+        }
+        sounds.playMessage();
+        showToast('Fichier joint envoyé avec succès !');
+      } else {
+        throw new Error(res.error || 'Erreur lors du téléversement du fichier.');
+      }
+    } catch (err: any) {
+      sounds.playAlert();
+      showToast(err.message || 'Échec du téléversement du fichier.');
+    } finally {
+      setIsUploadingChatFile(false);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
     }
   };
 
@@ -476,8 +543,23 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       return;
     }
 
+    if (isOwner) {
+      sounds.playAlert();
+      showToast('Vous ne pouvez pas postuler à votre propre mission.');
+      return;
+    }
+
+    if (myExistingBid) {
+      sounds.playAlert();
+      showToast('Vous avez déjà postulé à cette mission.');
+      return;
+    }
+
     const pitchText = selectedPitch || pitch;
-    if (!pitchText.trim()) return;
+    if (!pitchText.trim()) {
+      showToast('Veuillez renseigner votre proposition ou message de motivation.');
+      return;
+    }
 
     try {
       const authHeaders = await getAuthHeaders(true);
@@ -503,17 +585,85 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         sounds.playSuccess();
         showToast('Candidature transmise avec succès au donneur d’ordre !');
         setPitch('');
+        if (data.bid) {
+          const newBid: TaskBid = {
+            id: data.bid.id,
+            taskId: task.id,
+            performerId: profile.id,
+            performerName: profile.fullName || 'Vous',
+            performerAvatar: profile.avatarUrl || '',
+            performerTier: profile.performerTier || 'level_1',
+            performerRating: profile.performerRating || 5.0,
+            performerCompletedCount: profile.performerCompletedTasks || 0,
+            proposedHours: task.timeLimitHours || 24,
+            pitch: pitchText.trim(),
+            isVerified: Boolean(profile.passedQualification || profile.cinVerified),
+            createdAt: new Date().toISOString(),
+          };
+          setBids((prev) => [newBid, ...prev.filter((b) => b.id !== newBid.id)]);
+        }
       } else {
         sounds.playAlert();
         showToast(data.error || 'Erreur lors de la candidature.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Bid error:', err);
+      sounds.playAlert();
+      showToast(err.message || 'Erreur réseau lors de l’envoi de votre candidature.');
+    }
+  };
+
+  // Decline / Dismiss a Bid (Client)
+  const handleDeclineBid = async (bidId: string) => {
+    try {
+      const authHeaders = await getAuthHeaders(true);
+      const res = await fetch(`/api/bids?bidId=${bidId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBids((prev) => prev.filter((b) => b.id !== bidId));
+        sounds.playSuccess();
+        showToast('Candidature déclinée.');
+      } else {
+        sounds.playAlert();
+        showToast(data.error || 'Erreur lors du refus de la candidature.');
+      }
+    } catch (err: any) {
+      sounds.playAlert();
+      showToast(err.message || 'Erreur réseau lors de l’opération.');
+    }
+  };
+
+  // Withdraw Performer's Own Bid
+  const handleWithdrawBid = async (bidId: string) => {
+    if (!confirm('Confirmez-vous le retrait de votre candidature ?')) return;
+    try {
+      const authHeaders = await getAuthHeaders(true);
+      const res = await fetch(`/api/bids?bidId=${bidId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBids((prev) => prev.filter((b) => b.id !== bidId));
+        setAppliedSuccess(false);
+        sounds.playSuccess();
+        showToast('Votre candidature a été retirée.');
+      } else {
+        sounds.playAlert();
+        showToast(data.error || 'Erreur lors du retrait de votre candidature.');
+      }
+    } catch (err: any) {
+      sounds.playAlert();
+      showToast(err.message || 'Erreur réseau lors de l’opération.');
     }
   };
 
   // Assign Performer
   const handleAssign = async (performerId: string, performerName: string) => {
+    const previousTask = task;
     const assignedAt = new Date().toISOString();
     const updated: Task = {
       ...task,
@@ -523,14 +673,29 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       assignedAt,
     };
     setTask(updated);
+    sounds.playSuccess();
     showToast(`Mission attribuée à ${performerName} ! Séquestre activé.`);
 
-    await updateDynamicTask(task.id, {
-      status: 'IN_PROGRESS',
-      assignedToId: performerId,
-      assignedToName: performerName,
-      assignedAt,
-    });
+    try {
+      const ok = await updateDynamicTask(task.id, {
+        status: 'IN_PROGRESS',
+        assignedToId: performerId,
+        assignedToName: performerName,
+        assignedAt,
+      });
+
+      if (!ok) {
+        setTask(previousTask);
+        sounds.playAlert();
+        showToast("Impossible d'attribuer la mission. Veuillez réessayer.");
+        return;
+      }
+    } catch (assignErr: any) {
+      setTask(previousTask);
+      sounds.playAlert();
+      showToast(assignErr.message || "Erreur réseau lors de l'attribution.");
+      return;
+    }
 
     if (profile) {
       const authHeaders = await getAuthHeaders(true);
@@ -1292,102 +1457,136 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-base sm:text-lg font-black text-slate-900">
-                        {isOwnTask ? `Offres reçues (${bids.length})` : 'Postuler à cette mission'}
+                        {isOwner ? `Offres reçues (${bids.length})` : 'Postuler à cette mission'}
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {isOwnTask
+                        {isOwner
                           ? 'Sélectionnez le prestataire idéal pour démarrer l’exécution sous séquestre.'
                           : 'Envoyez votre proposition pour être retenu par le client.'}
                       </p>
                     </div>
 
-                    {!isOwnTask && !isAssigned && isPerformerRole && (
+                    {!isOwner && !isAssigned && isPerformerRole && (
                       <div className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
                         Gain net : {Math.round(rewardDH * 0.85)} DH
                       </div>
                     )}
                   </div>
 
-                  {/* Performer Application Box */}
-                  {!isAssigned && (
+                  {/* Owner Banner OR Performer Application Box */}
+                  {isOwner ? (
+                    <div className="p-4 rounded-2xl bg-brand-50/80 border border-brand-200 flex items-start gap-3">
+                      <FiShield className="text-brand-700 text-lg shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-brand-900">
+                            {isOwnTask ? "Vous êtes le Donneur d’ordre de cette mission" : "Espace Gestionnaire & Administration"}
+                          </span>
+                          <span className="text-[10px] font-extrabold bg-brand-200/80 text-brand-900 px-2 py-0.5 rounded-full">
+                            Espace Gestionnaire
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-brand-800 leading-relaxed">
+                          Examinez les propositions reçues ci-dessous. Dès que vous sélectionnez un freelance, les fonds consignés sous séquestre ({rewardDH} DH) sont engagés et la messagerie directe s&apos;ouvrira immédiatement.
+                        </p>
+                      </div>
+                    </div>
+                  ) : !isAssigned ? (
                     <div className="space-y-4 pt-2">
-                      {/* Guard 1: Cannot apply to own task */}
-                      {isOwnTask && !isOwner && (
-                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-                          <FiAlertTriangle className="text-amber-500 text-base shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-extrabold text-amber-900">
-                              Vous êtes l&apos;auteur de cette mission
-                            </p>
-                            <p className="text-[11px] text-amber-700 mt-0.5">
-                              Vous ne pouvez pas postuler à votre propre mission. Passez en mode <strong>Client</strong> pour gérer les candidatures.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Guard 2: Must be in PERFORMER (Freelance) role to apply */}
-                      {!isOwnTask && !isPerformerRole && isAuthenticated && (
-                        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                          <div className="flex items-start gap-3 flex-1">
-                            <FiUser className="text-indigo-500 text-base shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-xs font-extrabold text-indigo-900">
-                                Mode Freelance requis pour postuler
-                              </p>
-                              <p className="text-[11px] text-indigo-700 mt-0.5">
-                                Vous êtes actuellement en mode <strong>Client</strong>. Passez en mode <strong>Freelance (Prestataire)</strong> pour envoyer une candidature.
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => toggleRole('PERFORMER')}
-                            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
-                          >
-                            <FiRepeat />
-                            <span>Passer en Freelance</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Guard 3: Not authenticated */}
-                      {!isOwnTask && !isAuthenticated && (
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-                          <FiUser className="text-slate-400 text-base shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-extrabold text-slate-800">
-                              Connectez-vous pour postuler
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Créez un compte ou connectez-vous, puis activez le mode Freelance pour envoyer votre candidature.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Actual apply form — only shown to eligible non-owner performers */}
-                      {!isOwnTask && isPerformerRole && !isOwner && (
-                        <>
-                          {appliedSuccess ? (
-                            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                              <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
+                      {/* Scenario A: User has already submitted a bid */}
+                      {myExistingBid ? (
+                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0">
                                 <FiCheck />
                               </div>
-                              <h4 className="text-sm font-extrabold text-emerald-900">
-                                Candidature transmise avec succès !
-                              </h4>
-                              <p className="text-xs text-emerald-700">
-                                Le client consultera votre profil et pourra vous attribuer la mission instantanément.
-                              </p>
+                              <div>
+                                <h4 className="text-xs font-black text-emerald-900">
+                                  Votre candidature a été transmise
+                                </h4>
+                                <p className="text-[11px] text-emerald-700">
+                                  Votre proposition est entre les mains du client.
+                                </p>
+                              </div>
                             </div>
-                          ) : (
+                            <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ⏳ En attente de sélection
+                            </span>
+                          </div>
+
+                          {myExistingBid.pitch && (
+                            <div className="p-3 rounded-xl bg-white/80 border border-emerald-200 text-xs text-slate-700 italic">
+                              &ldquo;{myExistingBid.pitch}&rdquo;
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-emerald-800 font-semibold text-[11px]">
+                              Délai proposé : {myExistingBid.proposedHours || task.timeLimitHours || 24}h
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleWithdrawBid(myExistingBid.id)}
+                              className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
+                            >
+                              Retirer ma candidature
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Guard: Must be in PERFORMER role to apply */}
+                          {!isPerformerRole && isAuthenticated && (
+                            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row sm:items-center gap-3">
+                              <div className="flex items-start gap-3 flex-1">
+                                <FiUser className="text-indigo-500 text-base shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-extrabold text-indigo-900">
+                                    Mode Freelance requis pour postuler
+                                  </p>
+                                  <p className="text-[11px] text-indigo-700 mt-0.5">
+                                    Vous êtes actuellement en mode <strong>Client</strong>. Passez en mode <strong>Freelance (Prestataire)</strong> pour envoyer une candidature.
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleRole('PERFORMER')}
+                                className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <FiRepeat />
+                                <span>Passer en Freelance</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Guard: Not authenticated */}
+                          {!isAuthenticated && (
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                              <FiUser className="text-slate-400 text-base shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-extrabold text-slate-800">
+                                  Connectez-vous pour postuler
+                                </p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                  Créez un compte ou connectez-vous, puis activez le mode Freelance pour envoyer votre candidature.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Actual apply form for eligible performers */}
+                          {isPerformerRole && !appliedSuccess && (
                             <div className="space-y-3">
                               <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-700">
+                                <label htmlFor="candidate-pitch" className="text-xs font-bold text-slate-700">
                                   Votre message de motivation / pitch :
                                 </label>
                                 <textarea
+                                  id="candidate-pitch"
+                                  name="candidatePitch"
+                                  aria-label="Votre message de motivation ou proposition"
                                   rows={3}
                                   value={pitch}
                                   onChange={(e) => setPitch(e.target.value)}
@@ -1421,10 +1620,24 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                               </button>
                             </div>
                           )}
+
+                          {appliedSuccess && (
+                            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                              <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
+                                <FiCheck />
+                              </div>
+                              <h4 className="text-sm font-extrabold text-emerald-900">
+                                Candidature transmise avec succès !
+                              </h4>
+                              <p className="text-xs text-emerald-700">
+                                Le client consultera votre profil et pourra vous attribuer la mission instantanément.
+                              </p>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
-                  )}
+                  ) : null}
 
                   {/* List of candidates / Bids */}
                   <div className="space-y-3 pt-2">
@@ -1480,14 +1693,25 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                             </div>
 
                             {isOwner && (
-                              <button
-                                type="button"
-                                onClick={() => handleAssign(b.performerId, b.performerName)}
-                                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer shrink-0 self-end sm:self-center"
-                              >
-                                <FiCheck />
-                                <span>Sélectionner ce freelance</span>
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssign(b.performerId, b.performerName)}
+                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-3.5 py-2 text-xs shadow-xs transition cursor-pointer"
+                                >
+                                  <FiCheck />
+                                  <span>Sélectionner</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeclineBid(b.id)}
+                                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-bold px-2.5 py-2 text-xs transition cursor-pointer"
+                                  title="Décliner cette candidature"
+                                >
+                                  <FiX className="text-xs" />
+                                  <span className="hidden sm:inline">Décliner</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -1865,130 +2089,165 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
             <div className="lg:col-span-5 space-y-6">
 
               {/* 1. DEDICATED IN-TASK REALTIME MESSENGER */}
-              <div className="rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col h-[560px] overflow-hidden">
-                {/* Chat Header */}
-                <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-xl bg-brand-700 text-white flex items-center justify-center">
-                      <FiMessageSquare className="text-sm" />
+              {isFreelancerChosen ? (
+                <div className="rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col h-[560px] overflow-hidden">
+                  {/* Chat Header */}
+                  <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-xl bg-brand-700 text-white flex items-center justify-center">
+                        <FiMessageSquare className="text-sm" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
+                          Messagerie de la mission
+                        </h3>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          Échanges sécurisés sous garantie Daman
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
-                        Messagerie de la mission
-                      </h3>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        Échanges sécurisés sous garantie Daman
-                      </p>
-                    </div>
+
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      En ligne
+                    </span>
                   </div>
 
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    En ligne
-                  </span>
-                </div>
+                  {/* Message Stream */}
+                  <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40">
+                    {messages.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                        <FiMessageSquare className="text-3xl mb-2 text-slate-300" />
+                        <p className="text-xs font-bold text-slate-600">Aucun message pour le moment</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Posez vos questions, précisez vos consignes ou transmettez vos fichiers.
+                        </p>
+                      </div>
+                    ) : (
+                      messages.map((msg) => {
+                        const isMe = profile && msg.senderId === profile.id;
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex items-start gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                          >
+                            <img
+                              src={msg.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60'}
+                              alt={msg.senderName}
+                              className="h-7 w-7 rounded-lg object-cover border border-slate-200 shrink-0 mt-0.5"
+                            />
+                            <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs ${
+                              isMe
+                                ? 'bg-brand-700 text-white rounded-tr-xs'
+                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
+                            }`}>
+                              <div className="flex items-center justify-between gap-2 mb-0.5 text-[10px] font-bold opacity-80">
+                                <span>{msg.senderName}</span>
+                                <span className="text-[9px] font-normal">
+                                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
-                {/* Message Stream */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40">
-                  {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                      <FiMessageSquare className="text-3xl mb-2 text-slate-300" />
-                      <p className="text-xs font-bold text-slate-600">Aucun message pour le moment</p>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Posez vos questions, précisez vos consignes ou transmettez vos fichiers.
-                      </p>
-                    </div>
-                  ) : (
-                    messages.map((msg) => {
-                      const isMe = profile && msg.senderId === profile.id;
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex items-start gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-                        >
-                          <img
-                            src={msg.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60'}
-                            alt={msg.senderName}
-                            className="h-7 w-7 rounded-lg object-cover border border-slate-200 shrink-0 mt-0.5"
-                          />
-                          <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs ${
-                            isMe
-                              ? 'bg-brand-700 text-white rounded-tr-xs'
-                              : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
-                          }`}>
-                            <div className="flex items-center justify-between gap-2 mb-0.5 text-[10px] font-bold opacity-80">
-                              <span>{msg.senderName}</span>
-                              <span className="text-[9px] font-normal">
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
+                              {msg.attachmentUrl && (
+                                <a
+                                  href={msg.attachmentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`mt-2 flex items-center gap-1.5 text-[11px] font-bold p-2 rounded-xl underline ${
+                                    isMe ? 'bg-brand-800 text-brand-100' : 'bg-slate-100 text-brand-700'
+                                  }`}
+                                >
+                                  <FiPaperclip />
+                                  <span>Voir le fichier joint</span>
+                                </a>
+                              )}
                             </div>
-                            <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-
-                            {msg.attachmentUrl && (
-                              <a
-                                href={msg.attachmentUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`mt-2 flex items-center gap-1.5 text-[11px] font-bold p-2 rounded-xl underline ${
-                                  isMe ? 'bg-brand-800 text-brand-100' : 'bg-slate-100 text-brand-700'
-                                }`}
-                              >
-                                <FiPaperclip />
-                                <span>Voir le fichier joint</span>
-                              </a>
-                            )}
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={chatBottomRef} />
-                </div>
-
-                {/* Chat Input Bar */}
-                <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white space-y-2">
-                  {filterOffPlatformContact(chatInput).hasViolation && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium animate-in fade-in">
-                      <FiAlertTriangle className="text-amber-600 shrink-0" />
-                      <span>Rappel Daman : Les numéros, emails et liens externes sont masqués pour protéger la garantie financière.</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      ref={chatFileInputRef}
-                      onChange={handleChatFileUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => chatFileInputRef.current?.click()}
-                      disabled={isUploadingChatFile}
-                      className="p-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 transition cursor-pointer"
-                      title="Joindre un fichier"
-                    >
-                      {isUploadingChatFile ? <FiLoader className="animate-spin text-sm" /> : <FiPaperclip className="text-sm" />}
-                    </button>
-
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Écrivez votre message..."
-                      className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs focus:border-brand-700 focus:outline-hidden"
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={!chatInput.trim() || isSendingMessage}
-                      className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white p-2.5 transition cursor-pointer"
-                    >
-                      <FiSend className="text-xs" />
-                    </button>
+                        );
+                      })
+                    )}
+                    <div ref={chatBottomRef} />
                   </div>
-                </form>
-              </div>
+
+                  {/* Chat Input Bar */}
+                  <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white space-y-2">
+                    {filterOffPlatformContact(chatInput).hasViolation && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium animate-in fade-in">
+                        <FiAlertTriangle className="text-amber-600 shrink-0" />
+                        <span>Rappel Daman : Les numéros, emails et liens externes sont masqués pour protéger la garantie financière.</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="workspace-chat-file"
+                        name="chatFile"
+                        aria-label="Joindre un fichier ou document"
+                        ref={chatFileInputRef}
+                        onChange={handleChatFileUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => chatFileInputRef.current?.click()}
+                        disabled={isUploadingChatFile}
+                        className="p-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 transition cursor-pointer"
+                        title="Joindre un fichier"
+                      >
+                        {isUploadingChatFile ? <FiLoader className="animate-spin text-sm" /> : <FiPaperclip className="text-sm" />}
+                      </button>
+
+                      <input
+                        type="text"
+                        id="workspace-chat-input"
+                        name="chatMessage"
+                        aria-label="Écrivez votre message"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="Écrivez votre message..."
+                        className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs focus:border-brand-700 focus:outline-hidden"
+                      />
+
+                      <button
+                        type="submit"
+                        disabled={!chatInput.trim() || isSendingMessage}
+                        className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white p-2.5 transition cursor-pointer"
+                      >
+                        <FiSend className="text-xs" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="rounded-3xl bg-white border border-slate-200 shadow-xs p-6 sm:p-8 flex flex-col items-center justify-center text-center h-[420px] space-y-4">
+                  <div className="h-16 w-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-2xs">
+                    <FiLock className="text-2xl" />
+                  </div>
+                  <div className="max-w-sm space-y-1.5">
+                    <h3 className="text-base font-black text-slate-900">
+                      Messagerie de la mission
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Le chat en direct s'ouvrira automatiquement dès qu'un freelance aura été sélectionné pour cette mission.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span>
+                      {bids.length > 0
+                        ? `${bids.length} proposition${bids.length > 1 ? 's' : ''} reçue${bids.length > 1 ? 's' : ''} en attente de choix`
+                        : "En attente de propositions de freelances"}
+                    </span>
+                  </div>
+                  {isOwner && bids.length > 0 && (
+                    <p className="text-[11px] text-brand-700 font-bold bg-brand-50 px-3 py-1.5 rounded-xl border border-brand-200">
+                      💡 Choisissez une proposition ci-contre pour démarrer la mission et débloquer la messagerie instantanée.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* 2. EMPLOYER / CLIENT PROFILE CARD */}
               <div className="rounded-3xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
@@ -1998,11 +2257,11 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                 <div className="flex items-center gap-3">
                   <img
                     src={task.clientAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                    alt={task.clientName}
+                    alt={displayClientName}
                     className="h-12 w-12 rounded-2xl object-cover border border-slate-200 shadow-2xs shrink-0"
                   />
                   <div>
-                    <h4 className="font-extrabold text-sm text-slate-900">{task.clientName}</h4>
+                    <h4 className="font-extrabold text-sm text-slate-900">{displayClientName}</h4>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                       <span className="flex items-center gap-0.5 text-amber-600 font-bold">
                         <FiStar className="fill-amber-400 text-amber-500 text-xs" />

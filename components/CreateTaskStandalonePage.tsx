@@ -259,7 +259,7 @@ export const CreateTaskStandalonePage: React.FC = () => {
         fullDescription += `\n\n🔒 Mot de passe anti-spam : ${finalAntiSpam}`;
       }
 
-      const clientName = profile?.fullName ? `${profile.fullName} (Vous)` : 'Client (Vous)';
+      const clientName = profile?.fullName || 'Client';
 
       const newTaskData: Omit<Task, 'id' | 'applicantsCount' | 'createdAt'> = {
         title: title.trim(),
@@ -549,42 +549,74 @@ export const CreateTaskStandalonePage: React.FC = () => {
 
                   {/* Title */}
                   <div>
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Titre de la mission *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="create-task-title" className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                        Titre de la mission *
+                      </label>
+                      <span className={`text-[11px] font-mono font-bold ${title.trim().length >= 5 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {title.trim().length}/5 car. min
+                      </span>
+                    </div>
                     <input
+                      id="create-task-title"
+                      name="taskTitle"
+                      aria-label="Titre de la mission (minimum 5 caractères)"
                       type="text"
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex: Traduction contrat Arabe -> Français (3 pages), Création Logo startup IA, Saisie factures..."
-                      className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs sm:text-sm text-slate-900 font-bold outline-none transition focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 shadow-xs"
+                      className={`w-full rounded-xl border bg-white p-3.5 text-xs sm:text-sm text-slate-900 font-bold outline-none transition shadow-xs ${
+                        title.trim().length > 0 && title.trim().length < 5
+                          ? 'border-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10'
+                          : 'border-slate-300 focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10'
+                      }`}
                     />
-                    {title.trim().length > 0 && title.trim().length < 5 && (
-                      <span className="text-[11px] text-rose-500 font-medium mt-1 block">
-                        Le titre doit contenir au moins 5 caractères.
-                      </span>
-                    )}
+                    <div className="flex items-center justify-between text-[11px] mt-1.5">
+                      {title.trim().length === 0 ? (
+                        <span className="text-slate-400">Précisez l’objectif principal en quelques mots (au moins 5 caractères).</span>
+                      ) : title.trim().length < 5 ? (
+                        <span className="text-amber-600 font-medium">Encore {5 - title.trim().length} caractère(s) pour valider le titre.</span>
+                      ) : (
+                        <span className="text-emerald-600 font-medium">✓ Titre conforme</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Description */}
                   <div>
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Consignes & Instructions détaillées *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="create-task-description" className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                        Consignes & Instructions détaillées *
+                      </label>
+                      <span className={`text-[11px] font-mono font-bold ${description.trim().length >= 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {description.trim().length}/10 car. min
+                      </span>
+                    </div>
                     <textarea
+                      id="create-task-description"
+                      name="taskDescription"
+                      aria-label="Consignes et instructions détaillées (minimum 10 caractères)"
                       rows={5}
                       required
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Précisez les attentes, les formats de livraison, les étapes et toutes les informations nécessaires à la réalisation..."
-                      className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs sm:text-sm text-slate-900 outline-none transition focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10 shadow-xs leading-relaxed"
+                      className={`w-full rounded-xl border bg-white p-3.5 text-xs sm:text-sm text-slate-900 outline-none transition shadow-xs leading-relaxed ${
+                        description.trim().length > 0 && description.trim().length < 10
+                          ? 'border-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10'
+                          : 'border-slate-300 focus:border-brand-700 focus:ring-2 focus:ring-brand-700/10'
+                      }`}
                     />
-                    {description.trim().length > 0 && description.trim().length < 10 && (
-                      <span className="text-[11px] text-rose-500 font-medium mt-1 block">
-                        La description doit contenir au moins 10 caractères.
-                      </span>
-                    )}
+                    <div className="flex items-center justify-between text-[11px] mt-1.5">
+                      {description.trim().length === 0 ? (
+                        <span className="text-slate-400">Détaillez le cahier des charges (au moins 10 caractères).</span>
+                      ) : description.trim().length < 10 ? (
+                        <span className="text-amber-600 font-medium">Encore {10 - description.trim().length} caractère(s) pour valider la description.</span>
+                      ) : (
+                        <span className="text-emerald-600 font-medium">✓ Instructions conformes</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Deliverables / Proofs */}
@@ -912,15 +944,23 @@ export const CreateTaskStandalonePage: React.FC = () => {
                 )}
 
                 {currentStep < 3 ? (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep((prev) => (prev + 1) as DecisionStep)}
-                    disabled={!canProceed}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold shadow-xs transition active:scale-98 cursor-pointer"
-                  >
-                    <span>Continuer vers l'étape {currentStep + 1}</span>
-                    <FiArrowRight />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {currentStep === 2 && !isStep2Valid && (
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl font-medium">
+                        <FiAlertCircle className="text-amber-600 text-xs shrink-0" />
+                        <span>Titre (5+ car.) et Consignes (10+ car.) requis pour continuer</span>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep((prev) => (prev + 1) as DecisionStep)}
+                      disabled={!canProceed}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold shadow-xs transition active:scale-98 cursor-pointer"
+                    >
+                      <span>Continuer vers l'étape {currentStep + 1}</span>
+                      <FiArrowRight />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"

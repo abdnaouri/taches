@@ -78,7 +78,7 @@ interface MarketplaceAppProps {
   forcedLocale?: Locale;
   initialSlug?: string;
   initialTaskId?: string;
-  viewMode?: 'home' | 'tasks' | 'wallet' | 'concepts' | 'profile';
+  viewMode?: 'home' | 'tasks' | 'wallet' | 'concepts' | 'profile' | 'dashboard';
 }
 
 function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewMode = 'home' }: MarketplaceAppProps) {
@@ -123,9 +123,9 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
   const user: UserProfile = profile || defaultGuestUser;
   const isCustomer = user.activeRole === 'CUSTOMER';
 
-  // Toggle between personalized dashboard and public landing presentation
-  // Default: landing page (shown for all users, authenticated or not)
-  const [homeViewPreference, setHomeViewPreference] = useState<'dashboard' | 'landing'>('landing');
+  const [homeViewPreference, setHomeViewPreference] = useState<'dashboard' | 'landing'>(
+    viewMode === 'dashboard' ? 'dashboard' : 'landing'
+  );
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -351,7 +351,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       ...newTaskData,
       id: newId,
       clientId: profile.id,
-      clientName: `${profile.fullName} (Vous)`,
+      clientName: profile.fullName || 'Client',
       clientAvatar: profile.avatarUrl,
       applicantsCount: 0,
       createdAt: t('justNow'),
@@ -1229,9 +1229,28 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       ) : viewMode === 'concepts' ? (
         /* DEDICATED CONCEPTS & ARCHITECTURE EXPLAINER PAGE */
         <ConceptExplainerPage />
+      ) : viewMode === 'dashboard' && !isAuthenticated ? (
+        <main className="flex-1 py-16 bg-slate-50 flex items-center justify-center px-4">
+          <div className="max-w-md w-full rounded-3xl bg-white border border-slate-200 p-8 text-center shadow-lg space-y-4">
+            <div className="h-16 w-16 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center mx-auto text-2xl font-black">
+              <FiUser />
+            </div>
+            <h2 className="text-xl font-black text-slate-900">Connexion requise</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Connectez-vous pour accéder à votre tableau de bord personnel, suivre vos missions et gérer vos commandes.
+            </p>
+            <button
+              type="button"
+              onClick={() => openAuthModal('login')}
+              className="w-full rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 text-xs shadow-md transition cursor-pointer"
+            >
+              Se connecter
+            </button>
+          </div>
+        </main>
       ) : (
-        /* HOME PAGE VIEW: CONNECTED DASHBOARD FOR AUTHENTICATED USERS, LANDING FOR GUESTS */
-        isAuthenticated && homeViewPreference === 'dashboard' ? (
+        /* HOME / DASHBOARD PAGE VIEW */
+        isAuthenticated && (homeViewPreference === 'dashboard' || viewMode === 'dashboard') ? (
           <main className="flex-1 py-6 sm:py-10 bg-slate-50">
             <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
 
@@ -1412,14 +1431,26 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
               <div className="bg-brand-50 border-b border-brand-100 py-2.5 px-4 text-center">
                 <div className="mx-auto max-w-6xl flex items-center justify-between text-xs">
                   <span className="text-brand-900 font-semibold">
-                    👤 Vous êtes connecté en tant que <strong>{user.fullName}</strong>.
+                    👤 {locale === 'ar' ? (
+                      <>أنت مسجل الدخول باسم <strong>{user.fullName}</strong>.</>
+                    ) : locale === 'en' ? (
+                      <>You are logged in as <strong>{user.fullName}</strong>.</>
+                    ) : (
+                      <>Vous êtes connecté en tant que <strong>{user.fullName}</strong>.</>
+                    )}
                   </span>
                   <button
                     type="button"
                     onClick={() => setHomeViewPreference('dashboard')}
                     className="inline-flex items-center gap-1.5 font-bold text-brand-700 hover:text-brand-800 bg-white border border-brand-200 px-3 py-1 rounded-lg hover:bg-brand-50 transition cursor-pointer shadow-2xs"
                   >
-                    <span>📊 Revenir à mon Tableau de bord</span>
+                    <span>
+                      {locale === 'ar'
+                        ? '📊 العودة إلى لوحة التحكم'
+                        : locale === 'en'
+                        ? '📊 Back to Dashboard'
+                        : '📊 Revenir à mon Tableau de bord'}
+                    </span>
                     {isRTL ? <FiArrowLeft /> : <FiArrowRight />}
                   </button>
                 </div>
@@ -1511,7 +1542,7 @@ function MarketplaceAppContent({ forcedLocale, initialSlug, initialTaskId, viewM
       )}
 
       {/* Multi-Age Help Center with WhatsApp Support & FAQ */}
-      {viewMode !== 'wallet' && viewMode !== 'profile' && <WorkzillaHelpCenter />}
+      {viewMode !== 'wallet' && viewMode !== 'profile' && viewMode !== 'dashboard' && <WorkzillaHelpCenter />}
 
       {/* Functional Moroccan Footer */}
       <WorkzillaFooter />

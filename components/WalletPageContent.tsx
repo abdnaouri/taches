@@ -312,12 +312,10 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
             </div>
             <div className="mt-4 pt-3 border-t border-emerald-200/60">
               <a
-                href="https://wa.me/212600000000"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:contact@taches.ma?subject=Support%20Portefeuille%20Taches.ma"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-900 underline"
               >
-                Assistance WhatsApp &rarr;
+                Assistance & Support Client &rarr;
               </a>
             </div>
           </div>
@@ -1202,13 +1200,11 @@ export const WalletPageContent: React.FC<WalletPageContentProps> = ({
               </div>
 
               <a
-                href="https://wa.me/212600000000"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:contact@taches.ma?subject=Support%20Arbitrage%20Taches.ma"
                 className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-5 py-3 text-xs font-extrabold text-slate-950 shadow-md transition"
               >
                 <FiPhoneCall className="text-sm" />
-                <span>Support Arbitrage WhatsApp</span>
+                <span>Support & Médiation (contact@taches.ma)</span>
               </a>
             </div>
           </div>

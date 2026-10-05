@@ -71,6 +71,7 @@ export const metadata: Metadata = {
       'x-default': 'https://taches.ma/fr',
       'fr-MA': 'https://taches.ma/fr',
       'ar-MA': 'https://taches.ma/ar',
+      'en-US': 'https://taches.ma/en',
     },
   },
   openGraph: {
@@ -80,7 +81,7 @@ export const metadata: Metadata = {
     url: 'https://taches.ma/fr',
     siteName: 'tâches.ma',
     locale: 'fr_MA',
-    alternateLocale: ['ar_MA'],
+    alternateLocale: ['ar_MA', 'en_US'],
     type: 'website',
     images: [
       {

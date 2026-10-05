@@ -31,7 +31,7 @@ export const ru: Translations = {
   menuDamanSecurity: 'Гарантия Daman',
   menuWallet: 'Кошелек и выплаты',
   menuQualification: 'Сертификация профиля',
-  menuSupportWhatsApp: 'Поддержка WhatsApp (+212)',
+  menuSupportWhatsApp: 'Поддержка (contact@taches.ma)',
   menuClose: 'Закрыть меню',
   menuOpen: 'Открыть меню',
   menuProfile: 'Мой профиль',

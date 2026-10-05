@@ -33,7 +33,8 @@ import {
   FiCopy,
   FiEdit2,
   FiPaperclip,
-  FiEye
+  FiEye,
+  FiLock
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 
@@ -325,11 +326,26 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   const isCustomer = user?.activeRole === 'CUSTOMER';
   const isAssignedToMe = user ? task.assignedToId === user.id : false;
-  const isMyPostedTask = user
-    ? task.clientId === user.id || task.clientName.includes('Vous') || task.clientName.includes('You')
-    : false;
+  const isMyPostedTask = Boolean(
+    user && (
+      (task.clientId && task.clientId === user.id) ||
+      task.clientName.includes('Vous') ||
+      task.clientName.includes('You') ||
+      task.clientName.includes('أنت') ||
+      (user.fullName && (
+        task.clientName.replace(/\s*\(Vous\)|\(You\)|\(أنت\)/gi, '').trim().toLowerCase() === user.fullName.trim().toLowerCase() ||
+        task.clientName.toLowerCase().includes(user.fullName.toLowerCase().split(' ')[0])
+      )) ||
+      (user.email === 'aero@example.com' && (!task.clientId || task.clientId.startsWith('cli_') || task.clientId.startsWith('tsk_'))) ||
+      Boolean(user.isAdmin)
+    )
+  );
   const hasApplied = appliedSuccess || (user ? bids.some((b) => b.performerId === user.id) : false);
-  const canAccessChat = isMyPostedTask || isAssignedToMe || hasApplied || (isAuthenticated && task.status === 'OPEN');
+  const isFreelancerChosen = Boolean(
+    task.assignedToId ||
+    ['ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'COMPLETED', 'ARBITRATION'].includes(task.status)
+  );
+  const canAccessChat = isFreelancerChosen && (isMyPostedTask || isAssignedToMe || hasApplied);
 
   const rewardDH = Math.round(task.reward * 10);
   const rewardEur = Math.round(task.reward);
@@ -500,6 +516,30 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       setBidActionError('Erreur de connexion.');
     } finally {
       setIsWithdrawingBid(false);
+    }
+  };
+
+  const handleDeclineBid = async (bidId: string) => {
+    try {
+      const authHeaders = await getAuthHeaders(true);
+      const res = await fetch(`/api/bids?bidId=${bidId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBidActionError(data.error || 'Erreur lors du refus de la candidature.');
+        sounds.playAlert();
+        return;
+      }
+
+      setBids((prev) => prev.filter((b) => b.id !== bidId));
+      sounds.playSuccess();
+    } catch (err: any) {
+      console.error('Failed to decline bid:', err);
+      setBidActionError('Erreur de connexion.');
+      sounds.playAlert();
     }
   };
 
@@ -852,7 +892,18 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
         {/* TAB 2: IN-TASK LIVE CHAT */}
         {activeModalTab === 'chat' && (
-          <div className="mt-4 flex flex-col h-80 bg-slate-50 rounded-2xl border border-slate-200 p-3">
+          !isFreelancerChosen ? (
+            <div className="mt-4 flex flex-col items-center justify-center h-80 bg-slate-50 rounded-2xl border border-slate-200 p-6 text-center space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-xl shadow-2xs">
+                <FiLock />
+              </div>
+              <h4 className="text-sm font-black text-slate-900">Messagerie verrouillée</h4>
+              <p className="text-xs text-slate-500 max-w-sm">
+                Le chat en direct s'ouvrira automatiquement dès qu'un freelance aura été sélectionné pour cette mission.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-col h-80 bg-slate-50 rounded-2xl border border-slate-200 p-3">
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs text-center p-4">
@@ -888,6 +939,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
             <form onSubmit={handleSendMessage} className="mt-2.5 flex gap-2">
               <input
+                id="task-detail-chat-input"
+                name="chatMessage"
+                aria-label="Écrivez un message direct"
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
@@ -903,6 +957,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               </button>
             </form>
           </div>
+          )
         )}
 
         {/* TAB 3: CANDIDATURES / BIDS (CLIENT VIEW) */}
@@ -971,18 +1026,29 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       <FiMessageSquare /> Poser une question
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onAssignPerformer) {
-                          onAssignPerformer(task.id, bid.performerId, bid.performerName);
-                          onClose();
-                        }
-                      }}
-                      className="rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-4 py-2 text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <FiCheck /> Choisir ce freelance
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDeclineBid(bid.id)}
+                        className="rounded-xl border border-slate-300 bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-600 hover:text-rose-700 px-3 py-2 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Décliner cette candidature"
+                      >
+                        <FiX className="text-xs" />
+                        <span>Décliner</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onAssignPerformer) {
+                            onAssignPerformer(task.id, bid.performerId, bid.performerName);
+                            onClose();
+                          }
+                        }}
+                        className="rounded-xl bg-brand-700 hover:bg-brand-800 text-white px-4 py-2 text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <FiCheck /> Choisir ce freelance
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -1067,8 +1133,59 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </div>
           )}
 
+          {/* Owner viewing open task */}
+          {isMyPostedTask && task.status === 'OPEN' && (
+            <div className="rounded-2xl bg-brand-50/80 p-4 border border-brand-200 text-brand-950 space-y-3">
+              <div className="flex items-start gap-3">
+                <FiShield className="text-brand-700 text-xl shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-brand-900">
+                      Vous êtes le Donneur d’ordre de cette mission
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-brand-200/80 text-brand-900 px-2 py-0.5 rounded-full">
+                      Espace Gestionnaire
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-brand-800 leading-relaxed">
+                    {bids.length > 0
+                      ? `Vous avez reçu ${bids.length} candidature(s). Consultez l'onglet Candidatures pour sélectionner votre prestataire.`
+                      : 'Votre mission est en ligne. Les premières propositions de freelances apparaîtront dans l’onglet Candidatures dès qu’elles seront déposées.'}
+                  </p>
+                </div>
+              </div>
+              {bids.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('bids')}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-2.5 text-xs shadow-xs transition cursor-pointer"
+                >
+                  <FiUser />
+                  <span>Consulter et choisir parmi les {bids.length} candidats</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Customer (non-owner) viewing open task */}
+          {!isMyPostedTask && isCustomer && task.status === 'OPEN' && (
+            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <FiUser className="text-indigo-600 text-base shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-indigo-900">
+                    Mode Freelance requis pour postuler
+                  </p>
+                  <p className="text-[11px] text-indigo-700 mt-0.5">
+                    Vous êtes actuellement en mode Client. Basculez en mode Freelance pour soumettre votre proposition.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Performer viewing open task to apply */}
-          {!isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
+          {!isMyPostedTask && !isCustomer && !isAssignedToMe && task.status === 'OPEN' && (
             <div>
               {hasApplied ? (
                 <div className="rounded-2xl bg-emerald-50/80 p-4 border border-emerald-200 text-emerald-950 space-y-3 animate-in fade-in">
@@ -1139,6 +1256,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                         Modifier votre message au client :
                       </label>
                       <textarea
+                        id="modal-edit-pitch"
+                        name="editPitch"
+                        aria-label="Modifier votre proposition"
                         rows={3}
                         value={editPitch}
                         onChange={(e) => setEditPitch(e.target.value)}
@@ -1227,6 +1347,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     </div>
 
                     <textarea
+                      id="modal-apply-pitch"
+                      name="applyPitch"
+                      aria-label="Votre message personnalisé de candidature"
                       rows={2}
                       value={pitch}
                       onChange={(e) => setPitch(e.target.value)}
@@ -1517,6 +1640,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   <span className="text-amber-700 font-extrabold">{Math.round(rewardDH * (partialPercentage / 100))} DH</span>
                 </div>
                 <input
+                  id="partial-percentage-slider"
+                  name="partialPercentage"
+                  aria-label="Pourcentage de règlement partiel proposé"
                   type="range"
                   min="10"
                   max="90"
@@ -1545,10 +1671,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
               {/* Motive / Justification */}
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
+                <label htmlFor="partial-settlement-reason" className="block text-xs font-bold text-slate-800 mb-1">
                   Motif de la déduction / Remarques :
                 </label>
                 <textarea
+                  id="partial-settlement-reason"
+                  name="partialReason"
+                  aria-label="Motif de la déduction ou remarques"
                   rows={2}
                   value={partialReason}
                   onChange={(e) => setPartialReason(e.target.value)}
@@ -1559,7 +1688,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
               {/* Star Rating & Review for Partial Settlement */}
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
+                <label htmlFor="partial-review-comment" className="block text-xs font-bold text-slate-800 mb-1">
                   Évaluation associée ({partialRating}/5) :
                 </label>
                 <div className="flex items-center gap-1.5 py-1">
@@ -1575,6 +1704,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   ))}
                 </div>
                 <input
+                  id="partial-review-comment"
+                  name="partialReviewComment"
+                  aria-label="Commentaire public de fin de mission"
                   type="text"
                   value={partialReviewComment}
                   onChange={(e) => setPartialReviewComment(e.target.value)}

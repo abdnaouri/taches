@@ -31,7 +31,7 @@ export const en: Translations = {
   menuDamanSecurity: 'Escrow Guarantee (Daman)',
   menuWallet: 'My Wallet & Payouts',
   menuQualification: 'Profile Certification',
-  menuSupportWhatsApp: 'WhatsApp Support (+212)',
+  menuSupportWhatsApp: 'Help & Support (contact@taches.ma)',
   menuClose: 'Close menu',
   menuOpen: 'Open menu',
   menuProfile: 'My Account',

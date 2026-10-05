@@ -12,32 +12,49 @@ interface TasksPageProps {
 
 export async function generateMetadata({ params }: TasksPageProps): Promise<Metadata> {
   const locale = params.locale || 'fr';
-  const isAr = locale === 'ar';
   const baseUrl = 'https://taches.ma';
 
+  let title = 'Missions & Tâches Freelance au Maroc — Offres en cours';
+  let description =
+    'Explorez des centaines d’offres de micro-tâches et services freelance au Maroc. Postulez en direct et recevez vos paiements garantis sous séquestre Daman.';
+  let ogTitle = 'Missions Freelance & Micro-Tâches au Maroc | tâches.ma';
+  let ogDescription = 'Trouvez des missions freelance et micro-tâches rémunérées partout au Maroc.';
+  let ogLocale = 'fr_MA';
+
+  if (locale === 'ar') {
+    title = 'سوق المهام والخدمات المستقلة في المغرب';
+    description =
+      'استكشف مئات المهام اليومية والخدمات المستقلة المتاحة في المغرب. اكسب دخلاً من مهاراتك مع ضمان الدفع Séquestre Daman.';
+    ogTitle = 'سوق المهام والخدمات في المغرب | tâches.ma';
+    ogDescription = 'مهام وفرص عمل حر في الدار البيضاء، الرباط، مراكش وجميع أنحاء المغرب.';
+    ogLocale = 'ar_MA';
+  } else if (locale === 'en') {
+    title = 'Freelance Missions & Tasks in Morocco — Open Gigs';
+    description =
+      'Explore hundreds of micro-tasks and freelance opportunities across Morocco. Apply directly and get guaranteed escrow payments via Daman.';
+    ogTitle = 'Freelance Missions & Micro-Tasks in Morocco | tâches.ma';
+    ogDescription = 'Find paid freelance missions and micro-tasks across Casablanca, Rabat, Marrakech, and all Morocco.';
+    ogLocale = 'en_US';
+  }
+
   return {
-    title: isAr
-      ? 'سوق المهام والخدمات المستقلة في المغرب | tâches.ma'
-      : 'Missions & Tâches Freelance au Maroc — Offres en cours | tâches.ma',
-    description: isAr
-      ? 'استكشف مئات المهام اليومية والخدمات المستقلة المتاحة في المغرب. اكسب دخلاً من مهاراتك مع ضمان الدفع Séquestre Daman.'
-      : 'Explorez des centaines d’offres de micro-tâches et services freelance au Maroc. Postulez en direct et recevez vos paiements garantis sous séquestre Daman.',
+    title,
+    description,
     alternates: {
       canonical: `${baseUrl}/${locale}/tasks`,
       languages: {
         'x-default': `${baseUrl}/fr/tasks`,
         'fr-MA': `${baseUrl}/fr/tasks`,
         'ar-MA': `${baseUrl}/ar/tasks`,
+        'en-US': `${baseUrl}/en/tasks`,
       },
     },
     openGraph: {
-      title: isAr ? 'سوق المهام والخدمات في المغرب | tâches.ma' : 'Missions Freelance & Micro-Tâches au Maroc | tâches.ma',
-      description: isAr
-        ? 'مهام وفرص عمل حر في الدار البيضاء، الرباط، مراكش وجميع أنحاء المغرب.'
-        : 'Trouvez des missions freelance et micro-tâches rémunérées partout au Maroc.',
+      title: ogTitle,
+      description: ogDescription,
       url: `${baseUrl}/${locale}/tasks`,
       siteName: 'tâches.ma',
-      locale: isAr ? 'ar_MA' : 'fr_MA',
+      locale: ogLocale,
       type: 'website',
     },
   };

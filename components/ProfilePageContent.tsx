@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UserProfile, UserPortfolioItem, UserLanguage, UserRole } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -278,6 +278,30 @@ export const ProfilePageContent: React.FC = () => {
     }
   }, [user]);
 
+  // Avatar Upload State & Handler
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const res = await uploadDynamicProofFile(file);
+      if (res.success && res.url) {
+        setAvatarUrl(res.url);
+        await updateProfile({ avatarUrl: res.url });
+        showToast('✅ Photo de profil mise à jour avec succès !');
+      } else {
+        showToast('❌ Erreur lors du téléversement de la photo');
+      }
+    } catch (err: any) {
+      showToast(err.message || '❌ Erreur lors du téléversement');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   // Upload KYC Document (Front / Back)
   const handleUploadKycDoc = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
@@ -473,6 +497,42 @@ export const ProfilePageContent: React.FC = () => {
   const balanceDH = Math.round(user.balanceAvailable * 10);
   const escrowDH = Math.round(user.balanceEscrow * 10);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-16 px-4 flex items-center justify-center">
+        <div className="max-w-md w-full rounded-3xl bg-white border border-slate-200 p-8 text-center shadow-lg space-y-5">
+          <div className="h-16 w-16 rounded-3xl bg-brand-50 border border-brand-200 flex items-center justify-center text-brand-700 mx-auto text-2xl font-black">
+            <FiUser />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              Espace Profil & Coordonnées
+            </h1>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Connectez-vous à votre compte tâches.ma pour gérer vos informations personnelles, votre photo de profil, vos compétences et vos coordonnées bancaires.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+            <button
+              type="button"
+              onClick={() => openAuthModal('login')}
+              className="flex-1 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 text-xs shadow-md transition cursor-pointer"
+            >
+              Se connecter
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthModal('signup')}
+              className="flex-1 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 text-xs transition cursor-pointer"
+            >
+              Créer un compte
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 py-6 sm:py-10">
       {/* TOAST NOTIFICATION */}
@@ -493,25 +553,43 @@ export const ProfilePageContent: React.FC = () => {
             {/* Left: Avatar + Details */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="relative group shrink-0">
+                <input
+                  type="file"
+                  ref={avatarFileInputRef}
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  className="hidden"
+                />
                 <img
                   src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160'}
                   alt={fullName}
                   className="h-20 w-20 sm:h-24 sm:w-24 rounded-3xl object-cover border-2 border-brand-700 shadow-md ring-4 ring-brand-50"
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newUrl = prompt('Entrez l’URL de votre nouvelle photo de profil :', avatarUrl);
-                    if (newUrl && newUrl.trim()) {
-                      setAvatarUrl(newUrl.trim());
-                      updateProfile({ avatarUrl: newUrl.trim() });
-                    }
-                  }}
-                  className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md hover:bg-brand-700 transition cursor-pointer"
-                  title="Changer la photo"
-                >
-                  <FiEdit2 className="text-xs" />
-                </button>
+                <div className="absolute -bottom-2 -right-2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md hover:bg-brand-700 transition cursor-pointer disabled:opacity-50"
+                    title="Téléverser une photo depuis votre appareil"
+                  >
+                    {isUploadingAvatar ? <FiRefreshCw className="animate-spin text-xs" /> : <FiCamera className="text-xs" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newUrl = prompt('Ou collez l’URL de votre nouvelle photo de profil :', avatarUrl);
+                      if (newUrl && newUrl.trim()) {
+                        setAvatarUrl(newUrl.trim());
+                        updateProfile({ avatarUrl: newUrl.trim() });
+                      }
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white border border-slate-300 text-slate-700 shadow-md hover:bg-slate-50 transition cursor-pointer"
+                    title="Saisir une URL d'image"
+                  >
+                    <FiEdit2 className="text-xs" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5 flex-1">
@@ -932,6 +1010,49 @@ export const ProfilePageContent: React.FC = () => {
                     />
                     <span>WhatsApp</span>
                   </label>
+                </div>
+              </div>
+
+              {/* Account Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Adresse Email du Compte
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    readOnly
+                    value={user.email || ''}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-xs font-semibold text-slate-600 cursor-not-allowed select-all"
+                  />
+                  <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 border border-emerald-200 px-2.5 py-2 text-[10px] font-bold text-emerald-700 shrink-0">
+                    <FiCheckCircle className="text-xs" />
+                    Vérifié
+                  </span>
+                </div>
+              </div>
+
+              {/* Avatar URL / File Upload */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Photo de Profil (URL ou Téléversement)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-brand-700 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    {isUploadingAvatar ? 'Chargement...' : 'Fichier'}
+                  </button>
                 </div>
               </div>
 

@@ -322,13 +322,11 @@ export default function ServiceLandingPage({ params }: ServicePageProps) {
               <p className="text-sm text-slate-300 mt-1">Notre équipe au Maroc vous répond instantanément sur WhatsApp 7j/7.</p>
             </div>
             <a
-              href="https://wa.me/212600000000?text=Bonjour,%20j%27ai%20besoin%20d%27un%20freelance%20au%20Maroc"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:contact@taches.ma?subject=Demande%20de%20service%20Taches.ma"
               className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 text-sm font-bold shrink-0 transition-transform active:scale-95"
             >
               <FiPhoneCall className="text-lg" />
-              <span>Contacter sur WhatsApp (+212)</span>
+              <span>Contacter le support (contact@taches.ma)</span>
             </a>
           </div>
 

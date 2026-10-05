@@ -31,7 +31,7 @@ export const es: Translations = {
   menuDamanSecurity: 'Garantía Custodia (Daman)',
   menuWallet: 'Mi Billetera y Retiros',
   menuQualification: 'Certificación del perfil',
-  menuSupportWhatsApp: 'Soporte WhatsApp (+212)',
+  menuSupportWhatsApp: 'Soporte y Asistencia (contact@taches.ma)',
   menuClose: 'Cerrar menú',
   menuOpen: 'Abrir menú',
   menuProfile: 'Mi Cuenta',
