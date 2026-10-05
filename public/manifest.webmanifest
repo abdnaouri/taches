@@ -8,6 +8,30 @@
   "theme_color": "#1d4ed8",
   "orientation": "portrait-primary",
   "lang": "fr-MA",
+  "categories": ["business", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Publier une tâche",
+      "short_name": "Publier",
+      "description": "Déposez une nouvelle tâche en 1 minute",
+      "url": "/fr/task/new",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Toutes les missions",
+      "short_name": "Missions",
+      "description": "Explorer le catalogue des tâches disponibles",
+      "url": "/fr/tasks",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mon Portefeuille",
+      "short_name": "Portefeuille",
+      "description": "Consulter mon solde et retraits",
+      "url": "/fr/wallet",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-48.png",
