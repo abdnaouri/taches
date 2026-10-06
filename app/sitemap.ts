@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { MetadataRoute } from 'next';
 import { SEO_SERVICES } from '@/lib/seoLandings';
 import { MOROCCAN_CITIES } from '@/lib/moroccanCities';
