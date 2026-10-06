@@ -37,37 +37,6 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
   const [taskQuery, setTaskQuery] = useState('');
   const [heroAudience, setHeroAudience] = useState<'customer' | 'performer'>('customer');
 
-  const popularTasks = useMemo(() => {
-    if (locale === 'ar') {
-      return [
-        { title: 'تصميم شعار وهوية بصرية', price: '150 درهم', icon: '🎨' },
-        { title: 'ترجمة عربي / فرنسي', price: '100 درهم', icon: '📄' },
-        { title: 'إدخال فواتير في إكسيل', price: '80 درهم', icon: '📊' },
-        { title: 'متجر شوبيفاي وتجارة إلكترونية', price: '250 درهم', icon: '🛍️' },
-        { title: 'مونتاج فيديو تيك توك / ريلز', price: '120 درهم', icon: '📱' },
-        { title: 'معاملات وتوصيل وثائق', price: '70 درهم', icon: '🚚' },
-      ];
-    }
-    if (locale === 'en') {
-      return [
-        { title: 'Logo Design & Brand Identity', price: '150 DH', icon: '🎨' },
-        { title: 'Arabic / French Translation', price: '100 DH', icon: '📄' },
-        { title: 'Excel Invoice Data Entry', price: '80 DH', icon: '📊' },
-        { title: 'Shopify Store & E-commerce', price: '250 DH', icon: '🛍️' },
-        { title: 'TikTok / Reels Video Editing', price: '120 DH', icon: '📱' },
-        { title: 'Errands & Document Delivery', price: '70 DH', icon: '🚚' },
-      ];
-    }
-    return [
-      { title: 'Conception Logo & Identité', price: '150 DH', icon: '🎨' },
-      { title: 'Traduction Arabe / Français', price: '100 DH', icon: '📄' },
-      { title: 'Saisie factures sous Excel', price: '80 DH', icon: '📊' },
-      { title: 'Boutique Shopify & E-commerce', price: '250 DH', icon: '🛍️' },
-      { title: 'Montage vidéo TikTok / Reels', price: '120 DH', icon: '📱' },
-      { title: 'Démarches & Dépôt de plis', price: '70 DH', icon: '🚚' },
-    ];
-  }, [locale]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onDirectPost(taskQuery.trim());
@@ -147,49 +116,6 @@ export const WorkzillaHero: React.FC<WorkzillaHeroProps> = ({
                   <span>{t('wzHeroBtnPost')}</span>
                 </button>
               </form>
-
-              {/* Popular Task Quick Chips */}
-              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap text-xs">
-                <span className="font-bold text-slate-500 mr-1 hidden sm:inline">
-                  {locale === 'ar' ? 'أمثلة سريعة :' : locale === 'en' ? 'Quick examples:' : 'Exemples rapides :'}
-                </span>
-                {popularTasks.map((pt, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setTaskQuery(pt.title);
-                      onDirectPost(pt.title);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:border-brand-500 hover:text-brand-700 hover:bg-brand-50/50 transition-all font-semibold shadow-2xs cursor-pointer"
-                  >
-                    <span>{pt.icon}</span>
-                    <span>{pt.title}</span>
-                    <span className="text-[11px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.2 rounded-md">
-                      {pt.price}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Guarantee Note */}
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-slate-600 text-center">
-                <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
-                  <FiCheck className="text-brand-600 font-black" />
-                  <span>Publication gratuite sans engagement</span>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 text-slate-700 font-bold">
-                  <FiClock className="text-brand-600" />
-                  <span>Candidatures rapides de freelances</span>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 text-brand-700 font-bold">
-                  <FiLock className="text-brand-600" />
-                  <span>Paiement sécurisé avec garantie Daman</span>
-                </span>
-              </div>
-
             </div>
           </>
         ) : (
