@@ -2,7 +2,15 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Task, UserProfile, TaskBid, TaskMessage, TaskProofSubmission, TaskReview, WalletTransaction } from '@/types/database';
+import {
+  Task,
+  UserProfile,
+  TaskBid,
+  TaskMessage,
+  TaskProofSubmission,
+  TaskReview,
+  WalletTransaction,
+} from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { Locale } from '@/lib/i18n/types';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -18,7 +26,7 @@ import {
   fetchCampaignSlots,
   reserveCampaignSlot,
   submitCampaignExecution,
-  approveCampaignExecution
+  approveCampaignExecution,
 } from '@/lib/supabaseService';
 import { getAuthHeaders, supabase } from '@/lib/supabase';
 import { sounds } from '@/lib/soundEffects';
@@ -60,7 +68,11 @@ import {
   FiRefreshCw,
   FiX,
   FiEye,
-  FiLock
+  FiLock,
+  FiInfo,
+  FiHelpCircle,
+  FiChevronRight,
+  FiLayers,
 } from 'react-icons/fi';
 
 interface TaskWorkspacePageProps {
@@ -68,21 +80,335 @@ interface TaskWorkspacePageProps {
   forcedLocale?: Locale;
 }
 
+// Translations dictionary for pristine multilingual experience (EN, FR, AR)
+const WORKSPACE_TEXTS: Record<
+  string,
+  {
+    home: string;
+    tasks: string;
+    share: string;
+    allTasks: string;
+    linkCopied: string;
+    escrowGuaranteed: string;
+    stepProposals: string;
+    stepExecution: string;
+    stepReview: string;
+    stepCompleted: string;
+    statusOpen: string;
+    statusInProgress: string;
+    statusUnderReview: string;
+    statusRevision: string;
+    statusArbitration: string;
+    statusCompleted: string;
+    timeLimit: string;
+    hours: string;
+    levelRequired: string;
+    level: string;
+    mode: string;
+    modeSingle: string;
+    modeMulti: string;
+    guarantee: string;
+    guaranteeDesc: string;
+    descriptionTitle: string;
+    deliverablesTitle: string;
+    applyTitle: string;
+    applySubtitle: string;
+    bidsReceivedTitle: string;
+    bidsReceivedSubtitle: string;
+    netPayout: string;
+    yourPitch: string;
+    pitchPlaceholder: string;
+    sendApplication: string;
+    applicationSent: string;
+    applicationSentDesc: string;
+    bidPendingNotice: string;
+    withdrawBid: string;
+    clientManageNoticeTitle: string;
+    clientManageNoticeDesc: string;
+    noBidsYet: string;
+    noBidsYetDesc: string;
+    selectFreelancer: string;
+    declineBid: string;
+    cancelTask: string;
+    cancelTaskConfirm: string;
+    switchRoleToPerformer: string;
+    switchRoleDesc: string;
+    switchRoleBtn: string;
+    loginToApply: string;
+    loginToApplyDesc: string;
+    workInProgressTitle: string;
+    workInProgressDesc: string;
+    submitWorkBtn: string;
+    submittedProofTitle: string;
+    submittedProofSubtitle: string;
+    submittedFilesTitle: string;
+    autoApproveBannerTitle: string;
+    autoApproveBannerDesc: string;
+    approveAndPay: string;
+    requestRevision: string;
+    partialSettlement: string;
+    disputeLink: string;
+    chatTitle: string;
+    chatSubtitle: string;
+    chatLockedTitle: string;
+    chatLockedDesc: string;
+    chatLockedBadge: string;
+    clientCardTitle: string;
+    freelancerCardTitle: string;
+    escrowCardTitle: string;
+    escrowCardDesc: string;
+    safeNotice: string;
+    writeMessagePlaceholder: string;
+  }
+> = {
+  fr: {
+    home: 'Accueil',
+    tasks: 'Missions',
+    share: 'Partager',
+    allTasks: 'Toutes les missions',
+    linkCopied: 'Lien de la mission copié dans le presse-papier !',
+    escrowGuaranteed: 'Séquestre Daman Maroc',
+    stepProposals: '1. Candidatures',
+    stepExecution: '2. En cours',
+    stepReview: '3. Vérification',
+    stepCompleted: '4. Payé & Clôturé',
+    statusOpen: 'Ouverte aux candidats',
+    statusInProgress: 'En cours d’exécution',
+    statusUnderReview: 'Livrables à vérifier',
+    statusRevision: 'Retouche demandée',
+    statusArbitration: 'En arbitrage Daman',
+    statusCompleted: 'Mission Clôturée & Payée',
+    timeLimit: 'Délai imparti',
+    hours: 'heures',
+    levelRequired: 'Niveau requis',
+    level: 'Niveau',
+    mode: 'Mode d’attribution',
+    modeSingle: 'Individuel (1 freelance)',
+    modeMulti: 'Multi-exécutions',
+    guarantee: 'Garantie financière',
+    guaranteeDesc: '100% Remboursé si non conforme',
+    descriptionTitle: 'Cahier des charges & Consignes',
+    deliverablesTitle: 'Preuves & Livrables exigés',
+    applyTitle: 'Postuler à cette mission',
+    applySubtitle: 'Envoyez votre proposition pour être retenu par le client.',
+    bidsReceivedTitle: 'Candidatures reçues',
+    bidsReceivedSubtitle: 'Sélectionnez le prestataire idéal pour démarrer l’exécution sous séquestre.',
+    netPayout: 'Rémunération nette',
+    yourPitch: 'Votre proposition / pitch de motivation :',
+    pitchPlaceholder: 'Expliquez en 1-2 phrases pourquoi vous êtes le freelance idéal pour cette mission...',
+    sendApplication: 'Envoyer ma candidature',
+    applicationSent: 'Candidature transmise avec succès !',
+    applicationSentDesc: 'Le donneur d’ordre a été notifié et peut vous assigner la mission.',
+    bidPendingNotice: 'Votre candidature est en cours d’examen par le client.',
+    withdrawBid: 'Retirer ma candidature',
+    clientManageNoticeTitle: 'Espace Donneur d’Ordre & Gestionnaire',
+    clientManageNoticeDesc: 'Examinez les propositions reçues. Dès que vous sélectionnez un candidat, les fonds consignés sous séquestre sont engagés et la messagerie instantanée s’ouvre.',
+    noBidsYet: 'Aucune candidature pour le moment',
+    noBidsYetDesc: 'Les freelances qualifiés sont notifiés et vont postuler très rapidement.',
+    selectFreelancer: 'Attribuer la mission',
+    declineBid: 'Décliner',
+    cancelTask: 'Annuler la mission & Débloquer les fonds',
+    cancelTaskConfirm: 'Confirmez-vous l’annulation de cette mission ? Le montant sous séquestre sera immédiatement restitué à votre solde disponible.',
+    switchRoleToPerformer: 'Mode Freelance requis pour postuler',
+    switchRoleDesc: 'Vous êtes actuellement en mode Client. Basculez en mode Freelance pour soumettre votre offre.',
+    switchRoleBtn: 'Passer en Freelance',
+    loginToApply: 'Connectez-vous pour postuler',
+    loginToApplyDesc: 'Créez un compte ou connectez-vous pour envoyer votre proposition et recevoir vos gains.',
+    workInProgressTitle: 'Mission en cours de réalisation',
+    workInProgressDesc: 'Le freelance exécute actuellement la tâche conformément aux consignes.',
+    submitWorkBtn: 'Déposer mes preuves & Livrables',
+    submittedProofTitle: 'Livrables déposés pour inspection',
+    submittedProofSubtitle: 'Vérifiez les fichiers et validez le déblocage des fonds.',
+    submittedFilesTitle: 'Fichiers & Liens de preuve :',
+    autoApproveBannerTitle: 'Garantie d’approbation automatique sous 72 heures',
+    autoApproveBannerDesc: 'Sans réclamation ou demande de retouche sous 72h, le système débloquera automatiquement le paiement pour le freelance.',
+    approveAndPay: 'Valider & Débloquer le paiement',
+    requestRevision: 'Demander une retouche',
+    partialSettlement: 'Proposer un accord partiel (%)',
+    disputeLink: 'Ouvrir un litige / Demander l’arbitrage Daman',
+    chatTitle: 'Messagerie de la mission',
+    chatSubtitle: 'Échanges directs et sécurisés sous garantie Daman',
+    chatLockedTitle: 'Messagerie privée',
+    chatLockedDesc: 'La messagerie instantanée s’activera automatiquement dès qu’un freelance aura été sélectionné.',
+    chatLockedBadge: 'Messagerie verrouillée',
+    clientCardTitle: 'Donneur d’ordre (Client)',
+    freelancerCardTitle: 'Freelance Assigné',
+    escrowCardTitle: 'Séquestre Daman Maroc',
+    escrowCardDesc: 'Le paiement est consigné sur un compte séquestre sécurisé. Il n’est versé qu’après validation conforme des livrables.',
+    safeNotice: 'Rappel de sécurité : Les coordonnées directes sont filtrées pour préserver votre garantie financière.',
+    writeMessagePlaceholder: 'Écrivez votre message...',
+  },
+  en: {
+    home: 'Home',
+    tasks: 'Missions',
+    share: 'Share',
+    allTasks: 'All Missions',
+    linkCopied: 'Mission link copied to clipboard!',
+    escrowGuaranteed: 'Daman Morocco Escrow',
+    stepProposals: '1. Proposals',
+    stepExecution: '2. In Progress',
+    stepReview: '3. Review',
+    stepCompleted: '4. Paid & Closed',
+    statusOpen: 'Open for Proposals',
+    statusInProgress: 'In Progress',
+    statusUnderReview: 'Deliverables Under Review',
+    statusRevision: 'Revision Requested',
+    statusArbitration: 'In Daman Arbitration',
+    statusCompleted: 'Completed & Paid',
+    timeLimit: 'Time Limit',
+    hours: 'hours',
+    levelRequired: 'Required Level',
+    level: 'Level',
+    mode: 'Assignment Mode',
+    modeSingle: 'Single Freelancer',
+    modeMulti: 'Crowd / Multi-Executions',
+    guarantee: 'Escrow Protection',
+    guaranteeDesc: '100% Refundable if not delivered',
+    descriptionTitle: 'Scope of Work & Instructions',
+    deliverablesTitle: 'Required Deliverables & Proofs',
+    applyTitle: 'Apply for this mission',
+    applySubtitle: 'Submit your proposal to get selected by the client.',
+    bidsReceivedTitle: 'Received Proposals',
+    bidsReceivedSubtitle: 'Review proposals and assign the best talent under escrow protection.',
+    netPayout: 'Net Earnings',
+    yourPitch: 'Your proposal / motivation pitch:',
+    pitchPlaceholder: 'Explain in 1-2 sentences why you are the best freelancer for this task...',
+    sendApplication: 'Submit Proposal',
+    applicationSent: 'Proposal submitted successfully!',
+    applicationSentDesc: 'The employer has been notified and can assign the task to you.',
+    bidPendingNotice: 'Your proposal is currently being reviewed by the employer.',
+    withdrawBid: 'Withdraw proposal',
+    clientManageNoticeTitle: 'Employer Management Hub',
+    clientManageNoticeDesc: 'Review received proposals below. Once you select a freelancer, escrow funds are committed and realtime private chat unlocks instantly.',
+    noBidsYet: 'No proposals yet',
+    noBidsYetDesc: 'Qualified freelancers have been notified and will apply shortly.',
+    selectFreelancer: 'Assign & Start',
+    declineBid: 'Decline',
+    cancelTask: 'Cancel Mission & Refund Funds',
+    cancelTaskConfirm: 'Are you sure you want to cancel this mission? Escrow funds will be immediately refunded to your available balance.',
+    switchRoleToPerformer: 'Freelancer Mode required to apply',
+    switchRoleDesc: 'You are currently in Client mode. Switch to Freelancer mode to submit a proposal.',
+    switchRoleBtn: 'Switch to Freelancer',
+    loginToApply: 'Log in to apply',
+    loginToApplyDesc: 'Create an account or sign in to submit your proposal and receive payments.',
+    workInProgressTitle: 'Mission currently in progress',
+    workInProgressDesc: 'The assigned freelancer is actively working on the task requirements.',
+    submitWorkBtn: 'Submit Proofs & Deliverables',
+    submittedProofTitle: 'Deliverables Submitted for Review',
+    submittedProofSubtitle: 'Inspect the files and approve payout release.',
+    submittedFilesTitle: 'Proof Files & Links:',
+    autoApproveBannerTitle: '72-Hour Auto-Approval Guarantee',
+    autoApproveBannerDesc: 'If no revision is requested within 72 hours, payment will be automatically released to the freelancer.',
+    approveAndPay: 'Approve & Release Payment',
+    requestRevision: 'Request Revision',
+    partialSettlement: 'Propose Partial Settlement (%)',
+    disputeLink: 'Open Dispute / Request Daman Arbitration',
+    chatTitle: 'Mission Private Chat',
+    chatSubtitle: 'Secure direct messaging protected by Daman Escrow',
+    chatLockedTitle: 'Private Messenger',
+    chatLockedDesc: 'Direct messaging will unlock automatically as soon as a freelancer is selected.',
+    chatLockedBadge: 'Chat Locked',
+    clientCardTitle: 'Employer (Client)',
+    freelancerCardTitle: 'Assigned Freelancer',
+    escrowCardTitle: 'Daman Morocco Escrow Guarantee',
+    escrowCardDesc: 'Funds are securely locked in escrow and only released once you inspect and approve the completed deliverables.',
+    safeNotice: 'Safety reminder: Contact details are filtered to protect your financial escrow guarantee.',
+    writeMessagePlaceholder: 'Type your message...',
+  },
+  ar: {
+    home: 'الرئيسية',
+    tasks: 'المهام',
+    share: 'مشاركة',
+    allTasks: 'جميع المهام',
+    linkCopied: 'تم نسخ رابط المهمة بنجاح!',
+    escrowGuaranteed: 'ضمان الدفع Séquestre Daman',
+    stepProposals: '1. العروض',
+    stepExecution: '2. قيد الإنجاز',
+    stepReview: '3. المراجعة',
+    stepCompleted: '4. مكتملة ومدفوعة',
+    statusOpen: 'مفتوحة للمستقلين',
+    statusInProgress: 'قيد التنفيذ',
+    statusUnderReview: 'التسليمات قيد المراجعة',
+    statusRevision: 'طلب تعديل',
+    statusArbitration: 'تحت تحكيم ضمان',
+    statusCompleted: 'مكتملة ومدفوعة',
+    timeLimit: 'المدة المحددة',
+    hours: 'ساعات',
+    levelRequired: 'المستوى المطلوب',
+    level: 'مستوى',
+    mode: 'طريقة الإسناد',
+    modeSingle: 'مستقل واحد',
+    modeMulti: 'تنفيذ جماعي متعدد',
+    guarantee: 'الضمان المالي',
+    guaranteeDesc: 'استرجاع 100% في حال عدم المطابقة',
+    descriptionTitle: 'دفتر التحملات والتعليمات',
+    deliverablesTitle: 'الإثباتات والتسليمات المطلوبة',
+    applyTitle: 'التقديم على هذه المهمة',
+    applySubtitle: 'أرسل عرضك ليتم اختيارك من طرف صاحب المشروع.',
+    bidsReceivedTitle: 'العروض المستلمة',
+    bidsReceivedSubtitle: 'اختر المستقل المناسب لبدء العمل تحت حماية الضمان المالي.',
+    netPayout: 'المكسب الصافي',
+    yourPitch: 'رسالتك / عرضك لصاحب المهمة:',
+    pitchPlaceholder: 'اشرح في سطر أو سطرين لماذا أنت الشخص الأنسب لإنجاز هذه المهمة...',
+    sendApplication: 'إرسال العرض',
+    applicationSent: 'تم إرسال عرضك بنجاح!',
+    applicationSentDesc: 'تم إشعار صاحب المهمة ويمكنه اختيارك لبدء العمل.',
+    bidPendingNotice: 'عرضك قيد المراجعة من طرف العميل.',
+    withdrawBid: 'سحب العرض',
+    clientManageNoticeTitle: 'فضاء إدارة المهمة للعميل',
+    clientManageNoticeDesc: 'راجع العروض المقدمة أدناه. بمجرد اختيار مستقل، يتم تفعيل الضمان المالي وتفتح المحادثة الفورية مباشرة.',
+    noBidsYet: 'لا توجد عروض حتى الآن',
+    noBidsYetDesc: 'تم إشعار المستقلين المؤهلين وستصل العروض قريباً.',
+    selectFreelancer: 'اختيار المستقل وبدء المهمة',
+    declineBid: 'رفض',
+    cancelTask: 'إلغاء المهمة واسترجاع المبلغ',
+    cancelTaskConfirm: 'هل أنت متأكد من إلغاء هذه المهمة؟ سيتم استرجاع المبلغ المحجوز فوراً إلى رصيدك المتاح.',
+    switchRoleToPerformer: 'وضع المستقل مطلوب للتقديم',
+    switchRoleDesc: 'أنت حالياً في وضع العميل. قم بالتحويل إلى وضع المستقل لإرسال عرضك.',
+    switchRoleBtn: 'التحويل إلى مستقل',
+    loginToApply: 'سجل الدخول للتقديم',
+    loginToApplyDesc: 'أنشئ حساباً أو سجّل الدخول لإرسال عرضك واستلام أرباحك.',
+    workInProgressTitle: 'المهمة قيد التنفيذ حالياً',
+    workInProgressDesc: 'يعمل المستقل حالياً على إنجاز المتطلبات بدقة.',
+    submitWorkBtn: 'إيداع إثباتات العمل والتسليمات',
+    submittedProofTitle: 'التسليمات المودعة للمراجعة',
+    submittedProofSubtitle: 'تحقق من الملفات واعتمد تحرير الدفعة المالية.',
+    submittedFilesTitle: 'ملفات وروابط الإثبات:',
+    autoApproveBannerTitle: 'ضمان الموافقة التلقائية خلال 72 ساعة',
+    autoApproveBannerDesc: 'في حال عدم وجود أي اعتراض خلال 72 ساعة، يحرر النظام المبلغ تلقائياً للمستقل.',
+    approveAndPay: 'الموافقة وتحرير الدفع',
+    requestRevision: 'طلب تعديل',
+    partialSettlement: 'اقتراح تسوية مالية جزئية (%)',
+    disputeLink: 'فتح نزاع / طلب تحكيم ضمان',
+    chatTitle: 'محادثة المهمة',
+    chatSubtitle: 'تواصل مباشر وآمن محمي بضمان Daman Escrow',
+    chatLockedTitle: 'المحادثة الخاصة',
+    chatLockedDesc: 'ستفتح المحادثة الفورية تلقائياً بمجرد اختيار مستقل لتنفيذ المهمة.',
+    chatLockedBadge: 'المحادثة مقفلة حالياً',
+    clientCardTitle: 'صاحب المهمة (العميل)',
+    freelancerCardTitle: 'المستقل المعين',
+    escrowCardTitle: 'ضمان Séquestre Daman المغرب',
+    escrowCardDesc: 'المبلغ محجوز بأمان في حساب الضمان، ولا يتم تحريره للمستقل إلا بعد فحصك للتسليمات والموافقة عليها.',
+    safeNotice: 'تنبيه أمان: يتم حجب معلومات الاتصال الخارجية لحماية حقوقك وضمانك المالي.',
+    writeMessagePlaceholder: 'اكتب رسالتك هنا...',
+  },
+};
+
 export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forcedLocale }) => {
-  const { t, locale, isRTL, getCategoryLabel } = useLanguage();
+  const { t, locale: contextLocale, isRTL, getCategoryLabel } = useLanguage();
+  const locale = forcedLocale || contextLocale || 'fr';
+  const txt = WORKSPACE_TEXTS[locale] || WORKSPACE_TEXTS.fr;
+
   const { isAuthenticated, profile, openAuthModal, updateProfile, toggleRole, refreshProfile } = useAuth();
   const { track } = useAnalytics();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [task, setTask] = useState<Task | null>(null);
   const [isLoadingTask, setIsLoadingTask] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'bids' | 'submission'>('details');
 
   // Candidate Bids State
   const [bids, setBids] = useState<TaskBid[]>([]);
-  const [isLoadingBids, setIsLoadingBids] = useState<boolean>(false);
   const [pitch, setPitch] = useState<string>('');
   const [appliedSuccess, setAppliedSuccess] = useState<boolean>(false);
 
@@ -102,14 +428,32 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   const [taskReviews, setTaskReviews] = useState<TaskReview[]>([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
   const [ratingScore, setRatingScore] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('Travail sérieux et rapide, je recommande vivement !');
+  const [reviewComment, setReviewComment] = useState<string>(
+    locale === 'ar'
+      ? 'عمل متقن وسريع، أوصي بالتعامل معه بشدة!'
+      : locale === 'en'
+      ? 'Great work, fast and reliable. Highly recommended!'
+      : 'Travail sérieux et rapide, je recommande vivement !'
+  );
 
   // Partial Settlement State
   const [isPartialModalOpen, setIsPartialModalOpen] = useState<boolean>(false);
   const [partialPercentage, setPartialPercentage] = useState<number>(50);
-  const [partialReason, setPartialReason] = useState<string>('Travail partiellement conforme aux attentes.');
+  const [partialReason, setPartialReason] = useState<string>(
+    locale === 'ar'
+      ? 'العمل مطابق جزئياً للمطلوب.'
+      : locale === 'en'
+      ? 'Work partially meets initial requirements.'
+      : 'Travail partiellement conforme aux attentes.'
+  );
   const [partialRating, setPartialRating] = useState<number>(3);
-  const [partialReviewComment, setPartialReviewComment] = useState<string>('Prestation partiellement satisfaisante, accord amiable trouvé.');
+  const [partialReviewComment, setPartialReviewComment] = useState<string>(
+    locale === 'ar'
+      ? 'تم التوصل إلى تسوية ودية مرضية للطرفين.'
+      : locale === 'en'
+      ? 'Amicable settlement reached.'
+      : 'Prestation partiellement satisfaisante, accord amiable trouvé.'
+  );
 
   // Revision & Arbitration State
   const [isRevisionInputOpen, setIsRevisionInputOpen] = useState<boolean>(false);
@@ -120,12 +464,10 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   // Performer Qualification Modal
   const [isQualModalOpen, setIsQualModalOpen] = useState<boolean>(false);
 
-  // Multi-Execution Campaign Slots State (UNU Parity)
+  // Multi-Execution Campaign Slots State
   const [campaignExecutions, setCampaignExecutions] = useState<any[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
   const [isReservingSlot, setIsReservingSlot] = useState<boolean>(false);
-  const [isSlotDrawerOpen, setIsSlotDrawerOpen] = useState<boolean>(false);
-  const [selectedSlotForReview, setSelectedSlotForReview] = useState<any | null>(null);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -134,12 +476,28 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     setTimeout(() => setToastMessage(null), 4500);
   };
 
-  // Quick Pitch templates
-  const quickPitches = [
-    '⚡ Disponible immédiatement, travail soigné et rapide garanti.',
-    '🎨 Expérience confirmée dans ce domaine avec réalisations similaires.',
-    '📄 Parfaite maîtrise des consignes, livraison conforme avant le délai.',
-  ];
+  // Quick Pitch templates localized
+  const quickPitches = useMemo(() => {
+    if (locale === 'ar') {
+      return [
+        '⚡ متاح فوراً للبدء وإنجاز العمل بدقة وسرعة مضمونة.',
+        '🎨 لدي خبرة مثبتة في هذا المجال مع أعمال سابقة مشابهة.',
+        '📄 التزام تام بالتعليمات والتسليم قبل الموعد المحدد.',
+      ];
+    }
+    if (locale === 'en') {
+      return [
+        '⚡ Available immediately, high quality and on-time delivery guaranteed.',
+        '🎨 Proven track record and experience with similar projects.',
+        '📄 Strict adherence to requirements and prompt communication.',
+      ];
+    }
+    return [
+      '⚡ Disponible immédiatement, travail soigné et rapide garanti.',
+      '🎨 Expérience confirmée dans ce domaine avec réalisations similaires.',
+      '📄 Parfaite maîtrise des consignes, livraison conforme avant le délai.',
+    ];
+  }, [locale]);
 
   // Load Task by Slug / ID
   useEffect(() => {
@@ -148,37 +506,90 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
 
     const loadTask = async () => {
       try {
-        const allRes = await fetchDynamicTasks();
-        const allList: Task[] = allRes.tasks || [];
-        if (isMounted) setTasks(allList);
+        const taskId = extractTaskIdFromSlug(slug);
+        const dynamicTask = taskId ? await fetchDynamicTaskById(taskId) : null;
 
-        const extractedId = extractTaskIdFromSlug(slug, allList);
-        if (extractedId) {
-          const direct = allList.find((t) => t.id === extractedId);
-          if (direct) {
-            if (isMounted) setTask(direct);
-          } else {
-            const single = await fetchDynamicTaskById(extractedId);
-            if (single && isMounted) setTask(single);
-          }
+        if (!isMounted) return;
+
+        if (dynamicTask) {
+          setTask(dynamicTask);
+        } else {
+          // Fallback to fetch from list
+          const allRes = await fetchDynamicTasks();
+          const list: Task[] = allRes.tasks || [];
+          const found = list.find((t) => (taskId && t.id === taskId) || getTaskSlug(t) === slug);
+          if (isMounted) setTask(found || null);
         }
       } catch (err) {
-        console.error('Failed to load task for workspace:', err);
+        console.error('Error fetching task by slug:', err);
       } finally {
         if (isMounted) setIsLoadingTask(false);
       }
     };
 
     loadTask();
+
     return () => {
       isMounted = false;
     };
   }, [slug]);
 
-  // Load Bids & Setup Realtime Channel
+  // Realtime Messages Subscription
   useEffect(() => {
     if (!task?.id) return;
-    setIsLoadingBids(true);
+
+    getAuthHeaders(false).then((authHeaders) => {
+      fetch(`/api/messages?taskId=${task.id}`, { headers: authHeaders })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.messages) {
+            setMessages(data.messages);
+          }
+        })
+        .catch(() => {});
+    });
+
+    const channel = supabase
+      .channel(`task_chat_${task.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_messages',
+          filter: `task_id=eq.${task.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            sounds.playMessage();
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                taskId: newMsg.task_id,
+                senderId: newMsg.sender_id,
+                senderName: newMsg.sender_name || 'Utilisateur',
+                senderAvatar: newMsg.sender_avatar || '',
+                content: newMsg.content,
+                attachmentUrl: newMsg.attachment_url,
+                createdAt: newMsg.created_at,
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [task?.id]);
+
+  // Load Bids
+  useEffect(() => {
+    if (!task?.id) return;
 
     getAuthHeaders(false).then((authHeaders) => {
       fetch(`/api/bids?taskId=${task.id}`, { headers: authHeaders })
@@ -188,39 +599,30 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
             setBids(data.bids);
           }
         })
-        .catch((err) => console.warn('Failed to fetch bids:', err))
-        .finally(() => setIsLoadingBids(false));
+        .catch(() => {});
     });
 
     const bidsChannel = supabase
-      .channel(`task_bids_ws_${task.id}`)
+      .channel(`task_bids_${task.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'bids',
+          table: 'task_bids',
           filter: `task_id=eq.${task.id}`,
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const row = payload.new as any;
-            const newBid: TaskBid = {
-              id: row.id,
-              taskId: row.task_id,
-              performerId: row.performer_id,
-              performerName: row.performer_name || 'Candidat',
-              performerAvatar: row.performer_avatar || '',
-              performerTier: row.performer_tier || 'level_1',
-              performerRating: Number(row.performer_rating ?? 5.0),
-              performerCompletedCount: Number(row.performer_completed_tasks ?? 0),
-              proposedHours: Number(row.proposed_hours ?? 24),
-              pitch: row.pitch || '',
-              isVerified: Boolean(row.is_verified || row.isVerified),
-              createdAt: row.created_at || new Date().toISOString(),
-            };
-            setBids((prev) => (prev.some((b) => b.id === newBid.id) ? prev : [newBid, ...prev]));
-          }
+        () => {
+          getAuthHeaders(false).then((authHeaders) => {
+            fetch(`/api/bids?taskId=${task.id}`, { headers: authHeaders })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success && data.bids) {
+                  setBids(data.bids);
+                }
+              })
+              .catch(() => {});
+          });
         }
       )
       .subscribe();
@@ -230,88 +632,22 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     };
   }, [task?.id]);
 
-  // Load Messages & Setup Realtime Channel
-  useEffect(() => {
-    if (!task?.id) return;
-
-    const fetchMessages = () => {
-      getAuthHeaders(false).then((authHeaders) => {
-        fetch(`/api/messages?taskId=${task.id}`, { headers: authHeaders })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success && data.messages) {
-              setMessages(data.messages);
-            }
-          })
-          .catch((err) => console.warn('Failed to fetch messages:', err));
-      });
-    };
-
-    fetchMessages();
-
-    const chatChannel = supabase
-      .channel(`task_chat_ws_${task.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `task_id=eq.${task.id}`,
-        },
-        (payload) => {
-          const row = payload.new as any;
-          if (!row) return;
-
-          const formattedMsg: TaskMessage = {
-            id: row.id,
-            taskId: row.task_id,
-            senderId: row.sender_id,
-            senderName: row.sender_name || 'Utilisateur',
-            senderAvatar: row.sender_avatar || '',
-            receiverId: row.receiver_id,
-            content: row.content,
-            attachmentUrl: row.attachment_url,
-            createdAt: row.created_at || new Date().toISOString(),
-          };
-
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === formattedMsg.id)) return prev;
-            if (profile && formattedMsg.senderId !== profile.id) {
-              sounds.playMessage();
-            }
-            return [...prev, formattedMsg];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(chatChannel);
-    };
-  }, [task?.id, profile]);
-
   // Load Submissions & Reviews
   useEffect(() => {
     if (!task?.id) return;
 
-    if (task.submission) {
-      setSubmission(task.submission);
-    }
-
-    // Avoid 403 Forbidden: only fetch submissions if task is not open and user is author, worker, or admin
     const canFetchSubmissions = Boolean(
       profile &&
-      task.status !== 'OPEN' &&
-      (
-        (task.clientId && profile.id === task.clientId) ||
-        (task.assignedToId && profile.id === task.assignedToId) ||
-        profile.isAdmin ||
-        task.clientName?.includes('(Vous)') ||
-        task.clientName?.includes('(You)') ||
-        task.clientName?.includes('(أنت)') ||
-        (profile.fullName && task.clientName?.toLowerCase().includes(profile.fullName.toLowerCase()))
-      )
+        task.status !== 'OPEN' &&
+        (
+          (task.clientId && profile.id === task.clientId) ||
+          (task.assignedToId && profile.id === task.assignedToId) ||
+          profile.isAdmin ||
+          task.clientName?.includes('(Vous)') ||
+          task.clientName?.includes('(You)') ||
+          task.clientName?.includes('(أنت)') ||
+          (profile.fullName && task.clientName?.toLowerCase().includes(profile.fullName.toLowerCase()))
+        )
     );
 
     if (canFetchSubmissions) {
@@ -340,7 +676,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         })
         .catch(() => {});
 
-      // Load Campaign Slots for UNU Multi-Execution Tasks
       if (task.taskMode === 'multi') {
         setIsLoadingSlots(true);
         fetchCampaignSlots(task.id)
@@ -353,16 +688,16 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   // Auto scroll chat to bottom
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeTab]);
+  }, [messages]);
 
   if (isLoadingTask) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
         <Header />
-        <div className="flex-1 flex items-center justify-center py-20">
+        <div className="flex-1 flex items-center justify-center py-24">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 rounded-full border-3 border-brand-700 border-t-transparent animate-spin" />
-            <p className="text-xs font-bold text-slate-500">Chargement de la mission et des flux...</p>
+            <p className="text-xs font-bold text-slate-500">Chargement de la mission...</p>
           </div>
         </div>
       </div>
@@ -374,20 +709,26 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
         <Header />
         <div className="flex-1 flex items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xs">
-            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xs space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto">
               <FiAlertTriangle />
             </div>
-            <h2 className="text-lg font-black text-slate-900">Mission introuvable</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Cette mission a peut-être été supprimée ou clôturée par son auteur.
+            <h2 className="text-lg font-black text-slate-900">
+              {locale === 'ar' ? 'المهمة غير متوفرة' : locale === 'en' ? 'Task Not Found' : 'Mission introuvable'}
+            </h2>
+            <p className="text-xs text-slate-500">
+              {locale === 'ar'
+                ? 'ربما تم حذف هذه المهمة أو إغلاقها من طرف صاحبها.'
+                : locale === 'en'
+                ? 'This task may have been removed or closed by its author.'
+                : 'Cette mission a peut-être été supprimée ou clôturée par son auteur.'}
             </p>
             <button
               onClick={() => router.push(`/${locale}/tasks`)}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 text-xs transition cursor-pointer"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 text-xs transition cursor-pointer"
             >
               <FiArrowLeft />
-              <span>Retour au catalogue des missions</span>
+              <span>{txt.allTasks}</span>
             </button>
           </div>
         </div>
@@ -397,10 +738,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
 
   const localized = getLocalizedTask(task, locale);
   const rewardDH = Math.round(task.reward * 10);
+  const netRewardDH = Math.round(rewardDH * 0.85);
 
-  // Author & Owner determination:
-  // User is author if profile.id matches task.clientId, or email matches, or clientName matches user's name / '(Vous)' / '(You)' / '(أنت)',
-  // or demo account fallback.
+  // Author & Owner determination
   const isOwnTask = Boolean(
     profile && (
       (task.clientId && profile.id === task.clientId) ||
@@ -418,10 +758,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     )
   );
 
-  // isOwner: user is the author OR has admin privileges.
-  // Never restrict by activeRole so that the owner always has management rights (accept/reject bids, cancel, approve).
   const isOwner = isOwnTask || Boolean(profile?.isAdmin);
-
   const isAssignedToMe = Boolean(profile && task.assignedToId && profile.id === task.assignedToId);
   const isFreelancerChosen = Boolean(
     task.assignedToId ||
@@ -431,23 +768,21 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
   const isUrgent = task.timeLimitHours <= 6;
   const isPerformerRole = Boolean(profile && profile.activeRole === 'PERFORMER');
 
-  // Check if current user already submitted a bid to this task
   const myExistingBid = profile
     ? bids.find((b) => b.performerId === profile.id || (b as any).isOwnBid === true) || null
     : null;
 
-  // Clean client name display without permanently baked '(Vous)'
-  const rawClientName = (task.clientName || 'Client').replace(/\s*\(Vous\)/gi, '').trim();
+  const rawClientName = (task.clientName || 'Client').replace(/\s*\(Vous\)|\(You\)|\(أنت\)/gi, '').trim();
   const youSuffix = locale === 'ar' ? 'أنت' : locale === 'en' ? 'You' : 'Vous';
   const displayClientName = isOwnTask ? `${rawClientName} (${youSuffix})` : rawClientName;
 
-  // Send message in chat
+  // Handlers
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!chatInput.trim() || !task) return;
 
     if (!isAuthenticated || !profile) {
-      openAuthModal('login', 'Connectez-vous pour envoyer un message');
+      openAuthModal('login', txt.loginToApply);
       return;
     }
 
@@ -487,16 +822,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       }
     } catch (err: any) {
       console.error('Failed to post message:', err);
-      // Remove failed optimistic message and show user error feedback
       setMessages((prev) => prev.filter((m) => m.id !== tempMsg.id));
       sounds.playAlert();
-      showToast(err.message || 'Impossible d’envoyer le message. Vérifiez votre connexion.');
+      showToast(err.message || 'Impossible d’envoyer le message.');
     } finally {
       setIsSendingMessage(false);
     }
   };
 
-  // Upload attachment in chat
   const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !task) return;
@@ -520,12 +853,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         });
         const postData = await postRes.json();
         if (!postData.success) {
-          throw new Error(postData.error || 'Erreur lors de l’envoi de la pièce jointe');
+          throw new Error(postData.error || 'Erreur lors de l’envoi');
         }
         sounds.playMessage();
         showToast('Fichier joint envoyé avec succès !');
       } else {
-        throw new Error(res.error || 'Erreur lors du téléversement du fichier.');
+        throw new Error(res.error || 'Échec de téléversement.');
       }
     } catch (err: any) {
       sounds.playAlert();
@@ -536,10 +869,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Apply / Bid for task
   const handleApplyBid = async (selectedPitch?: string) => {
     if (!isAuthenticated || !profile) {
-      openAuthModal('login', 'Connectez-vous pour postuler à cette mission');
+      openAuthModal('login', txt.loginToApply);
       return;
     }
 
@@ -557,7 +889,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
 
     const pitchText = selectedPitch || pitch;
     if (!pitchText.trim()) {
-      showToast('Veuillez renseigner votre proposition ou message de motivation.');
+      showToast('Veuillez renseigner votre proposition.');
       return;
     }
 
@@ -583,7 +915,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       if (data.success) {
         setAppliedSuccess(true);
         sounds.playSuccess();
-        showToast('Candidature transmise avec succès au donneur d’ordre !');
+        showToast(txt.applicationSent);
         setPitch('');
         if (data.bid) {
           const newBid: TaskBid = {
@@ -607,13 +939,11 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         showToast(data.error || 'Erreur lors de la candidature.');
       }
     } catch (err: any) {
-      console.warn('Bid error:', err);
       sounds.playAlert();
-      showToast(err.message || 'Erreur réseau lors de l’envoi de votre candidature.');
+      showToast(err.message || 'Erreur réseau.');
     }
   };
 
-  // Decline / Dismiss a Bid (Client)
   const handleDeclineBid = async (bidId: string) => {
     try {
       const authHeaders = await getAuthHeaders(true);
@@ -628,15 +958,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         showToast('Candidature déclinée.');
       } else {
         sounds.playAlert();
-        showToast(data.error || 'Erreur lors du refus de la candidature.');
+        showToast(data.error || 'Erreur lors du refus.');
       }
     } catch (err: any) {
       sounds.playAlert();
-      showToast(err.message || 'Erreur réseau lors de l’opération.');
+      showToast(err.message || 'Erreur réseau.');
     }
   };
 
-  // Withdraw Performer's Own Bid
   const handleWithdrawBid = async (bidId: string) => {
     if (!confirm('Confirmez-vous le retrait de votre candidature ?')) return;
     try {
@@ -653,15 +982,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         showToast('Votre candidature a été retirée.');
       } else {
         sounds.playAlert();
-        showToast(data.error || 'Erreur lors du retrait de votre candidature.');
+        showToast(data.error || 'Erreur lors du retrait.');
       }
     } catch (err: any) {
       sounds.playAlert();
-      showToast(err.message || 'Erreur réseau lors de l’opération.');
+      showToast(err.message || 'Erreur réseau.');
     }
   };
 
-  // Assign Performer
   const handleAssign = async (performerId: string, performerName: string) => {
     const previousTask = task;
     const assignedAt = new Date().toISOString();
@@ -674,7 +1002,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     };
     setTask(updated);
     sounds.playSuccess();
-    showToast(`Mission attribuée à ${performerName} ! Séquestre activé.`);
+    showToast(`Mission attribuée à ${performerName} ! Séquestre Daman activé.`);
 
     try {
       const ok = await updateDynamicTask(task.id, {
@@ -707,13 +1035,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
           senderId: profile.id,
           senderName: profile.fullName || 'Client',
           senderAvatar: profile.avatarUrl || '',
-          content: `🤝 Mission confiée à ${performerName}. Le budget (${rewardDH} DH) est consigné sous séquestre Daman. Les échanges de consignes et de fichiers s’effectuent ici.`,
+          content: `🤝 Mission confiée à ${performerName}. Le budget (${rewardDH} DH) est consigné sous séquestre Daman. Les échanges et fichiers s’effectuent ici.`,
         }),
       });
     }
   };
 
-  // Submit Deliverable Proofs
   const handleSubmitProof = async (reportText: string, proofUrls: string[], antiSpamEntered?: string) => {
     if (!task) return;
     const newSubmission: TaskProofSubmission = {
@@ -731,7 +1058,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     };
     setTask(updated);
     setSubmission(newSubmission);
-    showToast('Livrables et preuves soumis avec succès ! Le client a été notifié.');
+    showToast('Livrables et preuves soumis avec succès !');
     setIsProofDrawerOpen(false);
 
     try {
@@ -767,10 +1094,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Reserve Slot in Multi-Execution Campaign (UNU Parity)
   const handleReserveSlot = async () => {
     if (!isAuthenticated || !profile) {
-      openAuthModal('login', 'Connectez-vous pour réserver une place');
+      openAuthModal('login', txt.loginToApply);
       return;
     }
 
@@ -781,7 +1107,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     if (res.success) {
       sounds.playSuccess();
       showToast(res.message || 'Place réservée pour 45 minutes !');
-      // Refresh slots
       const updatedSlots = await fetchCampaignSlots(task.id);
       setCampaignExecutions(updatedSlots);
     } else {
@@ -790,7 +1115,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Approve a single execution in Multi-Execution Campaign
   const handleApproveSlotExecution = async (executionId: string) => {
     const res = await approveCampaignExecution(executionId);
     if (res.success) {
@@ -798,13 +1122,11 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       showToast('Exécution approuvée et rémunération débloquée !');
       const updatedSlots = await fetchCampaignSlots(task.id);
       setCampaignExecutions(updatedSlots);
-      setSelectedSlotForReview(null);
     } else {
       showToast(res.error || 'Erreur lors de la validation.');
     }
   };
 
-  // Approve Work (100% Release)
   const handleApproveWork = async () => {
     if (!task) return;
     const completedAt = new Date().toISOString();
@@ -832,7 +1154,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         customerTotalSpent: (profile.customerTotalSpent || 0) + task.totalBudget,
       });
 
-      // Post Review
       const authHeaders = await getAuthHeaders(true);
       await fetch('/api/reviews', {
         method: 'POST',
@@ -847,7 +1168,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
         }),
       });
 
-      // Kickoff message
       await fetch('/api/messages', {
         method: 'POST',
         headers: authHeaders,
@@ -862,7 +1182,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Request Revision
   const handleRequestRevision = async () => {
     if (!task || !revisionFeedback.trim()) return;
     const updated: Task = { ...task, status: 'REVISION_REQUESTED' };
@@ -888,10 +1207,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Cancel Open Task (Client 100% Refund)
   const handleCancelOpenTask = async () => {
     if (!task) return;
-    if (!confirm('Confirmez-vous l’annulation de cette mission ? Le montant total consigné sous séquestre sera immédiatement restitué à votre solde disponible.')) {
+    if (!confirm(txt.cancelTaskConfirm)) {
       return;
     }
     const updated: Task = { ...task, status: 'CANCELLED' };
@@ -909,7 +1227,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Propose Partial Settlement (Client)
   const handleProposePartialSettlement = async () => {
     if (!task) return;
     const amountDH = Math.round(rewardDH * (partialPercentage / 100));
@@ -930,7 +1247,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     };
     setTask(updated);
     setIsPartialModalOpen(false);
-    showToast(`Proposition de ${partialPercentage}% (${amountDH} DH) transmise au prestataire.`);
+    showToast(`Proposition de ${partialPercentage}% (${amountDH} DH) transmise.`);
 
     await updateDynamicTask(task.id, {
       settlementProposal: proposal,
@@ -946,13 +1263,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
           senderId: profile.id,
           senderName: profile.fullName || 'Client',
           senderAvatar: profile.avatarUrl || '',
-          content: `⚖️ Proposition de règlement partiel : ${partialPercentage}% (${amountDH} DH) pour le travail rendu. Motif : « ${partialReason} »`,
+          content: `⚖️ Proposition de règlement partiel : ${partialPercentage}% (${amountDH} DH). Motif : « ${partialReason} »`,
         }),
       });
     }
   };
 
-  // Accept Partial Settlement (Performer)
   const handleAcceptPartialSettlement = async () => {
     if (!task || !task.settlementProposal) return;
     const proposal = task.settlementProposal;
@@ -998,7 +1314,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       refreshProfile();
     }
 
-    showToast(`Accord amiable validé : ${performerNetDH} DH débloqués, ${clientRefundDH} DH remboursés au client.`);
+    showToast(`Accord amiable validé : ${performerNetDH} DH débloqués, ${clientRefundDH} DH remboursés.`);
 
     await updateDynamicTask(task.id, {
       status: 'COMPLETED',
@@ -1025,7 +1341,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Reject Partial Settlement
   const handleRejectPartialSettlement = async () => {
     if (!task || !task.settlementProposal) return;
     const updatedProposal = {
@@ -1049,13 +1364,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
           senderId: profile.id,
           senderName: profile.fullName || 'Utilisateur',
           senderAvatar: profile.avatarUrl || '',
-          content: `❌ Proposition de règlement partiel refusée. Les échanges se poursuivent ou l'arbitrage Daman peut être sollicité.`,
+          content: `❌ Proposition de règlement partiel refusée.`,
         }),
       });
     }
   };
 
-  // Escalate to Arbitration
   const handleSendArbitration = async () => {
     if (!task || !arbitrationReason.trim()) return;
     const reason = arbitrationReason.trim();
@@ -1082,60 +1396,74 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
     }
   };
 
-  // Status badge styling
+  // Status Badge Component
   const getStatusBadge = () => {
     switch (task.status) {
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 text-xs font-black">
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            En cours d’exécution
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1 text-xs font-black shadow-2xs">
+            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+            {txt.statusInProgress}
           </span>
         );
       case 'UNDER_REVIEW':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-800 px-3 py-1 text-xs font-black">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-800 px-3 py-1 text-xs font-black shadow-2xs">
             <FiCheckCircle className="text-purple-600" />
-            Livrables à vérifier
+            {txt.statusUnderReview}
           </span>
         );
       case 'REVISION_REQUESTED':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1 text-xs font-black">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1 text-xs font-black shadow-2xs">
             <FiRepeat className="text-rose-600" />
-            Retouche demandée
+            {txt.statusRevision}
           </span>
         );
       case 'ARBITRATION':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-800 px-3 py-1 text-xs font-black">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-800 px-3 py-1 text-xs font-black shadow-2xs">
             <FiShield className="text-orange-600" />
-            En arbitrage Daman
+            {txt.statusArbitration}
           </span>
         );
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 text-xs font-black">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 text-xs font-black shadow-2xs">
             <FiCheckCircle className="text-emerald-600" />
-            Mission Clôturée & Payée
+            {txt.statusCompleted}
           </span>
         );
       case 'OPEN':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 px-3 py-1 text-xs font-black">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 px-3 py-1 text-xs font-black shadow-2xs">
             <span className="h-2 w-2 rounded-full bg-brand-600 animate-ping" />
-            Ouverte aux candidats ({bids.length} offre{bids.length > 1 ? 's' : ''})
+            {txt.statusOpen} ({bids.length})
           </span>
         );
     }
   };
 
+  // Stepper Current Phase Calculation
+  const currentStepIndex =
+    task.status === 'COMPLETED'
+      ? 3
+      : task.status === 'UNDER_REVIEW' || task.status === 'REVISION_REQUESTED' || task.status === 'ARBITRATION'
+      ? 2
+      : task.status === 'IN_PROGRESS' || isFreelancerChosen
+      ? 1
+      : 0;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className={`min-h-screen bg-slate-50/80 text-slate-900 flex flex-col font-sans ${isRTL ? 'rtl' : 'ltr'}`}>
       {/* Toast Alert */}
       {toastMessage && (
-        <div className={`fixed top-18 ${isRTL ? 'left-5' : 'right-5'} z-50 flex items-center gap-2.5 rounded-xl bg-slate-900 text-white px-4 py-3 shadow-2xl border border-emerald-500/40 text-xs animate-in slide-in-from-top-3`}>
+        <div
+          className={`fixed top-18 ${
+            isRTL ? 'left-5' : 'right-5'
+          } z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 text-white px-4 py-3 shadow-2xl border border-emerald-500/40 text-xs animate-in slide-in-from-top-3`}
+        >
           <FiCheck className="text-emerald-400 text-base shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -1144,156 +1472,225 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
       {/* Global Header */}
       <Header />
 
-      {/* Main Task Workspace Container */}
+      {/* Main Task Workspace */}
       <main className="flex-1 py-6 sm:py-8">
         <div className="mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8 space-y-6">
 
-          {/* BREADCRUMB & TOP NAV */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
+          {/* 1. TOP BREADCRUMB & NAVIGATION BAR */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
             <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold flex-wrap">
               <button
                 type="button"
                 onClick={() => router.push(`/${locale}`)}
                 className="hover:text-brand-700 transition cursor-pointer"
               >
-                Accueil
+                {txt.home}
               </button>
-              <span>/</span>
+              <span className="text-slate-300">/</span>
               <button
                 type="button"
                 onClick={() => router.push(`/${locale}/tasks`)}
                 className="hover:text-brand-700 transition cursor-pointer"
               >
-                Missions
+                {txt.tasks}
               </button>
-              <span>/</span>
-              <span className="text-slate-800 font-bold truncate max-w-[200px] sm:max-w-xs">
-                {task.title}
+              <span className="text-slate-300">/</span>
+              <span className="text-slate-800 font-bold truncate max-w-[240px] sm:max-w-md">
+                {localized.title}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
-                  showToast('Lien de la mission copié dans le presse-papier !');
+                  showToast(txt.linkCopied);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition cursor-pointer"
-                title="Partager cette mission"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition cursor-pointer"
+                title="Partager"
               >
                 <FiShare2 className="text-xs text-slate-500" />
-                <span>Partager</span>
+                <span>{txt.share}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => router.push(`/${locale}/tasks`)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 text-xs font-bold shadow-2xs transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-4 py-1.5 text-xs font-bold shadow-2xs transition cursor-pointer"
               >
-                <FiArrowLeft />
-                <span>Toutes les missions</span>
+                {isRTL ? <FiArrowRight /> : <FiArrowLeft />}
+                <span>{txt.allTasks}</span>
               </button>
             </div>
           </div>
 
-          {/* DUAL COLUMN WORKSPACE GRID */}
+          {/* 2. HERO TASK HEADER CARD (IMMEDIATE ORIENTATION & EYE PROGRESSION) */}
+          <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+            {/* Top row: Status, Badges & Price Tag */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                {getStatusBadge()}
+                <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                  {task.subCategory || getCategoryLabel(task.category || 'all')}
+                </span>
+                {task.city ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-800 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+                    <FiMapPin className="text-xs" /> {task.city}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                    <FiGlobe className="text-xs" /> {locale === 'ar' ? 'عن بُعد / أونلاين' : 'En ligne / Remote'}
+                  </span>
+                )}
+                {isUrgent && (
+                  <span className="inline-flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                    ⚡ {locale === 'ar' ? 'عاجل' : locale === 'en' ? 'Urgent' : 'Urgent'}
+                  </span>
+                )}
+              </div>
+
+              {/* Price / Budget Pill */}
+              <div className="flex items-baseline gap-2 bg-gradient-to-r from-brand-50 to-emerald-50 border border-brand-200/60 rounded-2xl px-4 py-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  {locale === 'ar' ? 'المكافأة :' : locale === 'en' ? 'Reward :' : 'Rémunération :'}
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-brand-900">
+                  {rewardDH} <span className="text-sm font-extrabold text-slate-600">DH</span>
+                </span>
+                <span className="text-[10px] font-black text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                  ✓ Daman
+                </span>
+              </div>
+            </div>
+
+            {/* Task Title */}
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-snug">
+              {localized.title}
+            </h1>
+
+            {/* Task Meta Specs Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-slate-100 text-xs">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-base shrink-0">
+                  <FiClock />
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">{txt.timeLimit}</span>
+                  <span className="font-extrabold text-slate-800">
+                    {task.timeLimitHours} {txt.hours}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-base shrink-0">
+                  <FiAward />
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">{txt.levelRequired}</span>
+                  <span className="font-extrabold text-slate-800">
+                    {txt.level} {task.minLevelRequired || 1}+
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-base shrink-0">
+                  <FiUsers />
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">{txt.mode}</span>
+                  <span className="font-extrabold text-slate-800">
+                    {task.taskMode === 'multi' ? txt.modeMulti : txt.modeSingle}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base shrink-0">
+                  <FiShield />
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">{txt.guarantee}</span>
+                  <span className="font-extrabold text-emerald-700">100% Sécurisé</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. LIFECYCLE PROGRESS STEPPER (CLEAR PROCESS VISION) */}
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-4 shadow-2xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { title: txt.stepProposals, sub: 'Appel d’offres', index: 0 },
+                { title: txt.stepExecution, sub: 'En production', index: 1 },
+                { title: txt.stepReview, sub: 'Vérification livrables', index: 2 },
+                { title: txt.stepCompleted, sub: 'Fonds débloqués', index: 3 },
+              ].map((step) => {
+                const isPast = currentStepIndex > step.index;
+                const isCurrent = currentStepIndex === step.index;
+                return (
+                  <div
+                    key={step.index}
+                    className={`p-3 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'bg-brand-50/70 border-brand-300 text-brand-950 font-bold shadow-2xs'
+                        : isPast
+                        ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900 font-semibold'
+                        : 'bg-slate-50 border-slate-100 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${
+                          isCurrent
+                            ? 'bg-brand-700 text-white animate-pulse'
+                            : isPast
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        {isPast ? <FiCheck className="text-xs" /> : step.index + 1}
+                      </div>
+                      <span className="text-xs font-extrabold truncate">{step.title}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 4. DUAL COLUMN WORKSPACE (MAIN WORKSPACE 8 COLS / TRUST SIDEBAR 4 COLS) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* LEFT COLUMN: TASK DETAILS & WORKFLOW ENGINE (7 COLS) */}
-            <div className="lg:col-span-7 space-y-6">
+            {/* LEFT / MAIN COLUMN (8 COLS) */}
+            <div className="lg:col-span-8 space-y-6">
 
-              {/* 1. PRIMARY TASK HEADER CARD */}
-              <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {getStatusBadge()}
-                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                      {task.subCategory || getCategoryLabel(task.category || 'all')}
-                    </span>
-                    {task.city ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-800 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
-                        <FiMapPin className="text-xs" /> {task.city}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">
-                        <FiGlobe className="text-xs" /> En ligne
-                      </span>
-                    )}
-                    {isUrgent && (
-                      <span className="inline-flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-100 px-2 py-1 rounded-lg border border-amber-300">
-                        ⚡ Urgent
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <div className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">
-                      {rewardDH} <span className="text-sm font-extrabold text-slate-500">DH</span>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mt-0.5">
-                      ✓ Séquestre Daman
-                    </span>
-                  </div>
-                </div>
-
-                {/* Title */}
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
-                  {localized.title}
-                </h1>
-
-                {/* Task Metadata Bar */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Délai imparti</span>
-                    <span className="font-extrabold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <FiClock className="text-brand-600" /> {task.timeLimitHours} heures
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Niveau requis</span>
-                    <span className="font-extrabold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <FiAward className="text-amber-500" /> Niveau {task.minLevelRequired || 1}+
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Mode</span>
-                    <span className="font-extrabold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <FiUsers className="text-indigo-600" /> {task.taskMode === 'multi' ? 'Multi-exécuteurs' : 'Individuel'}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Garantie</span>
-                    <span className="font-extrabold text-emerald-700 flex items-center gap-1 mt-0.5">
-                      <FiShield className="text-emerald-600" /> 100% Remboursé
-                    </span>
-                  </div>
-                </div>
-
-                {/* Description */}
+              {/* CARD A: MISSION SCOPE & REQUIRED PROOFS */}
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-5">
                 <div>
-                  <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-2">
-                    Description du besoin
-                  </h3>
-                  <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <h2 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <FiFileText className="text-slate-500" />
+                    <span>{txt.descriptionTitle}</span>
+                  </h2>
+                  <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/70">
                     {localized.description}
                   </div>
                 </div>
 
-                {/* Deliverables / Proofs Requirements */}
+                {/* Proofs checklist */}
                 {task.requiredProofs && task.requiredProofs.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-2">
-                      Preuves & Livrables exigés
-                    </h3>
+                  <div className="pt-2">
+                    <h2 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-2.5 flex items-center gap-1.5">
+                      <FiCheckSquare className="text-emerald-600" />
+                      <span>{txt.deliverablesTitle}</span>
+                    </h2>
                     <div className="space-y-2">
                       {task.requiredProofs.map((proof, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50/50 border border-emerald-200/70 text-xs font-medium text-slate-800"
+                          className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-50/40 border border-emerald-200/60 text-xs font-medium text-slate-800"
                         >
                           <FiCheckSquare className="text-emerald-600 shrink-0 text-sm mt-0.5" />
                           <span>{proof}</span>
@@ -1304,7 +1701,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                 )}
               </div>
 
-              {/* AUTO-APPROVAL 72H BANNER (Workzilla Parity) */}
+              {/* AUTO-APPROVAL 72H BANNER */}
               {task.status === 'UNDER_REVIEW' && (
                 <div className="rounded-3xl bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 text-white p-5 sm:p-6 shadow-md flex items-start gap-4">
                   <div className="h-11 w-11 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-400/30 flex items-center justify-center shrink-0 text-xl mt-0.5">
@@ -1312,21 +1709,21 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black text-sm text-white">Garantie d’approbation automatique sous 72 heures</span>
+                      <span className="font-black text-sm text-white">{txt.autoApproveBannerTitle}</span>
                       <span className="text-[10px] font-extrabold bg-purple-400/20 text-purple-200 px-2 py-0.5 rounded-full border border-purple-400/30">
-                        Séquestre Daman
+                        {txt.escrowGuaranteed}
                       </span>
                     </div>
                     <p className="text-xs text-purple-100 leading-relaxed">
-                      Les livrables sont en cours d’examen par le client. Sans réclamation ou demande de retouche sous 72h, le système débloquera automatiquement le paiement ({rewardDH} DH) pour le freelance.
+                      {txt.autoApproveBannerDesc}
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* MULTI-EXECUTION CROWD CAMPAIGN ENGINE (UNU Parity) */}
+              {/* MULTI-EXECUTION CROWD CAMPAIGN (UNU MODE) */}
               {task.taskMode === 'multi' && (
-                <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
+                <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
                       <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-0.5 text-xs font-bold text-indigo-700 mb-1">
@@ -1346,7 +1743,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   </div>
 
-                  {/* Slots Progress */}
                   <div>
                     <div className="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
                       <span>Progression des exécutions</span>
@@ -1358,13 +1754,17 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                       <div
                         className="h-full bg-gradient-to-r from-indigo-500 to-brand-600 transition-all duration-500"
                         style={{
-                          width: `${Math.min(100, Math.round(((task.executionsApprovedCount || 0) / Math.max(1, task.targetExecutionsCount || 1)) * 100))}%`,
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              ((task.executionsApprovedCount || 0) / Math.max(1, task.targetExecutionsCount || 1)) * 100
+                            )
+                          )}%`,
                         }}
                       />
                     </div>
                   </div>
 
-                  {/* Performer Slot Reservation Box */}
                   {!isOwner && (
                     <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div>
@@ -1385,7 +1785,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   )}
 
-                  {/* Executions Table */}
                   <div className="space-y-3 pt-2">
                     <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
                       Suivi des exécutions ({campaignExecutions.length})
@@ -1395,7 +1794,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                       <div className="p-6 text-center text-xs text-slate-400">Chargement des exécutions...</div>
                     ) : campaignExecutions.length === 0 ? (
                       <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500">
-                        Aucune exécution enregistrée pour l’instant. Les premières réservations apparaîtront ici.
+                        Aucune exécution enregistrée pour l’instant.
                       </div>
                     ) : (
                       <div className="space-y-2.5">
@@ -1413,25 +1812,32 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                               <div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-extrabold text-slate-900">{exec.performerName}</span>
-                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                    exec.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                                    exec.status === 'SUBMITTED' ? 'bg-purple-100 text-purple-800' :
-                                    exec.status === 'RESERVED' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
-                                  }`}>
-                                    {exec.status === 'APPROVED' ? '✓ Validé & Payé' :
-                                     exec.status === 'SUBMITTED' ? '⏳ Livrable déposé' :
-                                     exec.status === 'RESERVED' ? '⏱️ Place réservée (45 min)' : exec.status}
+                                  <span
+                                    className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                      exec.status === 'APPROVED'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : exec.status === 'SUBMITTED'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : exec.status === 'RESERVED'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-slate-200 text-slate-700'
+                                    }`}
+                                  >
+                                    {exec.status === 'APPROVED'
+                                      ? '✓ Validé & Payé'
+                                      : exec.status === 'SUBMITTED'
+                                      ? '⏳ Livrable déposé'
+                                      : exec.status === 'RESERVED'
+                                      ? '⏱️ Place réservée (45 min)'
+                                      : exec.status}
                                   </span>
                                 </div>
                                 {exec.reportText && (
-                                  <p className="text-slate-600 mt-1 line-clamp-1 italic">
-                                    "{exec.reportText}"
-                                  </p>
+                                  <p className="text-slate-600 mt-1 line-clamp-1 italic">"{exec.reportText}"</p>
                                 )}
                               </div>
                             </div>
 
-                            {/* Client Action on Submitted Slot */}
                             {isOwner && exec.status === 'SUBMITTED' && (
                               <button
                                 type="button"
@@ -1450,103 +1856,98 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                 </div>
               )}
 
-              {/* 2. WORKFLOW ACTION AREA: CANDIDATURES / LIVRABLES / ACTIONS */}
+              {/* CARD B: CONTEXTUAL ACTION ENGINE (PROPOSALS / DELIVERABLES / REVIEWS) */}
               {task.status === 'OPEN' && task.taskMode !== 'multi' ? (
-                /* OPEN STATUS: CANDIDATE BIDS SECTION */
-                <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
-                  <div className="flex items-center justify-between">
+                /* OPEN STATUS: PROPOSALS & APPLICATION HUB */
+                <div id="proposals-hub" className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <h2 className="text-base sm:text-lg font-black text-slate-900">
-                        {isOwner ? `Offres reçues (${bids.length})` : 'Postuler à cette mission'}
+                        {isOwner ? `${txt.bidsReceivedTitle} (${bids.length})` : txt.applyTitle}
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {isOwner
-                          ? 'Sélectionnez le prestataire idéal pour démarrer l’exécution sous séquestre.'
-                          : 'Envoyez votre proposition pour être retenu par le client.'}
+                        {isOwner ? txt.bidsReceivedSubtitle : txt.applySubtitle}
                       </p>
                     </div>
 
                     {!isOwner && !isAssigned && isPerformerRole && (
-                      <div className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
-                        Gain net : {Math.round(rewardDH * 0.85)} DH
+                      <div className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                        {txt.netPayout} : {netRewardDH} DH
                       </div>
                     )}
                   </div>
 
-                  {/* Owner Banner OR Performer Application Box */}
+                  {/* Owner Banner OR Performer Proposal Form */}
                   {isOwner ? (
                     <div className="p-4 rounded-2xl bg-brand-50/80 border border-brand-200 flex items-start gap-3">
                       <FiShield className="text-brand-700 text-lg shrink-0 mt-0.5" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-brand-900">
-                            {isOwnTask ? "Vous êtes le Donneur d’ordre de cette mission" : "Espace Gestionnaire & Administration"}
-                          </span>
-                          <span className="text-[10px] font-extrabold bg-brand-200/80 text-brand-900 px-2 py-0.5 rounded-full">
-                            Espace Gestionnaire
+                            {txt.clientManageNoticeTitle}
                           </span>
                         </div>
                         <p className="text-[11px] text-brand-800 leading-relaxed">
-                          Examinez les propositions reçues ci-dessous. Dès que vous sélectionnez un freelance, les fonds consignés sous séquestre ({rewardDH} DH) sont engagés et la messagerie directe s&apos;ouvrira immédiatement.
+                          {txt.clientManageNoticeDesc}
                         </p>
                       </div>
                     </div>
                   ) : !isAssigned ? (
-                    <div className="space-y-4 pt-2">
-                      {/* Scenario A: User has already submitted a bid */}
+                    <div className="space-y-4 pt-1">
+                      {/* Case: Already submitted bid */}
                       {myExistingBid ? (
                         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5">
                               <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm shrink-0">
                                 <FiCheck />
                               </div>
                               <div>
                                 <h4 className="text-xs font-black text-emerald-900">
-                                  Votre candidature a été transmise
+                                  {txt.applicationSent}
                                 </h4>
                                 <p className="text-[11px] text-emerald-700">
-                                  Votre proposition est entre les mains du client.
+                                  {txt.bidPendingNotice}
                                 </p>
                               </div>
                             </div>
                             <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              ⏳ En attente de sélection
+                              ⏳ En attente
                             </span>
                           </div>
 
                           {myExistingBid.pitch && (
-                            <div className="p-3 rounded-xl bg-white/80 border border-emerald-200 text-xs text-slate-700 italic">
+                            <div className="p-3 rounded-xl bg-white/90 border border-emerald-200 text-xs text-slate-700 italic">
                               &ldquo;{myExistingBid.pitch}&rdquo;
                             </div>
                           )}
 
                           <div className="flex items-center justify-between text-xs pt-1">
                             <span className="text-emerald-800 font-semibold text-[11px]">
-                              Délai proposé : {myExistingBid.proposedHours || task.timeLimitHours || 24}h
+                              {txt.timeLimit} : {myExistingBid.proposedHours || task.timeLimitHours || 24}h
                             </span>
                             <button
                               type="button"
                               onClick={() => handleWithdrawBid(myExistingBid.id)}
                               className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
                             >
-                              Retirer ma candidature
+                              {txt.withdrawBid}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <>
-                          {/* Guard: Must be in PERFORMER role to apply */}
+                          {/* Guard: Must be in PERFORMER role */}
                           {!isPerformerRole && isAuthenticated && (
                             <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row sm:items-center gap-3">
                               <div className="flex items-start gap-3 flex-1">
                                 <FiUser className="text-indigo-500 text-base shrink-0 mt-0.5" />
                                 <div>
                                   <p className="text-xs font-extrabold text-indigo-900">
-                                    Mode Freelance requis pour postuler
+                                    {txt.switchRoleToPerformer}
                                   </p>
                                   <p className="text-[11px] text-indigo-700 mt-0.5">
-                                    Vous êtes actuellement en mode <strong>Client</strong>. Passez en mode <strong>Freelance (Prestataire)</strong> pour envoyer une candidature.
+                                    {txt.switchRoleDesc}
                                   </p>
                                 </div>
                               </div>
@@ -1556,7 +1957,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                 className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
                               >
                                 <FiRepeat />
-                                <span>Passer en Freelance</span>
+                                <span>{txt.switchRoleBtn}</span>
                               </button>
                             </div>
                           )}
@@ -1565,33 +1966,52 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                           {!isAuthenticated && (
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
                               <FiUser className="text-slate-400 text-base shrink-0 mt-0.5" />
-                              <div>
+                              <div className="flex-1">
                                 <p className="text-xs font-extrabold text-slate-800">
-                                  Connectez-vous pour postuler
+                                  {txt.loginToApply}
                                 </p>
                                 <p className="text-[11px] text-slate-500 mt-0.5">
-                                  Créez un compte ou connectez-vous, puis activez le mode Freelance pour envoyer votre candidature.
+                                  {txt.loginToApplyDesc}
                                 </p>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => openAuthModal('login', txt.loginToApply)}
+                                className="shrink-0 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-4 py-2 transition cursor-pointer"
+                              >
+                                Connexion
+                              </button>
                             </div>
                           )}
 
-                          {/* Actual apply form for eligible performers */}
+                          {/* Apply form */}
                           {isPerformerRole && !appliedSuccess && (
                             <div className="space-y-3">
+                              {/* Earnings preview calculation */}
+                              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-brand-50 border border-emerald-200/80 flex items-center justify-between text-xs">
+                                <div>
+                                  <span className="text-slate-600 block text-[11px]">Budget mission : <strong>{rewardDH} DH</strong></span>
+                                  <span className="text-slate-500 text-[10px]">Séquestre Daman (-15%) : -{Math.round(rewardDH * 0.15)} DH</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Votre gain net</span>
+                                  <span className="text-base font-black text-emerald-700">{netRewardDH} DH</span>
+                                </div>
+                              </div>
+
                               <div className="space-y-1.5">
                                 <label htmlFor="candidate-pitch" className="text-xs font-bold text-slate-700">
-                                  Votre message de motivation / pitch :
+                                  {txt.yourPitch}
                                 </label>
                                 <textarea
                                   id="candidate-pitch"
                                   name="candidatePitch"
-                                  aria-label="Votre message de motivation ou proposition"
+                                  aria-label={txt.yourPitch}
                                   rows={3}
                                   value={pitch}
                                   onChange={(e) => setPitch(e.target.value)}
-                                  placeholder="Expliquez en 1-2 phrases pourquoi vous êtes le freelance idéal pour cette mission..."
-                                  className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-brand-700 focus:outline-hidden focus:ring-1 focus:ring-brand-700 bg-white"
+                                  placeholder={txt.pitchPlaceholder}
+                                  className="w-full rounded-2xl border border-slate-300 p-3.5 text-xs focus:border-brand-700 focus:outline-hidden focus:ring-1 focus:ring-brand-700 bg-white shadow-2xs"
                                 />
                               </div>
 
@@ -1602,7 +2022,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                     key={idx}
                                     type="button"
                                     onClick={() => setPitch(qp)}
-                                    className="rounded-lg bg-slate-100 hover:bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700 transition cursor-pointer"
+                                    className="rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-700 transition cursor-pointer text-left"
                                   >
                                     {qp}
                                   </button>
@@ -1613,24 +2033,24 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                 type="button"
                                 onClick={() => handleApplyBid()}
                                 disabled={!pitch.trim()}
-                                className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold py-3 text-xs shadow-md transition cursor-pointer"
+                                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white font-extrabold py-3.5 text-xs shadow-md transition cursor-pointer"
                               >
                                 <FiSend />
-                                <span>Envoyer ma candidature ({rewardDH} DH)</span>
+                                <span>{txt.sendApplication} ({rewardDH} DH)</span>
                               </button>
                             </div>
                           )}
 
                           {appliedSuccess && (
-                            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                            <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
                               <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
                                 <FiCheck />
                               </div>
                               <h4 className="text-sm font-extrabold text-emerald-900">
-                                Candidature transmise avec succès !
+                                {txt.applicationSent}
                               </h4>
                               <p className="text-xs text-emerald-700">
-                                Le client consultera votre profil et pourra vous attribuer la mission instantanément.
+                                {txt.applicationSentDesc}
                               </p>
                             </div>
                           )}
@@ -1642,25 +2062,25 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                   {/* List of candidates / Bids */}
                   <div className="space-y-3 pt-2">
                     <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
-                      Candidats postulants ({bids.length})
+                      {txt.bidsReceivedTitle} ({bids.length})
                     </h3>
 
                     {bids.length === 0 ? (
                       <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500">
-                        Aucune offre pour l’instant. Les premiers freelances notifiés vont postuler sous peu.
+                        {txt.noBidsYetDesc}
                       </div>
                     ) : (
                       <div className="space-y-2.5">
                         {bids.map((b) => (
                           <div
                             key={b.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-brand-300 transition"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-brand-300 transition"
                           >
                             <div className="flex items-center gap-3">
                               <img
                                 src={b.performerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'}
                                 alt={b.performerName}
-                                className="h-10 w-10 rounded-xl object-cover border border-slate-300 shrink-0"
+                                className="h-11 w-11 rounded-2xl object-cover border border-slate-300 shrink-0 shadow-2xs"
                               />
                               <div>
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1668,7 +2088,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                   {b.isVerified ? (
                                     <span
                                       className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700 shadow-2xs"
-                                      title="Prestataire Vérifié : Rigueur et compétences validées (Confiance & Autorité)"
                                     >
                                       <FiCheckCircle className="text-emerald-600 text-xs shrink-0" />
                                       <span>Vérifié</span>
@@ -1676,7 +2095,6 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                   ) : (
                                     <span
                                       className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-1.5 py-0.2 text-[9px] font-medium text-slate-500"
-                                      title="Prestataire membre"
                                     >
                                       Nouveau
                                     </span>
@@ -1686,7 +2104,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                     {b.performerRating || 5.0} ({b.performerCompletedCount || 0} missions)
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-600 mt-0.5 line-clamp-2 italic">
+                                <p className="text-xs text-slate-600 mt-1 line-clamp-2 italic">
                                   "{b.pitch}"
                                 </p>
                               </div>
@@ -1697,19 +2115,19 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                                 <button
                                   type="button"
                                   onClick={() => handleAssign(b.performerId, b.performerName)}
-                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-3.5 py-2 text-xs shadow-xs transition cursor-pointer"
+                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 text-xs shadow-xs transition cursor-pointer"
                                 >
                                   <FiCheck />
-                                  <span>Sélectionner</span>
+                                  <span>{txt.selectFreelancer}</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeclineBid(b.id)}
-                                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-bold px-2.5 py-2 text-xs transition cursor-pointer"
+                                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-bold px-3 py-2 text-xs transition cursor-pointer"
                                   title="Décliner cette candidature"
                                 >
                                   <FiX className="text-xs" />
-                                  <span className="hidden sm:inline">Décliner</span>
+                                  <span className="hidden sm:inline">{txt.declineBid}</span>
                                 </button>
                               </div>
                             )}
@@ -1727,19 +2145,19 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                           className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
                         >
                           <FiX />
-                          <span>Annuler la mission & Débloquer {rewardDH} DH</span>
+                          <span>{txt.cancelTask} ({rewardDH} DH)</span>
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
               ) : (
-                /* IN_PROGRESS / UNDER_REVIEW / COMPLETED / REVISION / ARBITRATION STATUS */
-                <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
+                /* IN_PROGRESS / UNDER_REVIEW / COMPLETED / REVISION / ARBITRATION */
+                <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-base sm:text-lg font-black text-slate-900">
-                        État de livraison & Actions
+                        {locale === 'ar' ? 'حالة التسليم وإجراءات المهمة' : 'État de livraison & Actions'}
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {isOwner
@@ -1762,10 +2180,10 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                       <button
                         type="button"
                         onClick={() => setIsProofDrawerOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-2.5 text-xs shadow-xs transition cursor-pointer"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 text-xs shadow-xs transition cursor-pointer"
                       >
                         <FiUploadCloud />
-                        <span>Déposer mes preuves & Livrables</span>
+                        <span>{txt.submitWorkBtn}</span>
                       </button>
                     </div>
                   )}
@@ -1805,7 +2223,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         </div>
                       ) : (
                         <p className="text-[11px] text-amber-700 italic">
-                          Votre proposition a été transmise au prestataire. S'il accepte, {task.settlementProposal.amountDH} DH lui seront versés et le restant ({Math.round(rewardDH - task.settlementProposal.amountDH)} DH) vous sera automatiquement restitué.
+                          Votre proposition a été transmise au prestataire. S'il accepte, {task.settlementProposal.amountDH} DH lui seront versés et le restant ({Math.round(rewardDH - task.settlementProposal.amountDH)} DH) vous sera restitué.
                         </p>
                       )}
                     </div>
@@ -1816,7 +2234,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     <div className="rounded-2xl bg-purple-50/80 border border-purple-200 p-4 sm:p-5 space-y-3.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-200 text-purple-800">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-200 text-purple-800">
                             <FiFileText className="text-sm" />
                           </span>
                           <div>
@@ -1825,19 +2243,26 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                             </h3>
                             <p className="text-[11px] text-slate-500">
                               {submission?.submittedAt
-                                ? `Remis le ${new Date(submission.submittedAt).toLocaleDateString(locale === 'ar' ? 'ar-MA' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
-                                : 'Travail soumis pour inspection et validation'}
+                                ? `Remis le ${new Date(submission.submittedAt).toLocaleDateString(locale === 'ar' ? 'ar-MA' : 'fr-FR', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}`
+                                : 'Travail soumis pour inspection'}
                             </p>
                           </div>
                         </div>
 
-                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full ${
-                          task.status === 'COMPLETED'
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                            : task.status === 'REVISION_REQUESTED'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                            : 'bg-purple-100 text-purple-800 border border-purple-200'
-                        }`}>
+                        <span
+                          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full ${
+                            task.status === 'COMPLETED'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : task.status === 'REVISION_REQUESTED'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-purple-100 text-purple-800 border border-purple-200'
+                          }`}
+                        >
                           {task.status === 'COMPLETED'
                             ? '✓ Livrables approuvés'
                             : task.status === 'REVISION_REQUESTED'
@@ -1846,7 +2271,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         </span>
                       </div>
 
-                      {/* Report / Message Text */}
+                      {/* Report text */}
                       <div className="space-y-1">
                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                           Rapport d&apos;exécution / Message :
@@ -1860,12 +2285,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         </div>
                       </div>
 
-                      {/* Attachments / Files / Proof Links */}
+                      {/* Files */}
                       {submission?.proofUrls && submission.proofUrls.length > 0 && (
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                             <FiPaperclip className="text-purple-700" />
-                            Fichiers & Liens de preuve ({submission.proofUrls.length}) :
+                            {txt.submittedFilesTitle} ({submission.proofUrls.length})
                           </span>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1903,19 +2328,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   )}
 
-                  {/* Client Approval & Revision Area — only shown AFTER proof is submitted */}
+                  {/* Client Approval & Actions */}
                   {isOwner && (task.status === 'UNDER_REVIEW' || task.status === 'REVISION_REQUESTED') && (
                     <div className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                      {task.status === 'UNDER_REVIEW' && (
-                        <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 flex items-center gap-2.5 text-xs text-purple-900">
-                          <FiClock className="text-purple-600 text-base shrink-0 animate-pulse" />
-                          <div className="leading-snug">
-                            <span className="font-extrabold block">Garantie Daman 72h :</span>
-                            <span className="text-purple-700">Validation automatique sous 72 heures si aucune contestation n'est émise. Validez dès maintenant pour libérer la rémunération au freelance.</span>
-                          </div>
-                        </div>
-                      )}
-
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-slate-900">
                           Actions du Donneur d’ordre :
@@ -1932,7 +2347,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                           className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 text-xs shadow-xs transition cursor-pointer"
                         >
                           <FiCheckCircle />
-                          <span>Valider & Débloquer {rewardDH} DH</span>
+                          <span>{txt.approveAndPay} ({rewardDH} DH)</span>
                         </button>
 
                         <button
@@ -1941,7 +2356,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                           className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 text-xs transition cursor-pointer"
                         >
                           <FiRepeat />
-                          <span>Demander une retouche</span>
+                          <span>{txt.requestRevision}</span>
                         </button>
 
                         <button
@@ -1950,7 +2365,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                           className="flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold py-3 text-xs transition cursor-pointer"
                         >
                           <FiPercent />
-                          <span>Proposer un accord partiel (%)</span>
+                          <span>{txt.partialSettlement}</span>
                         </button>
                       </div>
 
@@ -1971,7 +2386,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                             type="button"
                             onClick={handleRequestRevision}
                             disabled={!revisionFeedback.trim()}
-                            className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 text-xs transition cursor-pointer"
+                            className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 text-xs transition cursor-pointer"
                           >
                             Transmettre la demande de retouche
                           </button>
@@ -1980,66 +2395,67 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     </div>
                   )}
 
-                  {/* Dispute / Arbitration Trigger for Participants */}
-                  {(isOwner || isAssignedToMe) && (task.status === 'UNDER_REVIEW' || task.status === 'IN_PROGRESS' || task.status === 'REVISION_REQUESTED') && (
-                    <div className="pt-2 border-t border-slate-200">
-                      {!isArbitrationInputOpen ? (
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setIsArbitrationInputOpen(true)}
-                            className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
-                          >
-                            <FiShield />
-                            <span>Ouvrir un litige / Demander l'arbitrage Daman</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
-                              <FiShield className="text-rose-600" />
-                              <span>Saisir l'arbitrage officiel Daman</span>
-                            </span>
+                  {/* Dispute / Arbitration Trigger */}
+                  {(isOwner || isAssignedToMe) &&
+                    (task.status === 'UNDER_REVIEW' || task.status === 'IN_PROGRESS' || task.status === 'REVISION_REQUESTED') && (
+                      <div className="pt-2 border-t border-slate-200">
+                        {!isArbitrationInputOpen ? (
+                          <div className="flex justify-end">
                             <button
                               type="button"
-                              onClick={() => setIsArbitrationInputOpen(false)}
-                              className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                              onClick={() => setIsArbitrationInputOpen(true)}
+                              className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
                             >
-                              Fermer
+                              <FiShield />
+                              <span>{txt.disputeLink}</span>
                             </button>
                           </div>
-                          <p className="text-[11px] text-rose-700 leading-snug">
-                            En cas de désaccord persistant sur la conformité du livrable ou les délais, nos arbitres interviennent pour analyser les preuves et ordonner un règlement équitable (100% remboursement, 100% paiement ou compromis 50/50).
-                          </p>
-                          <textarea
-                            rows={2}
-                            value={arbitrationReason}
-                            onChange={(e) => setArbitrationReason(e.target.value)}
-                            placeholder="Motif précis du litige (ex: travail non conforme au cahier des charges, absence de réponse)..."
-                            className="w-full rounded-xl border border-rose-300 p-2.5 text-xs bg-white focus:outline-hidden focus:border-rose-600"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setIsArbitrationInputOpen(false)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSendArbitration}
-                              disabled={!arbitrationReason.trim()}
-                              className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
-                            >
-                              Transmettre aux arbitres Daman
-                            </button>
+                        ) : (
+                          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                                <FiShield className="text-rose-600" />
+                                <span>Saisir l'arbitrage officiel Daman</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsArbitrationInputOpen(false)}
+                                className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                              >
+                                Fermer
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-rose-700 leading-snug">
+                              En cas de désaccord persistant, nos arbitres interviennent pour analyser les preuves et ordonner un règlement équitable.
+                            </p>
+                            <textarea
+                              rows={2}
+                              value={arbitrationReason}
+                              onChange={(e) => setArbitrationReason(e.target.value)}
+                              placeholder="Motif précis du litige..."
+                              className="w-full rounded-xl border border-rose-300 p-2.5 text-xs bg-white focus:outline-hidden focus:border-rose-600"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsArbitrationInputOpen(false)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+                              >
+                                Annuler
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSendArbitration}
+                                disabled={!arbitrationReason.trim()}
+                                className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                              >
+                                Transmettre aux arbitres Daman
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
 
                   {/* Arbitration Status Banner */}
                   {task.status === 'ARBITRATION' && (
@@ -2049,78 +2465,61 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         <span>Mission en cours d'arbitrage officiel Daman</span>
                       </div>
                       <p className="text-xs text-orange-800 leading-relaxed">
-                        Un médiateur assermenté examine actuellement les échanges, les livrables déposés et le cahier des charges initial. Les fonds séquestre sont sous protection Daman. Une décision équitable (remboursement intégral, paiement intégrale ou partage 50/50 Workzilla) sera rendue sous 24h.
+                        Un médiateur examine actuellement les échanges, les livrables déposés et le cahier des charges initial. Une décision équitable sera rendue sous 24h.
                       </p>
                     </div>
                   )}
 
                   {/* Completed Banner */}
                   {task.status === 'COMPLETED' && (
-                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1.5">
+                    <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1.5">
                       <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-lg">
                         <FiCheckCircle />
                       </div>
                       <h4 className="text-sm font-extrabold text-emerald-900">
-                        Mission finalisée avec succès
+                        {txt.statusCompleted}
                       </h4>
                       <p className="text-xs text-emerald-700">
-                        Les fonds ont été versés au freelance et le séquestre a été clôturé.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Cancelled Banner */}
-                  {task.status === 'CANCELLED' && (
-                    <div className="p-5 rounded-2xl bg-slate-100 border border-slate-200 text-center space-y-2">
-                      <div className="h-10 w-10 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center mx-auto text-lg">
-                        <FiX />
-                      </div>
-                      <h4 className="text-sm font-extrabold text-slate-800">Mission Annulée</h4>
-                      <p className="text-xs text-slate-600 max-w-md mx-auto">
-                        Cette mission a été annulée. Si des fonds avaient été consignés sous séquestre, ils ont été automatiquement et intégralement restitués au solde disponible du donneur d'ordre.
+                        Les fonds ont été versés au freelance et le séquestre a été clôturé avec succès.
                       </p>
                     </div>
                   )}
                 </div>
               )}
-            </div>
 
-            {/* RIGHT COLUMN: REALTIME CHAT & PROFILES HUB (5 COLS) */}
-            <div className="lg:col-span-5 space-y-6">
-
-              {/* 1. DEDICATED IN-TASK REALTIME MESSENGER */}
+              {/* CARD C: IN-TASK REALTIME MESSENGER */}
               {isFreelancerChosen ? (
-                <div className="rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col h-[560px] overflow-hidden">
-                  {/* Chat Header */}
-                  <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div className="rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col h-[560px] overflow-hidden">
+                  {/* Header */}
+                  <div className="p-4 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-xl bg-brand-700 text-white flex items-center justify-center">
                         <FiMessageSquare className="text-sm" />
                       </div>
                       <div>
                         <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
-                          Messagerie de la mission
+                          {txt.chatTitle}
                         </h3>
                         <p className="text-[10px] text-slate-400 font-medium">
-                          Échanges sécurisés sous garantie Daman
+                          {txt.chatSubtitle}
                         </p>
                       </div>
                     </div>
 
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      En ligne
+                      En direct
                     </span>
                   </div>
 
                   {/* Message Stream */}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40">
+                  <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30">
                     {messages.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
                         <FiMessageSquare className="text-3xl mb-2 text-slate-300" />
                         <p className="text-xs font-bold text-slate-600">Aucun message pour le moment</p>
                         <p className="text-[11px] text-slate-400 mt-1">
-                          Posez vos questions, précisez vos consignes ou transmettez vos fichiers.
+                          Posez vos questions ou partagez vos précisions de travail ici.
                         </p>
                       </div>
                     ) : (
@@ -2136,11 +2535,13 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                               alt={msg.senderName}
                               className="h-7 w-7 rounded-lg object-cover border border-slate-200 shrink-0 mt-0.5"
                             />
-                            <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs ${
-                              isMe
-                                ? 'bg-brand-700 text-white rounded-tr-xs'
-                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
-                            }`}>
+                            <div
+                              className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-2xs ${
+                                isMe
+                                  ? 'bg-brand-700 text-white rounded-tr-xs'
+                                  : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
+                              }`}
+                            >
                               <div className="flex items-center justify-between gap-2 mb-0.5 text-[10px] font-bold opacity-80">
                                 <span>{msg.senderName}</span>
                                 <span className="text-[9px] font-normal">
@@ -2170,12 +2571,12 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                     <div ref={chatBottomRef} />
                   </div>
 
-                  {/* Chat Input Bar */}
+                  {/* Input Form */}
                   <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white space-y-2">
                     {filterOffPlatformContact(chatInput).hasViolation && (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium animate-in fade-in">
                         <FiAlertTriangle className="text-amber-600 shrink-0" />
-                        <span>Rappel Daman : Les numéros, emails et liens externes sont masqués pour protéger la garantie financière.</span>
+                        <span>{txt.safeNotice}</span>
                       </div>
                     )}
 
@@ -2184,7 +2585,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         type="file"
                         id="workspace-chat-file"
                         name="chatFile"
-                        aria-label="Joindre un fichier ou document"
+                        aria-label="Joindre un fichier"
                         ref={chatFileInputRef}
                         onChange={handleChatFileUpload}
                         className="hidden"
@@ -2193,7 +2594,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         type="button"
                         onClick={() => chatFileInputRef.current?.click()}
                         disabled={isUploadingChatFile}
-                        className="p-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 transition cursor-pointer"
+                        className="p-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 transition cursor-pointer"
                         title="Joindre un fichier"
                       >
                         {isUploadingChatFile ? <FiLoader className="animate-spin text-sm" /> : <FiPaperclip className="text-sm" />}
@@ -2203,11 +2604,11 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         type="text"
                         id="workspace-chat-input"
                         name="chatMessage"
-                        aria-label="Écrivez votre message"
+                        aria-label="Message"
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Écrivez votre message..."
-                        className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs focus:border-brand-700 focus:outline-hidden"
+                        placeholder={txt.writeMessagePlaceholder}
+                        className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs focus:border-brand-700 focus:outline-hidden"
                       />
 
                       <button
@@ -2215,44 +2616,114 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                         disabled={!chatInput.trim() || isSendingMessage}
                         className="rounded-xl bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white p-2.5 transition cursor-pointer"
                       >
-                        <FiSend className="text-xs" />
+                        <FiSend className="text-sm" />
                       </button>
                     </div>
                   </form>
                 </div>
               ) : (
-                <div className="rounded-3xl bg-white border border-slate-200 shadow-xs p-6 sm:p-8 flex flex-col items-center justify-center text-center h-[420px] space-y-4">
-                  <div className="h-16 w-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-2xs">
-                    <FiLock className="text-2xl" />
+                /* Compact Locked Messenger Banner */
+                <div className="rounded-3xl bg-white border border-slate-200/90 p-5 shadow-xs flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                      <FiLock className="text-lg" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">{txt.chatLockedTitle}</h4>
+                      <p className="text-[11px] text-slate-500">{txt.chatLockedDesc}</p>
+                    </div>
                   </div>
-                  <div className="max-w-sm space-y-1.5">
-                    <h3 className="text-base font-black text-slate-900">
-                      Messagerie de la mission
-                    </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Le chat en direct s'ouvrira automatiquement dès qu'un freelance aura été sélectionné pour cette mission.
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span>
-                      {bids.length > 0
-                        ? `${bids.length} proposition${bids.length > 1 ? 's' : ''} reçue${bids.length > 1 ? 's' : ''} en attente de choix`
-                        : "En attente de propositions de freelances"}
-                    </span>
-                  </div>
-                  {isOwner && bids.length > 0 && (
-                    <p className="text-[11px] text-brand-700 font-bold bg-brand-50 px-3 py-1.5 rounded-xl border border-brand-200">
-                      💡 Choisissez une proposition ci-contre pour démarrer la mission et débloquer la messagerie instantanée.
-                    </p>
-                  )}
+                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full shrink-0">
+                    {txt.chatLockedBadge}
+                  </span>
                 </div>
               )}
 
+            </div>
+
+            {/* RIGHT COLUMN (STICKY ACTION & TRUST SIDEBAR - 4 COLS) */}
+            <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
+
+              {/* 1. FINANCIAL SUMMARY & PRIMARY CTA CARD */}
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {locale === 'ar' ? 'الميزانية' : locale === 'en' ? 'Budget' : 'Montant de la mission'}
+                  </span>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    ✓ Séquestre Daman
+                  </span>
+                </div>
+
+                <div className="text-center py-1">
+                  <div className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">
+                    {rewardDH} <span className="text-base font-extrabold text-slate-500">DH</span>
+                  </div>
+                  {!isOwner && (
+                    <span className="text-xs font-bold text-emerald-700 block mt-1.5">
+                      {txt.netPayout} : {netRewardDH} DH
+                    </span>
+                  )}
+                </div>
+
+                {/* Primary Quick CTA Button */}
+                {task.status === 'OPEN' && !isOwner && !myExistingBid && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hub = document.getElementById('proposals-hub');
+                      if (hub) hub.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold py-3.5 text-xs shadow-md transition cursor-pointer"
+                  >
+                    <FiSend />
+                    <span>{txt.applyTitle}</span>
+                  </button>
+                )}
+
+                {task.status === 'IN_PROGRESS' && isAssignedToMe && (
+                  <button
+                    type="button"
+                    onClick={() => setIsProofDrawerOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-extrabold py-3.5 text-xs shadow-md transition cursor-pointer"
+                  >
+                    <FiUploadCloud />
+                    <span>{txt.submitWorkBtn}</span>
+                  </button>
+                )}
+
+                {/* Specs List */}
+                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <FiClock className="text-xs text-brand-600" />
+                      <span>{txt.timeLimit} :</span>
+                    </span>
+                    <strong className="text-slate-800">{task.timeLimitHours}h</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <FiAward className="text-xs text-amber-500" />
+                      <span>{txt.levelRequired} :</span>
+                    </span>
+                    <strong className="text-slate-800">{txt.level} {task.minLevelRequired || 1}+</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <FiShield className="text-xs text-emerald-600" />
+                      <span>Protection :</span>
+                    </span>
+                    <strong className="text-emerald-700">100% Garantie</strong>
+                  </div>
+                </div>
+              </div>
+
               {/* 2. EMPLOYER / CLIENT PROFILE CARD */}
-              <div className="rounded-3xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-5 shadow-xs space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  Donneur d’ordre (Client)
+                  {txt.clientCardTitle}
                 </span>
                 <div className="flex items-center gap-3">
                   <img
@@ -2276,11 +2747,11 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                 </div>
               </div>
 
-              {/* 3. ASSIGNED FREELANCE PROFILE CARD (IF ASSIGNED) */}
+              {/* 3. ASSIGNED FREELANCER (IF ASSIGNED) */}
               {task.assignedToName && (
-                <div className="rounded-3xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
+                <div className="rounded-3xl bg-white border border-slate-200/90 p-5 shadow-xs space-y-3">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Freelance Assigné
+                    {txt.freelancerCardTitle}
                   </span>
                   <div className="flex items-center gap-3">
                     <img
@@ -2298,14 +2769,14 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
                 </div>
               )}
 
-              {/* 4. DAMAN ESCROW GUARANTEE BADGE */}
-              <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 shadow-sm space-y-2">
+              {/* 4. DAMAN ESCROW GUARANTEE CARD */}
+              <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 shadow-xs space-y-2">
                 <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs">
                   <FiShield className="text-base" />
-                  <span>Séquestre Daman Maroc garanti</span>
+                  <span>{txt.escrowCardTitle}</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Votre paiement de <strong>{rewardDH} DH</strong> est consigné sur un compte séquestre sécurisé. Il n’est versé qu’une fois les livrables validés par le client.
+                  {txt.escrowCardDesc}
                 </p>
               </div>
 
@@ -2396,7 +2867,7 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
             </div>
 
             <p className="text-xs text-slate-600">
-              Si le travail n'est que partiellement exploitable, convenez d'un compromis financier amiable. Le restant sera automatiquement restitué à votre solde disponible dès accord du prestataire.
+              Si le travail n'est que partiellement exploitable, convenez d'un compromis financier amiable.
             </p>
 
             <div className="grid grid-cols-4 gap-2">
@@ -2419,7 +2890,9 @@ export const TaskWorkspacePage: React.FC<TaskWorkspacePageProps> = ({ slug, forc
             <div className="space-y-1 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
               <div className="flex justify-between text-xs font-bold text-slate-700">
                 <span>Ajuster : {partialPercentage}%</span>
-                <span className="text-amber-700 font-extrabold">{Math.round(rewardDH * (partialPercentage / 100))} DH</span>
+                <span className="text-amber-700 font-extrabold">
+                  {Math.round(rewardDH * (partialPercentage / 100))} DH
+                </span>
               </div>
               <input
                 type="range"
